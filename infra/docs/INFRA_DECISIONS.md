@@ -11,7 +11,7 @@
 - openvidu-local-deployment/community 클론 → docker compose up 성공 (전체 11개 컨테이너 Up)
 - Dashboard(localhost:7880/dashboard), Meet(localhost:9080) 접속 확인
 - Room 생성 → Participant 등록 → Dashboard Active Rooms/Participants 실시간 반영 확인 (SAFY 관리자 모니터링 구조의 실동작 근거 확보)
-- 팀원 3명(jisu, 세은, 경민) LAN 내 PC 접속 성공
+- 팀원 LAN 내 PC 접속 성공
 
 ## 3. 미해결 — 모바일 접속 실패
 - 폰(본인) → LAN 도메인/IP 둘 다 무한 대기로 실패
