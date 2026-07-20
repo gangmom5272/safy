@@ -41,3 +41,24 @@
 - 모바일 접속 이슈: Windows 방화벽 프로파일 확인 또는 서버 배포 후 재검증 중 택일
 - 서버 배포 기반 구성 착수 여부 결정
 - Redis 용도, 녹화 블러 처리, AI 서버 fps — 팀 미결 항목 계속 확인 필요
+
+## 2026-07-20 (월) 오후 — LiveKit CLI 토큰 발급 검증
+
+**목표**: 로컬 OpenVidu 기동 확인 + 토큰 발급 테스트
+
+**진행**
+- LiveKit CLI(`lk` v2.18.0) Windows 설치 (winget)
+- `lk token create`로 devkey/secret 기반 JWT 토큰 발급 성공
+  - 최초 시도 시 PowerShell 백틱(`) 줄바꿈이 깨지면서 `--url` 플래그 인식 실패 → LiveKit Cloud 인증 페이지로 잘못 유도되는 이슈 발생, 한 줄 명령으로 재시도해 해결
+- `lk room join`으로 CLI가 실제 test-room에 참가자로 입장 성공 (CONNECTED 상태 로그 확인)
+- OpenVidu Dashboard에서 Active Rooms: 1, Active Participants: 1로 실시간 반영 확인
+
+**의미**
+- SAFY 세션 트리거 흐름(3.3절)의 "Spring Boot → OpenVidu 토큰 발급" 단계가 실제로 API Key/Secret 서명 방식으로 동작함을 로컬에서 직접 검증
+- 추후 Spring Boot 연동 시 이 흐름을 서버 SDK로 그대로 옮기면 됨
+
+**부가 확인 — Dashboard Analytics**
+- Bandwidth 지표에서 Upstream(370MB) 대비 Downstream(571MB)이 더 큰 것 확인
+- SFU 구조 특성상 참가자 수가 늘수록 Downstream이 배로 증가하는 것을 실측으로 확인 — 향후 서버 사양 산정 시 참고 자료
+
+**상태**: 오전 목표(로컬 기동 확인 + 토큰 발급 테스트) 완료
