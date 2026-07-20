@@ -1,0 +1,119 @@
+version: "3.8"
+
+# SAFY 개발 환경 Docker Compose
+# ⬜ 표시된 서비스는 BE/AI/DB 담당자 확정 후 세부 설정 채워야 함
+#
+# ※ OpenVidu는 이 파일에 포함하지 않는다.
+#   OpenVidu Community v3(LiveKit+mediasoup)는 자체 공식 Docker Compose 스택(별도 레포)으로
+#   독립 실행해야 한다. 단일 이미지로 띄우는 방식(openvidu/openvidu-server 등)은
+#   구버전(2.x, Kurento 기반)이라 이번 프로젝트 스펙과 맞지 않는다.
+#   로컬 개발: https://github.com/OpenVidu/openvidu-local-deployment (community 디렉토리)
+#   실서버 배포: https://github.com/OpenVidu/openvidu-docker-compose-deployment
+#   이 앱은 OPENVIDU_URL / OPENVIDU_API_KEY / OPENVIDU_API_SECRET 로 위 스택에 연결만 한다.
+#   OpenVidu 자체 녹화(Egress) 저장용 MinIO는 그 스택이 자동으로 포함하므로 여기서 별도 구성 불필요.
+
+services:
+  # ==========================================
+  # Spring Boot (Java 21, Spring Boot 4.1.0) - 확정
+  # ==========================================
+  backend:
+    build: ./backend
+    ports:
+      - "${SPRING_PORT}:${SPRING_PORT}"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT}
+      - OPENVIDU_URL=${OPENVIDU_URL}
+      - OPENVIDU_API_KEY=${OPENVIDU_API_KEY}
+      - OPENVIDU_API_SECRET=${OPENVIDU_API_SECRET}
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_UPLOAD_BUCKET=${MINIO_UPLOAD_BUCKET}
+    depends_on:
+      - db
+      - redis
+      - minio
+    # ⬜ 정확한 빌드 컨텍스트, JAR 실행 방식은 BE 스켈레톤 코드 확인 후 추가
+    # ⬜ OpenVidu는 별도 스택이라 depends_on 대상 아님 — 연결 실패 시 재시도 로직 필요
+
+  # ==========================================
+  # DB - PostgreSQL - 확정
+  # ==========================================
+  db:
+    image: postgres:16
+    ports:
+      - "${DB_PORT}:5432"
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  # ==========================================
+  # Redis - 확정
+  # ==========================================
+  # 주의: 이건 우리 Spring Boot 전용 Redis다.
+  # OpenVidu 내부(Egress/Ingress 조율용)에도 별도 Redis가 필요한데,
+  # 그건 OpenVidu 자체 스택 안에서 따로 뜨므로 이 Redis와 절대 공유하지 않는다.
+  redis:
+    image: redis:7
+    ports:
+      - "${REDIS_PORT}:6379"
+    # ⬜ 용도(세션 캐시/Pub-Sub 등)에 따라 persistence 설정 필요할 수 있음
+
+  # ==========================================
+  # MinIO - 제보 업로드(이미지/영상) 저장용 - 확정
+  # ==========================================
+  # OpenVidu 녹화(Egress) 저장용 MinIO와는 별개의 인스턴스.
+  # 시민이 올리는 이미지/영상 제보를 Spring Boot가 이 버킷에 직접 저장한다.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # 관리 콘솔
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+
+  # ==========================================
+  # Python (AI 서버) - FastAPI 확정
+  # ==========================================
+  ai-server:
+    build: ./ai
+    ports:
+      - "${AI_SERVER_PORT}:${AI_SERVER_PORT}"
+    environment:
+      - OPENVIDU_URL=${OPENVIDU_URL}
+      - OPENVIDU_API_KEY=${OPENVIDU_API_KEY}
+      - OPENVIDU_API_SECRET=${OPENVIDU_API_SECRET}
+    # ⬜ OpenVidu가 별도 스택이라 depends_on 대상 아님
+    # ⬜ uvicorn 실행 커맨드 등 Dockerfile 세부는 AI 담당자 확인 후 추가
+    # 예상 형태: uvicorn main:app --host 0.0.0.0 --port ${AI_SERVER_PORT}
+
+  # ==========================================
+  # Nginx (reverse proxy) - 확정, 세부 라우팅 미확정
+  # ==========================================
+  # nginx:
+  #   image: nginx:latest
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./infra/nginx.conf:/etc/nginx/nginx.conf
+  #   depends_on:
+  #     - backend
+
+volumes:
+  db_data:
+  minio_data:
