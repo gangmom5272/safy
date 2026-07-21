@@ -1,14 +1,54 @@
-import { Link } from 'react-router'
+import { useCallback, useState } from 'react'
+import { DEFAULT_REPORT_CATEGORY, DEFAULT_REPORT_METHOD } from './reportConstants'
+import { LiveReportPage } from './LiveReportPage'
+import { MediaReportPage } from './MediaReportPage'
+import { ReportCompletePage } from './ReportCompletePage'
+import { ReportTypePage } from './ReportTypePage'
+import type { ReportFormData, ReportStep } from './reportTypes'
+import './report-create.css'
+
+function createInitialFormData(): ReportFormData {
+  return {
+    method: DEFAULT_REPORT_METHOD,
+    category: DEFAULT_REPORT_CATEGORY,
+    location: null,
+  }
+}
 
 export function ReportCreatePage() {
-  return (
-    <section className="page-section">
-      <p className="eyebrow">제보하기</p>
-      <h1>제보 시작</h1>
-      <p>제보 유형을 선택하고 실시간 영상 또는 사진·영상 제보 흐름으로 이동합니다.</p>
-      <Link className="text-link" to="/app/report/type">
-        제보 유형 선택
-      </Link>
-    </section>
-  )
+  const [step, setStep] = useState<ReportStep>('select')
+  const [formData, setFormData] = useState<ReportFormData>(() => createInitialFormData())
+
+  const handleStart = useCallback((nextFormData: ReportFormData) => {
+    setFormData(nextFormData)
+    setStep(nextFormData.method === 'live' ? 'live' : 'media')
+  }, [])
+
+  const handleBackToSelect = useCallback(() => {
+    setStep('select')
+  }, [])
+
+  const handleComplete = useCallback((completedFormData: ReportFormData) => {
+    setFormData(completedFormData)
+    setStep('complete')
+  }, [])
+
+  const handleReset = useCallback(() => {
+    setFormData(createInitialFormData())
+    setStep('select')
+  }, [])
+
+  if (step === 'live') {
+    return <LiveReportPage formData={formData} onBack={handleBackToSelect} onComplete={handleComplete} />
+  }
+
+  if (step === 'media') {
+    return <MediaReportPage formData={formData} onBack={handleBackToSelect} onComplete={handleComplete} />
+  }
+
+  if (step === 'complete') {
+    return <ReportCompletePage formData={formData} onRestart={handleReset} />
+  }
+
+  return <ReportTypePage initialFormData={formData} onStart={handleStart} />
 }
