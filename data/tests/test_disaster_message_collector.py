@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Any
-
+import httpx2
 import pytest
 
 import app.collectors.disaster_message as collector_module
@@ -124,5 +124,174 @@ def test_fetch_raises_error_when_api_result_fails(
     with pytest.raises(
         DisasterMessageAPIError,
         match="code=32",
+    ):
+        collector.fetch()
+
+
+class TimeoutClient:
+    def __enter__(self) -> "TimeoutClient":
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def get(
+        self,
+        url: str,
+        params: dict[str, str | int],
+    ) -> FakeResponse:
+        raise httpx2.TimeoutException(
+            "요청 시간이 초과되었습니다."
+        )
+
+
+def test_fetch_wraps_timeout_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        collector_module.httpx2,
+        "Client",
+        lambda timeout: TimeoutClient(),
+    )
+
+    collector = DisasterMessageCollector(
+        base_url="https://example.com/disaster-messages",
+        api_key="test-api-key",
+    )
+
+    with pytest.raises(
+        DisasterMessageAPIError,
+        match="시간이 초과",
+    ):
+        collector.fetch()
+
+class ConnectionErrorClient(TimeoutClient):
+    def get(
+        self,
+        url: str,
+        params: dict[str, str | int],
+    ) -> FakeResponse:
+        raise httpx2.ConnectError(
+            "서버에 연결할 수 없습니다."
+        )
+
+
+def test_fetch_wraps_http_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        collector_module.httpx2,
+        "Client",
+        lambda timeout: ConnectionErrorClient(),
+    )
+
+    collector = DisasterMessageCollector(
+        base_url="https://example.com/disaster-messages",
+        api_key="test-api-key",
+    )
+
+    with pytest.raises(
+        DisasterMessageAPIError,
+        match="통신에 실패",
+    ):
+        collector.fetch()
+
+
+class InvalidJSONResponse(FakeResponse):
+    def json(self) -> dict[str, Any]:
+        raise ValueError("잘못된 JSON 응답")
+
+
+class InvalidJSONClient(TimeoutClient):
+    def get(
+        self,
+        url: str,
+        params: dict[str, str | int],
+    ) -> InvalidJSONResponse:
+        return InvalidJSONResponse({})
+
+
+def test_fetch_wraps_invalid_json_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        collector_module.httpx2,
+        "Client",
+        lambda timeout: InvalidJSONClient(),
+    )
+
+    collector = DisasterMessageCollector(
+        base_url="https://example.com/disaster-messages",
+        api_key="test-api-key",
+    )
+
+    with pytest.raises(
+        DisasterMessageAPIError,
+        match="JSON",
+    ):
+        collector.fetch()
+
+def test_fetch_raises_error_when_body_is_not_list(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "header": {
+            "resultCode": "00",
+            "resultMsg": "NORMAL SERVICE",
+            "errorMsg": None,
+        },
+        "body": {},
+    }
+    fake_client = FakeClient(payload)
+
+    monkeypatch.setattr(
+        collector_module.httpx2,
+        "Client",
+        lambda timeout: fake_client,
+    )
+
+    collector = DisasterMessageCollector(
+        base_url="https://example.com/disaster-messages",
+        api_key="test-api-key",
+    )
+
+    with pytest.raises(
+        DisasterMessageAPIError,
+        match="body가 목록이 아닙니다",
+    ):
+        collector.fetch()
+
+def test_fetch_wraps_invalid_item_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "header": {
+            "resultCode": "00",
+            "resultMsg": "NORMAL SERVICE",
+            "errorMsg": None,
+        },
+        "body": [
+            {
+                "SN": "205355",
+                "MSG_CN": "필수 필드가 누락된 데이터",
+            }
+        ],
+    }
+    fake_client = FakeClient(payload)
+
+    monkeypatch.setattr(
+        collector_module.httpx2,
+        "Client",
+        lambda timeout: fake_client,
+    )
+
+    collector = DisasterMessageCollector(
+        base_url="https://example.com/disaster-messages",
+        api_key="test-api-key",
+    )
+
+    with pytest.raises(
+        DisasterMessageAPIError,
+        match="데이터 형식",
     ):
         collector.fetch()
