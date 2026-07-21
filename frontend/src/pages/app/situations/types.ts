@@ -63,18 +63,25 @@ export type AreaStatus = {
   updatedAt: string
 }
 
+export type ReportSource = 'webrtc' | 'photo'
+
 export type LiveReportSummary = {
   id: string
   title: string
   type: ReportType
   locationName: string
   address?: string
+  latitude?: number
+  longitude?: number
   reportedAt: string
+  relativeTime?: string
   riskLevel: RiskLevel
   description?: string
   maskedThumbnailUrl?: string | null
   isWebRtc: boolean
   isLive: boolean
+  viewerCount?: number
+  thumbnailType?: string
 }
 
 export type ReportDetail = LiveReportSummary & {
@@ -95,9 +102,9 @@ export type ReportWebRtcInfo = {
   reportId: string
   roomId?: string
   signalingUrl?: string
+  statusSocketUrl?: string
   status: WebRtcStatus
   iceServers?: RTCIceServer[]
-  statusSocketUrl?: string
 }
 
 export type ReportStatusSocketMessage = {
@@ -112,7 +119,17 @@ export type ReportListParams = {
   limit?: number
 }
 
-export const DEFAULT_REPORT_SORT: ReportSort = 'risk_desc'
+export type FavoritePlace = {
+  id: string
+  name: string
+  searchQuery: string
+  address: string
+  latitude: number
+  longitude: number
+  savedAt: string
+}
+
+export const DEFAULT_REPORT_SORT: ReportSort = 'latest'
 
 export const DEFAULT_REPORT_LIMIT = 20
 
@@ -139,7 +156,7 @@ export const shortRiskLevelLabels: Record<RiskLevel, string> = {
 }
 
 export const congestionLevelLabels: Record<CongestionLevel, string> = {
-  smooth: '원활',
+  smooth: '여유',
   normal: '보통',
   crowded: '혼잡',
   very_crowded: '매우 혼잡',

@@ -24,6 +24,8 @@ export function SituationsPage() {
           error={situation.searchError}
           onKeywordChange={situation.setSearchKeyword}
           onSelect={situation.selectArea}
+          onSubmit={situation.submitSearch}
+          onClear={situation.clearSelectedArea}
         />
         <button
           className="filter-icon-button"
@@ -72,6 +74,7 @@ export function SituationsPage() {
         error={situation.reportsError}
         listRef={situation.reportListRef}
         onRetry={() => void situation.retryReports()}
+        emptyMessage={situation.submittedQuery ? '검색 결과가 없습니다.' : undefined}
       />
 
       <ReportFilterSheet

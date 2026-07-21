@@ -36,6 +36,7 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'situations', element: <SituationsPage /> },
       { path: 'situations/areas/:areaId', element: <AreaSituationPage /> },
+      { path: 'situations/reports/:reportId', element: <ReportDetailPage /> },
       { path: 'reports/:reportId', element: <ReportDetailPage /> },
       { path: 'report', element: <ReportCreatePage /> },
       { path: 'report/type', element: <ReportTypePage /> },

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { ErrorState, LoadingSkeleton } from '../situations/SituationStates'
+import { AreaMap } from '../situations/AreaMap'
 import {
   analysisStatusLabels,
   reportTypeLabels,
@@ -76,6 +77,9 @@ export function ReportDetailPage() {
     return (
       <div className="situation-page">
         <ErrorState message="해당 제보 정보를 찾을 수 없습니다." />
+        <button className="inline-action-button" type="button" onClick={() => navigate('/app/situations')}>
+          상황 확인으로 돌아가기
+        </button>
       </div>
     )
   }
@@ -94,11 +98,16 @@ export function ReportDetailPage() {
 
       {isReportLoading && !report ? <LoadingSkeleton /> : null}
       {reportError && !report ? (
-        <ErrorState
-          message="해당 제보 정보를 찾을 수 없습니다."
-          actionLabel="다시 시도"
-          onAction={() => void retryReport()}
-        />
+        <>
+          <ErrorState
+            message="해당 제보 정보를 찾을 수 없습니다."
+            actionLabel="다시 시도"
+            onAction={() => void retryReport()}
+          />
+          <button className="inline-action-button" type="button" onClick={() => navigate('/app/situations')}>
+            상황 확인으로 돌아가기
+          </button>
+        </>
       ) : null}
       {report ? (
         <>
@@ -124,9 +133,42 @@ export function ReportDetailPage() {
             onRetryInfo={() => void retryWebRtc()}
             onReconnectSocket={socket.reconnect}
           />
+          <ReportLocationMap report={report} />
         </>
       ) : null}
     </div>
+  )
+}
+
+function ReportLocationMap({ report }: { report: ReportDetail }) {
+  const latitude = report.latitude ?? 37.4979
+  const longitude = report.longitude ?? 127.0276
+
+  return (
+    <AreaMap
+      isLoading={false}
+      error={null}
+      mapData={{
+        center: { latitude, longitude },
+        zones: [
+          {
+            id: `${report.id}-zone`,
+            name: '제보 위치 주변',
+            level: report.riskLevel,
+            coordinates: [{ latitude, longitude }],
+          },
+        ],
+        reportMarkers: [
+          {
+            reportId: report.id,
+            latitude,
+            longitude,
+            locationName: report.locationName,
+            riskLevel: report.riskLevel,
+          },
+        ],
+      }}
+    />
   )
 }
 

@@ -5,7 +5,7 @@ type ReportSortSelectProps = {
   onChange: (sort: ReportSort) => void
 }
 
-const sortOptions: ReportSort[] = ['latest', 'risk_asc', 'risk_desc']
+const sortOptions: ReportSort[] = ['latest', 'risk_desc', 'risk_asc']
 
 export function ReportSortSelect({ value, onChange }: ReportSortSelectProps) {
   return (

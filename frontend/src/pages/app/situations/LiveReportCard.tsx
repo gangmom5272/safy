@@ -1,5 +1,5 @@
 import { useState, type MouseEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { reportTypeLabels, riskLevelLabels, type LiveReportSummary } from './types'
 
 type LiveReportCardProps = {
@@ -8,13 +8,15 @@ type LiveReportCardProps = {
 
 export function LiveReportCard({ report }: LiveReportCardProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [imageFailed, setImageFailed] = useState(false)
   const [shareMessage, setShareMessage] = useState('')
 
-  const detailUrl = `${window.location.origin}/app/reports/${report.id}`
+  const detailPath = `/app/situations/reports/${report.id}${location.search}`
+  const detailUrl = `${window.location.origin}${detailPath}`
 
   const openDetail = () => {
-    navigate(`/app/reports/${report.id}`)
+    navigate(detailPath)
   }
 
   const shareReport = async (event: MouseEvent<HTMLButtonElement>) => {
@@ -92,7 +94,9 @@ export function LiveReportCard({ report }: LiveReportCardProps) {
           <button type="button" aria-label={`${report.title} 공유하기`} onClick={shareReport}>
             공유
           </button>
-          <span aria-hidden="true">상세보기</span>
+          <span aria-hidden="true">
+            {report.viewerCount ? `${report.viewerCount.toLocaleString()}명 시청` : '상세보기'}
+          </span>
         </div>
         {shareMessage ? <p className="share-feedback">{shareMessage}</p> : null}
       </div>

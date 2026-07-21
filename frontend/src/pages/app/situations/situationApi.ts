@@ -4,6 +4,7 @@ import {
   filterAndSortMockReports,
   filterMockLocations,
   getMockArea,
+  getMockAreaByQuery,
   getMockAreaMap,
   getMockReportAnalysis,
   getMockReportDetail,
@@ -28,7 +29,7 @@ import type {
 } from './types'
 import { DEFAULT_REPORT_LIMIT } from './types'
 
-const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true'
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== 'false'
 
 function toTypeParam(types: ReportType[]) {
   return types.length ? types.join(',') : undefined
@@ -36,7 +37,7 @@ function toTypeParam(types: ReportType[]) {
 
 function waitForMock<T>(data: T): Promise<T> {
   return new Promise((resolve) => {
-    window.setTimeout(() => resolve(data), 250)
+    window.setTimeout(() => resolve(data), 180)
   })
 }
 
@@ -87,15 +88,15 @@ function normalizeReportType(value: unknown): ReportType {
     return 'crowd'
   }
 
-  if (value === 'accident' || value === '사고·위험' || value === '사고위험') {
+  if (value === 'accident' || value === '사고·위험') {
     return 'accident'
   }
 
-  if (value === 'flood_weather' || value === '침수·기상' || value === '침수기상') {
+  if (value === 'flood_weather' || value === 'weather' || value === '침수·기상') {
     return 'flood_weather'
   }
 
-  if (value === 'facility_road' || value === '시설물·도로' || value === '시설물도로') {
+  if (value === 'facility_road' || value === 'facility' || value === '시설물·도로') {
     return 'facility_road'
   }
 
@@ -127,7 +128,7 @@ function normalizeCongestionLevel(value: unknown): CongestionLevel {
     return 'crowded'
   }
 
-  if (value === 'smooth' || value === '원활') {
+  if (value === 'smooth' || value === '여유') {
     return 'smooth'
   }
 
@@ -205,15 +206,18 @@ export function mapLiveReport(raw: unknown): LiveReportSummary {
     type: normalizeReportType(item.type ?? item.category),
     locationName: asString(item.locationName ?? item.placeName),
     address: asString(item.address),
+    latitude: asOptionalNumber(item.latitude ?? item.lat),
+    longitude: asOptionalNumber(item.longitude ?? item.lng),
     reportedAt: asString(item.reportedAt ?? item.createdAt ?? item.createdDate),
+    relativeTime: asString(item.relativeTime),
     riskLevel: normalizeRiskLevel(item.riskLevel ?? item.risk ?? item.riskScore),
     description: asString(item.description ?? item.summary),
-    maskedThumbnailUrl: asString(
-      item.maskedThumbnailUrl ?? item.thumbnailUrl ?? item.maskedImageUrl,
-      '',
-    ) || null,
+    maskedThumbnailUrl:
+      asString(item.maskedThumbnailUrl ?? item.thumbnailUrl ?? item.maskedImageUrl, '') || null,
     isWebRtc: asBoolean(item.isWebRtc ?? item.webRtc ?? item.webrtc),
     isLive: asBoolean(item.isLive ?? item.live),
+    viewerCount: asOptionalNumber(item.viewerCount ?? item.participantCount),
+    thumbnailType: asString(item.thumbnailType),
   }
 }
 
@@ -272,8 +276,7 @@ export function mapAreaStatus(raw: unknown): AreaStatus {
     weather: item.weather
       ? {
           condition: asString(weather.condition),
-          temperature:
-            typeof weather.temperature === 'number' ? weather.temperature : undefined,
+          temperature: asOptionalNumber(weather.temperature),
         }
       : undefined,
     updatedAt: asString(item.updatedAt ?? item.analyzedAt),
@@ -296,8 +299,7 @@ export function mapReportAnalysis(raw: unknown): ReportAnalysis {
     reportId: asString(item.reportId),
     status: normalizeAnalysisStatus(item.status),
     congestionLevel: item.congestionLevel ? normalizeRiskLevel(item.congestionLevel) : undefined,
-    estimatedPeopleCount:
-      typeof item.estimatedPeopleCount === 'number' ? item.estimatedPeopleCount : undefined,
+    estimatedPeopleCount: asOptionalNumber(item.estimatedPeopleCount),
     aiSummary: asString(item.aiSummary ?? item.summary),
     analyzedAt: asString(item.analyzedAt),
     errorMessage: asString(item.errorMessage),
@@ -351,12 +353,31 @@ export async function getArea(areaId: string): Promise<AreaDetail> {
   return mapAreaDetail(response.data)
 }
 
-export async function getAreaMap(areaId: string): Promise<AreaMapData> {
+export async function getAreaByQuery(keyword: string): Promise<AreaDetail | null> {
   if (USE_MOCK_API) {
-    return waitForMock(getMockAreaMap(areaId))
+    return waitForMock(getMockAreaByQuery(keyword))
   }
 
-  const response = await apiClient.get<unknown>(`/areas/${areaId}/map`)
+  const locations = await searchLocations(keyword)
+  const location = locations[0]
+
+  return location
+    ? {
+        id: location.id,
+        name: location.name,
+        address: location.address,
+        latitude: location.latitude ?? 0,
+        longitude: location.longitude ?? 0,
+      }
+    : null
+}
+
+export async function getAreaMap(areaIdOrQuery: string): Promise<AreaMapData> {
+  if (USE_MOCK_API) {
+    return waitForMock(getMockAreaMap(areaIdOrQuery))
+  }
+
+  const response = await apiClient.get<unknown>(`/areas/${areaIdOrQuery}/map`)
 
   return mapAreaMapData(response.data)
 }
@@ -372,14 +393,14 @@ export async function getAreaStatus(areaId: string): Promise<AreaStatus> {
 }
 
 export async function getAreaLiveReports(
-  areaId: string,
+  areaIdOrQuery: string,
   params: ReportListParams,
 ): Promise<LiveReportSummary[]> {
   if (USE_MOCK_API) {
-    return waitForMock(filterAndSortMockAreaReports(areaId, params.types, params.sort))
+    return waitForMock(filterAndSortMockAreaReports(areaIdOrQuery, params.types, params.sort))
   }
 
-  const response = await apiClient.get<unknown>(`/areas/${areaId}/reports/live`, {
+  const response = await apiClient.get<unknown>(`/areas/${areaIdOrQuery}/reports/live`, {
     params: createLiveReportParams(params),
   })
 

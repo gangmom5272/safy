@@ -18,6 +18,7 @@ type LiveReportSectionProps = {
   error: unknown
   listRef: RefObject<HTMLDivElement | null>
   onRetry: () => void
+  emptyMessage?: string
 }
 
 export function LiveReportSection({
@@ -28,6 +29,7 @@ export function LiveReportSection({
   error,
   listRef,
   onRetry,
+  emptyMessage = '조건에 맞는 실시간 제보가 없습니다.',
 }: LiveReportSectionProps) {
   const navigate = useNavigate()
 
@@ -61,7 +63,7 @@ export function LiveReportSection({
           />
         ) : null}
         {!isLoading && !error && reports.length === 0 ? (
-          <EmptyState message="조건에 맞는 실시간 제보가 없습니다." />
+          <EmptyState message={emptyMessage} />
         ) : null}
         {!isLoading && !error && reports.length > 0 ? (
           <div className="report-card-list">
