@@ -11,10 +11,12 @@ export async function getFavorites() { return unwrap((await apiClient.get<Favori
 export async function createFavorite(data: Omit<FavoriteLocation, 'id' | 'areaId' | 'riskLevel' | 'isPrimary'>) { return (await apiClient.post<FavoriteLocation>('/api/users/me/favorite-locations', data)).data }
 export async function patchFavorite(id: number, data: Partial<FavoriteLocation>) { return (await apiClient.patch<FavoriteLocation>(`/api/users/me/favorite-locations/${id}`, data)).data }
 export async function removeFavorite(id: number) { await apiClient.delete(`/api/users/me/favorite-locations/${id}`) }
-export async function logout() { await apiClient.post('/api/auth/logout') }
+export async function logout() { await apiClient.post('/api/v1/auth/logout') }
 export async function getFaqs(category?: string) { return unwrap((await apiClient.get<Faq[] | { data: Faq[] }>('/api/faqs', { params: category ? { category } : {} })).data) }
 export async function getNotices() { const data = (await apiClient.get<Notice[] | { content: Notice[] }>('/api/notices', { params: { page: 0, size: 30 } })).data; return Array.isArray(data) ? data : data.content }
+export async function getNotice(id: number) { return unwrap((await apiClient.get<Notice | { data: Notice }>(`/api/notices/${id}`)).data) }
 export async function getInquiries() { const data = (await apiClient.get<Inquiry[] | { content: Inquiry[] }>('/api/users/me/inquiries', { params: { page: 0, size: 30 } })).data; return Array.isArray(data) ? data : data.content }
 export async function createInquiry(data: Pick<Inquiry, 'type' | 'title' | 'content' | 'attachmentName'>) { return (await apiClient.post<Inquiry>('/api/inquiries', data)).data }
+export async function getInquiry(id: number) { return unwrap((await apiClient.get<Inquiry | { data: Inquiry }>(`/api/users/me/inquiries/${id}`)).data) }
 export async function getNotificationSettings() { return (await apiClient.get<NotificationSettingsData>('/api/users/me/notification-settings')).data }
 export async function updateNotificationSettings(settings: NotificationSettingsData) { return (await apiClient.patch<NotificationSettingsData>('/api/users/me/notification-settings', settings)).data }
