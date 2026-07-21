@@ -16,15 +16,36 @@ export function SituationsPage() {
     <div className="situation-page">
       <SituationHeader />
 
-      <LocationSearchBar
-        keyword={situation.searchKeyword}
-        suggestions={situation.searchSuggestions}
-        isLoading={situation.isSearchLoading}
-        error={situation.searchError}
-        onKeywordChange={situation.setSearchKeyword}
-        onSelect={situation.selectArea}
-        onFilterOpen={() => situation.setIsFilterOpen(true)}
-      />
+      <div className="situation-toolbar">
+        <LocationSearchBar
+          keyword={situation.searchKeyword}
+          suggestions={situation.searchSuggestions}
+          isLoading={situation.isSearchLoading}
+          error={situation.searchError}
+          onKeywordChange={situation.setSearchKeyword}
+          onSelect={situation.selectArea}
+        />
+        <button
+          className="filter-icon-button"
+          type="button"
+          aria-label="필터 열기"
+          onClick={() => situation.setIsFilterOpen(true)}
+        >
+          <svg
+            className="filter-funnel-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 5h16l-6.5 7.4V19l-3 1v-7.6L4 5Z" />
+          </svg>
+        </button>
+        <ReportSortSelect value={situation.sort} onChange={situation.setSort} />
+      </div>
 
       {situation.selectedArea ? (
         <>
@@ -42,17 +63,6 @@ export function SituationsPage() {
           />
         </>
       ) : null}
-
-      <div className="report-toolbar">
-        <button
-          className="report-filter-button"
-          type="button"
-          onClick={() => situation.setIsFilterOpen(true)}
-        >
-          필터 {situation.selectedTypes.length ? `${situation.selectedTypes.length}` : ''}
-        </button>
-        <ReportSortSelect value={situation.sort} onChange={situation.setSort} />
-      </div>
 
       <LiveReportSection
         reports={situation.reports}

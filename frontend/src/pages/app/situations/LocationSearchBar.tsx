@@ -8,7 +8,6 @@ type LocationSearchBarProps = {
   error: unknown
   onKeywordChange: (keyword: string) => void
   onSelect: (location: LocationSearchResult) => void
-  onFilterOpen: () => void
 }
 
 export function LocationSearchBar({
@@ -18,7 +17,6 @@ export function LocationSearchBar({
   error,
   onKeywordChange,
   onSelect,
-  onFilterOpen,
 }: LocationSearchBarProps) {
   const [activeIndex, setActiveIndex] = useState(-1)
   const [isListOpen, setIsListOpen] = useState(false)
@@ -71,47 +69,37 @@ export function LocationSearchBar({
 
   return (
     <div className="location-search-area">
-      <div className="location-search-row">
-        <label className="location-search-field">
-          <span className="search-icon" aria-hidden="true" />
-          <span className="sr-only">지역명, 장소명 검색</span>
-          <input
-            ref={inputRef}
-            type="search"
-            value={keyword}
-            placeholder="지역명, 장소명 검색"
-            aria-label="지역명, 장소명 검색"
-            aria-autocomplete="list"
-            aria-controls={listId}
-            aria-activedescendant={activeDescendant}
-            onChange={(event) => {
-              setActiveIndex(-1)
-              setIsListOpen(true)
-              onKeywordChange(event.target.value)
-            }}
-            onFocus={() => setIsListOpen(true)}
-            onKeyDown={handleKeyDown}
-          />
-          {hasKeyword ? (
-            <button
-              className="search-clear-button"
-              type="button"
-              aria-label="검색어 지우기"
-              onClick={() => onKeywordChange('')}
-            >
-              지우기
-            </button>
-          ) : null}
-        </label>
-        <button
-          className="filter-icon-button"
-          type="button"
-          aria-label="실시간 제보 필터 열기"
-          onClick={onFilterOpen}
-        >
-          필터
-        </button>
-      </div>
+      <label className="location-search-field">
+        <span className="search-icon" aria-hidden="true" />
+        <span className="sr-only">지역명, 장소명 검색</span>
+        <input
+          ref={inputRef}
+          type="search"
+          value={keyword}
+          placeholder="지역명, 장소명 검색"
+          aria-label="지역명, 장소명 검색"
+          aria-autocomplete="list"
+          aria-controls={listId}
+          aria-activedescendant={activeDescendant}
+          onChange={(event) => {
+            setActiveIndex(-1)
+            setIsListOpen(true)
+            onKeywordChange(event.target.value)
+          }}
+          onFocus={() => setIsListOpen(true)}
+          onKeyDown={handleKeyDown}
+        />
+        {hasKeyword ? (
+          <button
+            className="search-clear-button"
+            type="button"
+            aria-label="검색어 지우기"
+            onClick={() => onKeywordChange('')}
+          >
+            지우기
+          </button>
+        ) : null}
+      </label>
 
       {showSuggestions ? (
         <LocationSuggestionList
