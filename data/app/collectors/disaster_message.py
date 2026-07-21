@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Any
-
+from pydantic import ValidationError
 import httpx2
 
 from app.schemas.disaster_message import DisasterMessageRaw
@@ -47,15 +47,28 @@ class DisasterMessageCollector:
         if region:
             params["rgnNm"] = region
 
-        with httpx2.Client(
-            timeout=self._timeout_seconds,
-        ) as client:
-            response = client.get(
-                self._base_url,
-                params=params,
-            )
-            response.raise_for_status()
-            payload: dict[str, Any] = response.json()
+        try:
+            with httpx2.Client(
+                timeout=self._timeout_seconds,
+            ) as client:
+                response = client.get(
+                    self._base_url,
+                    params=params,
+                )
+                response.raise_for_status()
+                payload: dict[str, Any] = response.json()
+        except httpx2.TimeoutException as exc:
+            raise DisasterMessageAPIError(
+                "재난문자 API 요청 시간이 초과되었습니다."
+            ) from exc
+        except httpx2.HTTPError as exc:
+                raise DisasterMessageAPIError(
+                    "재난문자 API 통신에 실패했습니다."
+            ) from exc
+        except ValueError as exc:
+                raise DisasterMessageAPIError(
+                    "재난문자 API 응답을 JSON으로 해석할 수 없습니다."
+            ) from exc
 
         header = payload.get("header") or {}
         result_code = header.get("resultCode")
@@ -78,7 +91,12 @@ class DisasterMessageCollector:
                 "재난문자 API body가 목록이 아닙니다."
             )
 
-        return [
-            DisasterMessageRaw.model_validate(item)
-            for item in body
-        ]
+        try:
+            return [
+                DisasterMessageRaw.model_validate(item)
+                for item in body
+            ]
+        except ValidationError as exc:
+            raise DisasterMessageAPIError(
+                "재난문자 API 데이터 형식이 올바르지 않습니다."
+            ) from exc
