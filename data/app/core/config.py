@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     app_env: str = "local"
     disaster_api_base_url: str = ""
     disaster_api_key: str = ""
+    seoul_citydata_base_url: str = ""
+    seoul_citydata_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
