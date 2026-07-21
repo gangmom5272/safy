@@ -1,0 +1,91 @@
+.home-title .map-title-actions .text-button {
+  width: auto;
+  white-space: nowrap;
+}
+
+.text-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.status-summary-card .updated {
+  flex: none;
+  color: #65758b;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.status-summary-card .summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding-top: 2px;
+  border-top: 1px solid #e5edf1;
+}
+
+.status-summary-card .summary {
+  position: relative;
+  place-items: center;
+  gap: 5px;
+  padding: 18px 8px 4px;
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.status-summary-card .summary + .summary {
+  border-left: 1px solid #e5edf1;
+}
+
+.status-summary-card .summary-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #b54708;
+  background: #ffeed8;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.status-summary-card .summary strong {
+  color: #102033;
+  font-size: 17px;
+}
+
+.status-summary-card .summary small {
+  min-height: 32px;
+  color: #65758b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.status-summary-card .congestion-relaxed {
+  color: #175cd3;
+  background: #e6f0ff;
+}
+
+.status-summary-card .congestion-normal {
+  color: #047857;
+  background: #dcfce7;
+}
+
+.status-summary-card .congestion-crowded {
+  color: #9a6700;
+  background: #fef0c7;
+}
+
+.status-summary-card .congestion-very_crowded {
+  color: #b42318;
+  background: #fee4e2;
+}
+
+@media (max-width: 380px) {
+  .status-summary-card .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .status-summary-card .summary {
+    padding-inline: 4px;
+  }
+}
