@@ -35,6 +35,12 @@ class SeoulEventRaw(BaseModel):
     )
 
 
+class SeoulEventBatchRaw(BaseModel):
+    area_name: str
+    area_code: str
+    events: list[SeoulEventRaw]
+
+
 class SeoulEvent(BaseModel):
     area_name: str
     area_code: str
