@@ -2,13 +2,13 @@
 
 ## Project Structure & Module Organization
 
-This repository is organized as a multi-part application. The active client lives in `frontend/` and uses React, TypeScript, and Vite. Application code is under `frontend/src/`; place reusable images and imported assets in `frontend/src/assets/`, and files that must be served unchanged in `frontend/public/`. Vite writes production output to `frontend/dist/`, which should not be committed.
+This repository is organized as a multi-part application. There are two separate React/TypeScript/Vite clients: `frontend-user/` (the citizen-facing app) and `frontend-admin/` (the admin console). Each is an independent Vite project with its own `package.json`; there is no shared workspace tooling between them. Application code for each lives under `<project>/src/`; place reusable images and imported assets in `<project>/src/assets/`, and files that must be served unchanged in `<project>/public/`. Vite writes production output to `<project>/dist/`, which should not be committed. Common code is intentionally duplicated between the two projects for now — do not introduce a shared package until real duplication becomes a problem.
 
 The root-level `backend/`, `infra/`, and `docs/` directories are reserved for the Spring Boot service, Docker/Nginx/OpenVidu configuration, and project documentation respectively. Keep changes within the relevant area and document new top-level components in `README.md`.
 
 ## Build, Test, and Development Commands
 
-Run frontend commands from `frontend/`:
+Run frontend commands from `frontend-user/` or `frontend-admin/` (each project is independent, so run these separately in each):
 
 - `npm ci` installs the exact dependency versions from `package-lock.json`.
 - `npm run dev` starts the Vite development server with hot reload.
@@ -59,13 +59,19 @@ new libraries or architectural patterns.
 ## Frontend Architecture
 
 Before creating new structures, inspect the existing organization under
-`frontend/src/`.
+`frontend-user/src/` (or `frontend-admin/src/` when working on the admin
+console).
 
-Use the agreed project structure for pages, components, API clients,
-stores, routing, providers, assets, and styles. Do not create competing
-folder structures for the same responsibility.
+Use the agreed project structure: features are colocated (a page's API
+client, types, and utils live next to it, e.g.
+`pages/app/situations/situationApi.ts`), not split into global
+`api/`/`hooks/`/`stores/`/`types/`/`utils/` trees. Do not create competing
+folder structures for the same responsibility, and do not add a shared
+package between `frontend-user` and `frontend-admin` without discussing
+it first.
 
-When modifying frontend code, run the following from `frontend/`:
+When modifying frontend code, run the following from the project you
+changed (`frontend-user/` or `frontend-admin/`):
 
 - `npm run lint`
 - `npm run build`
