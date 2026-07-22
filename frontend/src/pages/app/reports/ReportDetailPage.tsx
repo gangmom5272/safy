@@ -6,13 +6,10 @@ import {
   analysisStatusLabels,
   reportTypeLabels,
   riskLevelLabels,
-  webRtcStatusLabels,
   type ReportAnalysis,
   type ReportDetail,
-  type ReportWebRtcInfo,
 } from '../situations/types'
 import { useReportDetail } from '../situations/useReportDetail'
-import { useReportStatusSocket } from '../situations/useReportStatusSocket'
 import '../situations/SituationsPage.css'
 
 export function ReportDetailPage() {
@@ -29,17 +26,7 @@ export function ReportDetailPage() {
     isAnalysisLoading,
     analysisError,
     retryAnalysis,
-    webRtcInfo,
-    isWebRtcLoading,
-    webRtcError,
-    retryWebRtc,
   } = useReportDetail(reportId)
-
-  const socket = useReportStatusSocket({
-    reportId,
-    socketUrl: webRtcInfo?.statusSocketUrl,
-    enabled: Boolean(webRtcInfo?.statusSocketUrl),
-  })
 
   const shareReport = async () => {
     if (!report) {
@@ -123,16 +110,6 @@ export function ReportDetailPage() {
             error={analysisError}
             onRetry={() => void retryAnalysis()}
           />
-          <ReportWebRtcPanel
-            info={webRtcInfo}
-            socketState={socket.connectionState}
-            socketStatus={socket.latestStatus}
-            socketMessage={socket.message}
-            isLoading={isWebRtcLoading}
-            error={webRtcError}
-            onRetryInfo={() => void retryWebRtc()}
-            onReconnectSocket={socket.reconnect}
-          />
           <ReportLocationMap report={report} />
         </>
       ) : null}
@@ -191,7 +168,6 @@ function ReportDetailSummary({ report, imageFailed, onImageError }: ReportDetail
             <span>MASKED</span>
           </div>
         )}
-        {report.isLive ? <span className="live-badge">LIVE</span> : null}
       </div>
       <div className="report-detail-body">
         <div className="report-card-badges">
@@ -290,73 +266,6 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
       {analysis.status === 'processing' ? <p className="muted-text">분석이 진행 중입니다.</p> : null}
       {analysis.status === 'failed' ? (
         <p className="muted-text">{analysis.errorMessage || '분석에 실패했습니다.'}</p>
-      ) : null}
-    </section>
-  )
-}
-
-type ReportWebRtcPanelProps = {
-  info: ReportWebRtcInfo | undefined
-  socketState: string
-  socketStatus: ReportWebRtcInfo['status'] | undefined
-  socketMessage: string
-  isLoading: boolean
-  error: unknown
-  onRetryInfo: () => void
-  onReconnectSocket: () => void
-}
-
-function ReportWebRtcPanel({
-  info,
-  socketState,
-  socketStatus,
-  socketMessage,
-  isLoading,
-  error,
-  onRetryInfo,
-  onReconnectSocket,
-}: ReportWebRtcPanelProps) {
-  if (isLoading && !info) {
-    return <LoadingSkeleton />
-  }
-
-  if (error && !info) {
-    return (
-      <ErrorState
-        message="WebRTC 연결 정보를 불러오지 못했습니다."
-        actionLabel="다시 시도"
-        onAction={onRetryInfo}
-      />
-    )
-  }
-
-  const currentStatus = socketStatus ?? info?.status ?? 'none'
-
-  return (
-    <section className="report-detail-card" aria-labelledby="webrtc-title">
-      <h2 id="webrtc-title">실시간 연결 상태</h2>
-      <dl className="report-detail-list">
-        <div>
-          <dt>WebRTC 상태</dt>
-          <dd>{webRtcStatusLabels[currentStatus]}</dd>
-        </div>
-        <div>
-          <dt>WebSocket 상태</dt>
-          <dd>{info?.statusSocketUrl ? socketState : '연결 정보 없음'}</dd>
-        </div>
-        <div>
-          <dt>방 ID</dt>
-          <dd>{info?.roomId || '정보 없음'}</dd>
-        </div>
-      </dl>
-      <p className="muted-text">
-        실제 실시간 영상 대신 마스킹된 대표 이미지를 표시합니다.
-      </p>
-      {socketMessage ? <p className="muted-text">{socketMessage}</p> : null}
-      {currentStatus === 'failed' || socketState === 'failed' || socketState === 'closed' ? (
-        <button className="inline-action-button" type="button" onClick={onReconnectSocket}>
-          재연결
-        </button>
       ) : null}
     </section>
   )

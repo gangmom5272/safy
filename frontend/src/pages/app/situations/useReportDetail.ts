@@ -3,7 +3,6 @@ import { queryKeys } from '../../../api/queryKeys'
 import {
   getReportAnalysis,
   getReportDetail,
-  getReportWebRtcInfo,
 } from './situationApi'
 
 export function useReportDetail(reportId?: string) {
@@ -21,12 +20,6 @@ export function useReportDetail(reportId?: string) {
     enabled,
   })
 
-  const webRtcQuery = useQuery({
-    queryKey: queryKeys.reports.webrtc(reportId ?? ''),
-    queryFn: () => getReportWebRtcInfo(reportId!),
-    enabled,
-  })
-
   return {
     report: detailQuery.data,
     isReportLoading: detailQuery.isFetching,
@@ -36,9 +29,5 @@ export function useReportDetail(reportId?: string) {
     isAnalysisLoading: analysisQuery.isFetching,
     analysisError: analysisQuery.error,
     retryAnalysis: analysisQuery.refetch,
-    webRtcInfo: webRtcQuery.data,
-    isWebRtcLoading: webRtcQuery.isFetching,
-    webRtcError: webRtcQuery.error,
-    retryWebRtc: webRtcQuery.refetch,
   }
 }

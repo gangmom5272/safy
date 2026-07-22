@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ErrorState, LoadingSkeleton } from './SituationStates'
 import { congestionLevelLabels, riskLevelLabels, type AreaStatus } from './types'
 
@@ -5,10 +6,31 @@ type AreaStatusSummaryProps = {
   status?: AreaStatus
   isLoading: boolean
   error: unknown
-  onRefresh: () => void
+  onRefresh: () => Promise<unknown> | void
 }
 
 export function AreaStatusSummary({ status, isLoading, error, onRefresh }: AreaStatusSummaryProps) {
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [refreshedAt, setRefreshedAt] = useState<string | null>(null)
+
+  const refreshStatus = async () => {
+    if (isRefreshing) {
+      return
+    }
+
+    setIsRefreshing(true)
+
+    try {
+      await onRefresh()
+      setRefreshedAt(new Date().toISOString())
+    } catch (error) {
+      console.error('Area status refresh failed', error)
+      setRefreshedAt(new Date().toISOString())
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   if (isLoading && !status) {
     return <LoadingSkeleton />
   }
@@ -18,7 +40,7 @@ export function AreaStatusSummary({ status, isLoading, error, onRefresh }: AreaS
       <ErrorState
         message="지역 상황 요약을 불러오지 못했습니다."
         actionLabel="새로고침"
-        onAction={onRefresh}
+        onAction={() => void refreshStatus()}
       />
     )
   }
@@ -27,15 +49,26 @@ export function AreaStatusSummary({ status, isLoading, error, onRefresh }: AreaS
     return null
   }
 
+  const displayUpdatedAt = refreshedAt ?? status.updatedAt
+
   return (
     <section className="area-status-summary" aria-labelledby="area-status-title">
       <div className="section-title-row compact">
         <div>
           <h2 id="area-status-title">상황 요약</h2>
-          <p>마지막 갱신 {formatDateTime(status.updatedAt)}</p>
+          <p>마지막 갱신 {formatDateTime(displayUpdatedAt)}</p>
         </div>
-        <button type="button" onClick={onRefresh} disabled={isLoading}>
-          새로고침
+        <button
+          className="refresh-icon-button"
+          type="button"
+          aria-label="새로고침"
+          title="새로고침"
+          onClick={() => void refreshStatus()}
+          disabled={isLoading || isRefreshing}
+        >
+          <span className={isRefreshing ? 'refresh-icon spinning' : 'refresh-icon'} aria-hidden="true">
+            ↻
+          </span>
         </button>
       </div>
       <div className="status-grid">

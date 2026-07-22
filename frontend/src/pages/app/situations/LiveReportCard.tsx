@@ -73,7 +73,6 @@ export function LiveReportCard({ report }: LiveReportCardProps) {
           </div>
         )}
         {report.isWebRtc ? <span className="webrtc-tag">WebRTC 제보</span> : null}
-        {report.isLive ? <span className="rec-badge">REC</span> : null}
       </div>
 
       <div className="report-card-content">
@@ -81,7 +80,6 @@ export function LiveReportCard({ report }: LiveReportCardProps) {
           <span className={`risk-badge risk-${report.riskLevel}`}>
             {riskLevelLabels[report.riskLevel]}
           </span>
-          {report.isLive ? <span className="live-badge">LIVE</span> : null}
         </div>
 
         <p className="report-category">{reportTypeLabels[report.type]}</p>
@@ -94,9 +92,6 @@ export function LiveReportCard({ report }: LiveReportCardProps) {
           <button type="button" aria-label={`${report.title} 공유하기`} onClick={shareReport}>
             공유
           </button>
-          <span aria-hidden="true">
-            {report.viewerCount ? `${report.viewerCount.toLocaleString()}명 시청` : '상세보기'}
-          </span>
         </div>
         {shareMessage ? <p className="share-feedback">{shareMessage}</p> : null}
       </div>

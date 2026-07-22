@@ -56,13 +56,14 @@ export function SituationsPage() {
             mapData={situation.mapData}
             isLoading={situation.isMapLoading}
             error={situation.mapError}
-          />
-          <AreaStatusSummary
-            status={situation.areaStatus}
-            isLoading={situation.isAreaStatusLoading}
-            error={situation.areaStatusError}
-            onRefresh={situation.refreshAreaStatus}
-          />
+          >
+            <AreaStatusSummary
+              status={situation.areaStatus}
+              isLoading={situation.isAreaStatusLoading}
+              error={situation.areaStatusError}
+              onRefresh={situation.refreshAreaStatus}
+            />
+          </AreaMap>
         </>
       ) : null}
 

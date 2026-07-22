@@ -175,15 +175,6 @@ export const analysisStatusLabels: Record<AnalysisStatus, string> = {
   failed: '분석 실패',
 }
 
-export const webRtcStatusLabels: Record<WebRtcStatus, string> = {
-  none: '연결 정보 없음',
-  waiting: '연결 대기 중',
-  connecting: '연결 중',
-  connected: '연결됨',
-  ended: '연결 종료',
-  failed: '연결 실패',
-}
-
 export const reportTypes: ReportType[] = [
   'crowd',
   'accident',

@@ -57,10 +57,14 @@ export function LocationSearchBar({
     }
 
     if (event.key === 'Enter') {
+      if (event.nativeEvent.isComposing) {
+        return
+      }
+
       event.preventDefault()
       if (showSuggestions && activeIndex >= 0 && suggestions[activeIndex]) {
         selectSuggestion(suggestions[activeIndex])
-      } else {
+      } else if (keyword.trim()) {
         setIsListOpen(false)
         onSubmit()
       }
@@ -85,7 +89,7 @@ export function LocationSearchBar({
         <span className="sr-only">지역명, 장소명 검색</span>
         <input
           ref={inputRef}
-          type="search"
+          type="text"
           value={keyword}
           placeholder="지역명, 장소명 검색"
           aria-label="지역명, 장소명 검색"
@@ -111,10 +115,6 @@ export function LocationSearchBar({
           </button>
         ) : null}
       </label>
-      <button className="search-submit-button" type="button" onClick={onSubmit}>
-        검색
-      </button>
-
       {showSuggestions ? (
         <LocationSuggestionList
           id={listId}

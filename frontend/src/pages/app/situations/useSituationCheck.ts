@@ -120,8 +120,11 @@ export function useSituationCheck() {
     navigate('/app/situations', { replace: false })
   }
 
-  const refreshAreaStatus = () => {
-    void areaStatusQuery.refetch()
+  const refreshAreaStatus = async () => {
+    await Promise.allSettled([
+      areaStatusQuery.refetch(),
+      areaMapQuery.refetch(),
+    ])
   }
 
   const searchSuggestions = useMemo(() => {
