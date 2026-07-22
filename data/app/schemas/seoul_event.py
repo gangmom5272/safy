@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -46,6 +47,8 @@ class SeoulEvent(BaseModel):
     area_code: str
     name: str
     period: str
+    start_date: date | None
+    end_date: date | None
     place: str
     longitude: float | None
     latitude: float | None
