@@ -29,6 +29,7 @@ public class MediaAsset extends BaseEntity {
 	private Long id;
 
 	@Version
+	@Column(nullable = false)
 	private long version;
 
 	@Column(name = "owner_user_id", nullable = false)
@@ -61,7 +62,7 @@ public class MediaAsset extends BaseEntity {
 	@Column(name = "storage_status", nullable = false, length = 30)
 	private MediaStorageStatus storageStatus;
 
-	@Column(name = "upload_expires_at")
+	@Column(name = "upload_expires_at", nullable = false, columnDefinition = "timestamp(6) with time zone")
 	private Instant uploadExpiresAt;
 
 	protected MediaAsset() {

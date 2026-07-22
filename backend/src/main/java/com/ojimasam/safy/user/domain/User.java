@@ -1,6 +1,6 @@
 package com.ojimasam.safy.user.domain;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import com.ojimasam.safy.common.persistence.BaseEntity;
 
@@ -29,16 +29,18 @@ public class User extends BaseEntity {
 	private UserRole role;
 
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 100)
+	@Column(nullable = false, length = 30)
 	private UserStatus status;
 
 	@Column(nullable = false)
 	private long tokenVersion;
 
 	@Version
+	@Column(nullable = false)
 	private long version;
 
-	private LocalDateTime withdrawnAt;
+	@Column(columnDefinition = "timestamp(6) with time zone")
+	private Instant withdrawnAt;
 
 	protected User() {
 	}
@@ -67,7 +69,7 @@ public class User extends BaseEntity {
 	public void changeStatus(UserStatus status) {
 		this.status = status;
 		if (status == UserStatus.WITHDRAWN) {
-			this.withdrawnAt = LocalDateTime.now();
+			this.withdrawnAt = Instant.now();
 		}
 	}
 
@@ -84,5 +86,5 @@ public class User extends BaseEntity {
 	public UserRole getRole() { return role; }
 	public UserStatus getStatus() { return status; }
 	public long getTokenVersion() { return tokenVersion; }
-	public LocalDateTime getWithdrawnAt() { return withdrawnAt; }
+	public Instant getWithdrawnAt() { return withdrawnAt; }
 }

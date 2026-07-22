@@ -14,11 +14,11 @@ import jakarta.persistence.MappedSuperclass;
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
 	@CreatedDate
-	@Column(nullable = false, updatable = false)
+	@Column(nullable = false, updatable = false, columnDefinition = "timestamp(6) with time zone")
 	private Instant createdAt;
 
 	@LastModifiedDate
-	@Column(nullable = false)
+	@Column(nullable = false, columnDefinition = "timestamp(6) with time zone")
 	private Instant updatedAt;
 
 	public Instant getCreatedAt() {

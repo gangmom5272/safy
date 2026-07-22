@@ -44,7 +44,7 @@ public class Report extends BaseEntity {
 	@Column(nullable = false, length = 20)
 	private ReportStatus status;
 
-	@Column(name = "reported_at", nullable = false)
+	@Column(name = "reported_at", nullable = false, columnDefinition = "timestamp(6) with time zone")
 	private Instant reportedAt;
 
 	protected Report() {
