@@ -17,6 +17,12 @@ class FakeModel:
                     [0.75, 0.50, 0.10, 0.20],
                 ]
             ),
+            xyxyn=torch.tensor(
+                [
+                    [0.20, 0.40, 0.30, 0.60],
+                    [0.70, 0.40, 0.80, 0.60],
+                ]
+            ),
         )
         return [SimpleNamespace(boxes=boxes)]
 
@@ -29,7 +35,9 @@ def encode_test_image() -> bytes:
     return encoded_image.tobytes()
 
 
-def test_detect_people_returns_normalized_centers(monkeypatch) -> None:
+def test_detect_people_returns_normalized_geometry(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(
         person_detector,
         "get_model",
@@ -47,4 +55,8 @@ def test_detect_people_returns_normalized_centers(monkeypatch) -> None:
     assert result.person_centers == [
         (0.25, 0.5),
         (0.75, 0.5),
+    ]
+    assert result.person_boxes == [
+        (0.2, 0.4, 0.3, 0.6),
+        (0.7, 0.4, 0.8, 0.6),
     ]

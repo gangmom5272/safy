@@ -13,17 +13,42 @@ class CongestionResult:
     local_peak_congestion_score: float
 
 
-def calculate_congestion(
+@dataclass(frozen=True)
+class CongestionGrid:
+    cell_counts: list[list[int]]
+    cell_scores: list[list[float]]
+    peak_window_row: int
+    peak_window_column: int
+    peak_window_score: float
+
+
+def build_congestion_grid(
     person_centers: list[tuple[float, float]],
-) -> CongestionResult:
+) -> CongestionGrid:
     cell_counts = [
         [0 for _ in range(GRID_SIZE)]
         for _ in range(GRID_SIZE)
     ]
 
     for center_x, center_y in person_centers:
-        column = min(int(center_x * GRID_SIZE), GRID_SIZE - 1)
-        row = min(int(center_y * GRID_SIZE), GRID_SIZE - 1)
+        bounded_center_x = min(
+            max(center_x, 0.0),
+            1.0,
+        )
+        bounded_center_y = min(
+            max(center_y, 0.0),
+            1.0,
+        )
+
+        column = min(
+            int(bounded_center_x * GRID_SIZE),
+            GRID_SIZE - 1,
+        )
+        row = min(
+            int(bounded_center_y * GRID_SIZE),
+            GRID_SIZE - 1,
+        )
+
         cell_counts[row][column] += 1
 
     cell_scores = [
@@ -34,21 +59,39 @@ def calculate_congestion(
         for row in cell_counts
     ]
 
-    visual_congestion_score = sum(
-        sum(row) for row in cell_scores
-    ) / (GRID_SIZE * GRID_SIZE)
-
-    local_peak_congestion_score = max(
-        sum(
-            cell_scores[row + row_offset][column + column_offset]
-            for row_offset in range(LOCAL_WINDOW_SIZE)
-            for column_offset in range(LOCAL_WINDOW_SIZE)
-        ) / (LOCAL_WINDOW_SIZE * LOCAL_WINDOW_SIZE)
+    peak_window_score, peak_window_row, peak_window_column = max(
+        (
+            sum(
+                cell_scores[row + row_offset][column + column_offset]
+                for row_offset in range(LOCAL_WINDOW_SIZE)
+                for column_offset in range(LOCAL_WINDOW_SIZE)
+            ) / (LOCAL_WINDOW_SIZE * LOCAL_WINDOW_SIZE),
+            row,
+            column,
+        )
         for row in range(GRID_SIZE - LOCAL_WINDOW_SIZE + 1)
         for column in range(GRID_SIZE - LOCAL_WINDOW_SIZE + 1)
     )
 
+    return CongestionGrid(
+        cell_counts=cell_counts,
+        cell_scores=cell_scores,
+        peak_window_row=peak_window_row,
+        peak_window_column=peak_window_column,
+        peak_window_score=round(peak_window_score, 2),
+    )
+
+
+def calculate_congestion(
+    person_centers: list[tuple[float, float]],
+) -> CongestionResult:
+    grid = build_congestion_grid(person_centers)
+
+    visual_congestion_score = sum(
+        sum(row) for row in grid.cell_scores
+    ) / (GRID_SIZE * GRID_SIZE)
+
     return CongestionResult(
         visual_congestion_score=round(visual_congestion_score, 2),
-        local_peak_congestion_score=round(local_peak_congestion_score, 2),
+        local_peak_congestion_score=grid.peak_window_score,
     )

@@ -16,6 +16,11 @@ class PersonDetectionResult:
     person_centers: list[tuple[float, float]] = field(
         default_factory=list,
     )
+    person_boxes: list[
+        tuple[float, float, float, float]
+    ] = field(
+        default_factory=list,
+    )
 
 
 def detect_people(image_bytes: bytes) -> PersonDetectionResult:
@@ -35,13 +40,22 @@ def detect_people(image_bytes: bytes) -> PersonDetectionResult:
         verbose=False,
     )[0]
 
-    processing_time_ms = round((perf_counter() - started_at) * 1000)
+    processing_time_ms = round(
+        (perf_counter() - started_at) * 1000
+    )
 
     if result.boxes is None:
         confidences = []
         person_centers = []
+        person_boxes = []
     else:
-        confidences = result.boxes.conf.detach().cpu().tolist()
+        confidences = (
+            result.boxes.conf
+            .detach()
+            .cpu()
+            .tolist()
+        )
+
         normalized_centers = (
             result.boxes.xywhn[:, :2]
             .detach()
@@ -49,8 +63,27 @@ def detect_people(image_bytes: bytes) -> PersonDetectionResult:
             .tolist()
         )
         person_centers = [
-            (float(center_x), float(center_y))
+            (
+                float(center_x),
+                float(center_y),
+            )
             for center_x, center_y in normalized_centers
+        ]
+
+        normalized_boxes = (
+            result.boxes.xyxyn
+            .detach()
+            .cpu()
+            .tolist()
+        )
+        person_boxes = [
+            (
+                round(float(left), 6),
+                round(float(top), 6),
+                round(float(right), 6),
+                round(float(bottom), 6),
+            )
+            for left, top, right, bottom in normalized_boxes
         ]
 
     return PersonDetectionResult(
@@ -58,4 +91,5 @@ def detect_people(image_bytes: bytes) -> PersonDetectionResult:
         confidences=confidences,
         processing_time_ms=processing_time_ms,
         person_centers=person_centers,
+        person_boxes=person_boxes,
     )
