@@ -38,6 +38,29 @@ curl -X POST "http://127.0.0.1:8000/api/v1/analyze/frame" \
   -F "image=@runs/bus.jpg"
 ```
 
+## Render congestion debug image
+
+YOLO 사람 탐지 결과와 C·L 계산 근거를 디버그 이미지로 확인합니다.
+
+```bash
+python -m scripts.render_congestion_debug runs/bus.jpg \
+  --output runs/bus-congestion-debug.png
+```
+
+디버그 이미지에는 다음 정보가 표시됩니다.
+
+- 8×8 혼잡도 격자
+- YOLO 사람 바운딩 박스
+- 칸별 사람 수와 점수
+- L 계산에 선택된 최대 2×2 영역
+- 전체 사람 수와 C·L 요약
+
+원본 이미지와 디버그 결과는 `runs/`에 저장하며 Git에 포함하지 않습니다.
+
+자세한 검증 결과는
+[혼잡도 계산 및 디버그 시각화 검증](docs/congestion-validation.md)을 참고합니다.
+
+
 ## Test
 
 ```bash
@@ -47,9 +70,16 @@ python -m ruff check .
 
 ## Current scope
 
-- 이미지 파일 입력
+- 이미지 파일 입력 및 프레임 품질 검사
 - YOLO 사전학습 모델의 `person` 클래스 탐지
 - `personCount` 및 탐지별 confidence 반환
+- YOLO 바운딩 박스 중심점 기반 임시 C·L 계산
+- 전체 시각적 혼잡도 `visualCongestionScore` 반환
+- 국소 최대 혼잡도 `localPeakCongestionScore` 반환
+- `COMPLETED`, `INVALID_FRAME`, `FAILED` 분석 상태 처리
 - GPU 추론 처리시간 측정
 
-혼잡도, 위험도, 프레임 품질 검사와 개인정보 블러는 후속 구현 범위입니다.
+C·L 계산은 SAFY MVP를 위한 임시 규칙입니다. 계산식과 한계는
+[C·L 임시 혼잡도 계산 규칙](docs/congestion-scoring.md)을 참고합니다.
+
+혼잡 지속성 P, 혼잡 증가 추세 G, 최종 위험도 계산과 개인정보 블러는 후속 구현 범위입니다.

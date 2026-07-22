@@ -1,6 +1,6 @@
 package com.ojimasam.safy.common.persistence;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -14,18 +14,18 @@ import jakarta.persistence.MappedSuperclass;
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
 	@CreatedDate
-	@Column(nullable = false, updatable = false)
-	private LocalDateTime createdAt;
+	@Column(nullable = false, updatable = false, columnDefinition = "timestamp(6) with time zone")
+	private Instant createdAt;
 
 	@LastModifiedDate
-	@Column(nullable = false)
-	private LocalDateTime updatedAt;
+	@Column(nullable = false, columnDefinition = "timestamp(6) with time zone")
+	private Instant updatedAt;
 
-	public LocalDateTime getCreatedAt() {
+	public Instant getCreatedAt() {
 		return createdAt;
 	}
 
-	public LocalDateTime getUpdatedAt() {
+	public Instant getUpdatedAt() {
 		return updatedAt;
 	}
 }

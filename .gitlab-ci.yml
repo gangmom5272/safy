@@ -1,0 +1,71 @@
+stages:
+  - test
+
+variables:
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+
+frontend-user:
+  stage: test
+  image: node:22
+  rules:
+    - changes:
+        - frontend-user/**/*
+  cache:
+    key: frontend-user-npm
+    paths:
+      - frontend-user/node_modules
+  script:
+    - cd frontend-user
+    - npm ci
+    - npm run lint
+    - npm run build
+
+frontend-admin:
+  stage: test
+  image: node:22
+  rules:
+    - changes:
+        - frontend-admin/**/*
+  cache:
+    key: frontend-admin-npm
+    paths:
+      - frontend-admin/node_modules
+  script:
+    - cd frontend-admin
+    - npm ci
+    - npm run lint
+    - npm run build
+
+backend:
+  stage: test
+  image: eclipse-temurin:21-jdk
+  rules:
+    - changes:
+        - backend/**/*
+  cache:
+    key: backend-gradle
+    paths:
+      - .gradle
+  script:
+    - cd backend
+    - chmod +x gradlew
+    - ./gradlew test build --no-daemon
+
+ai:
+  stage: test
+  image: python:3.12-slim
+  rules:
+    - changes:
+        - ai/**/*
+  cache:
+    key: ai-pip
+    paths:
+      - .cache/pip
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  before_script:
+    - apt-get update -qq && apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+  script:
+    - cd ai
+    - pip install -r requirements-ci.txt
+    - pytest
