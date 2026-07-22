@@ -4,18 +4,34 @@ stages:
 variables:
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
 
-frontend:
+frontend-user:
   stage: test
   image: node:22
   rules:
     - changes:
-        - frontend/**/*
+        - frontend-user/**/*
   cache:
-    key: frontend-npm
+    key: frontend-user-npm
     paths:
-      - frontend/node_modules
+      - frontend-user/node_modules
   script:
-    - cd frontend
+    - cd frontend-user
+    - npm ci
+    - npm run lint
+    - npm run build
+
+frontend-admin:
+  stage: test
+  image: node:22
+  rules:
+    - changes:
+        - frontend-admin/**/*
+  cache:
+    key: frontend-admin-npm
+    paths:
+      - frontend-admin/node_modules
+  script:
+    - cd frontend-admin
     - npm ci
     - npm run lint
     - npm run build
