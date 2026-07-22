@@ -1,7 +1,6 @@
 package com.ojimasam.safy.admin.application;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.auth.domain.AdminCredential;
@@ -17,7 +16,7 @@ public record OperatorResponse(
 		@Schema(allowableValues = {"ACTIVE", "SUSPENDED"}) String status,
 		@Schema(example = "1") Long controlCenterId,
 		@Schema(example = "MANAGER") String membershipRole,
-		LocalDateTime lastLoginAt,
+		Instant lastLoginAt,
 		Instant createdAt
 ) {
 	public static OperatorResponse of(User user, AdminCredential credential, AdminCenterMembership membership) {

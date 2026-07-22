@@ -1,6 +1,6 @@
 package com.ojimasam.safy.admin.domain;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import com.ojimasam.safy.common.persistence.BaseEntity;
 import com.ojimasam.safy.user.domain.User;
@@ -33,14 +33,15 @@ public class AdminCenterMembership extends BaseEntity {
 	private MembershipStatus status;
 	@Column(nullable = false)
 	private boolean isPrimary;
-	@Column(nullable = false)
-	private LocalDateTime startedAt;
-	private LocalDateTime endedAt;
+	@Column(nullable = false, columnDefinition = "timestamp(6) with time zone")
+	private Instant startedAt;
+	@Column(columnDefinition = "timestamp(6) with time zone")
+	private Instant endedAt;
 
 	protected AdminCenterMembership() {}
 	public AdminCenterMembership(User user, Long centerId, String membershipRole) {
 		this.user = user; this.controlCenterId = centerId; this.membershipRole = membershipRole;
-		this.status = MembershipStatus.ACTIVE; this.isPrimary = true; this.startedAt = LocalDateTime.now();
+		this.status = MembershipStatus.ACTIVE; this.isPrimary = true; this.startedAt = Instant.now();
 	}
 	public void update(Long centerId, String role) { this.controlCenterId = centerId; this.membershipRole = role; }
 	public Long getControlCenterId() { return controlCenterId; }

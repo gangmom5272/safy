@@ -1,6 +1,6 @@
 package com.ojimasam.safy.auth.domain;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import com.ojimasam.safy.common.persistence.BaseEntity;
 import com.ojimasam.safy.user.domain.User;
@@ -40,7 +40,8 @@ public class SocialAccount extends BaseEntity {
 	private String email;
 	private String providerNickname;
 	private String providerProfileImageUrl;
-	private LocalDateTime lastLoginAt;
+	@Column(nullable = false, columnDefinition = "timestamp(6) with time zone")
+	private Instant lastLoginAt;
 
 	protected SocialAccount() {
 	}
@@ -55,7 +56,7 @@ public class SocialAccount extends BaseEntity {
 		this.email = email;
 		this.providerNickname = nickname;
 		this.providerProfileImageUrl = imageUrl;
-		this.lastLoginAt = LocalDateTime.now();
+		this.lastLoginAt = Instant.now();
 	}
 
 	public User getUser() { return user; }

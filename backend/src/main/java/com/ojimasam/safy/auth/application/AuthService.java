@@ -1,7 +1,7 @@
 package com.ojimasam.safy.auth.application;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,7 +80,7 @@ public class AuthService {
 	public LoginResult adminLogin(String loginId, String password) {
 		AdminCredential credential = adminCredentialRepository.findByLoginId(loginId)
 				.orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_CREDENTIALS));
-		LocalDateTime now = LocalDateTime.now();
+		Instant now = Instant.now();
 		if (credential.isLoginLocked(now))
 			throw new BusinessException(AuthErrorCode.LOGIN_TEMPORARILY_LOCKED);
 		if (!passwordEncoder.matches(password, credential.getPasswordHash())) {
