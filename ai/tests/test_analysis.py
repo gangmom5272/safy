@@ -2,10 +2,22 @@ from fastapi.testclient import TestClient
 
 from app.api import analysis
 from app.main import app
+from app.services.frame_quality import FrameQualityResult
 from app.services.person_detector import PersonDetectionResult
 
 
 client = TestClient(app)
+
+
+def fake_valid_quality(_: bytes) -> FrameQualityResult:
+    return FrameQualityResult(
+        is_valid=True,
+        issues=[],
+        width=1280,
+        height=720,
+        brightness_score=127.5,
+        blur_score=350.0,
+    )
 
 
 def fake_detect_people(_: bytes) -> PersonDetectionResult:
@@ -16,9 +28,33 @@ def fake_detect_people(_: bytes) -> PersonDetectionResult:
     )
 
 
-def test_analyze_frame(monkeypatch) -> None:
-    monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
+def fake_invalid_quality(_: bytes) -> FrameQualityResult:
+    return FrameQualityResult(
+        is_valid=False,
+        issues=["TOO_DARK"],
+        width=1280,
+        height=720,
+        brightness_score=10.0,
+        blur_score=0.0,
+    )
 
+
+def fail_if_detection_runs(_: bytes) -> PersonDetectionResult:
+    raise AssertionError("품질 미달 프레임에서 YOLO가 실행되면 안 됩니다.")
+
+
+def fake_detection_failure(_: bytes) -> PersonDetectionResult:
+    raise RuntimeError("YOLO inference failed")
+
+
+def test_analyze_frame(monkeypatch) -> None:
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_valid_quality,
+        raising=False,
+    )
+    monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
     response = client.post(
         "/api/v1/analyze/frame",
         files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
@@ -32,7 +68,56 @@ def test_analyze_frame(monkeypatch) -> None:
         "densityLevel": None,
         "riskScore": None,
         "confidence": None,
+        "qualityIssues": [],
+        "frameWidth": 1280,
+        "frameHeight": 720,
+        "brightnessScore": 127.5,
+        "blurScore": 350.0,
         "modelName": "YOLO",
         "modelVersion": "yolo11n",
         "processingTimeMs": 10,
     }
+
+
+def test_invalid_frame_skips_detection(monkeypatch) -> None:
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_invalid_quality,
+        raising=False,
+    )
+    monkeypatch.setattr(analysis, "detect_people", fail_if_detection_runs)
+
+    response = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("dark.jpg", b"fake-image", "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["analysisStatus"] == "INVALID_FRAME"
+    assert response.json()["personCount"] is None
+    assert response.json()["qualityIssues"] == ["TOO_DARK"]
+
+
+def test_analysis_failure_returns_failed_status(monkeypatch) -> None:
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_valid_quality,
+    )
+    monkeypatch.setattr(
+        analysis,
+        "detect_people",
+        fake_detection_failure,
+    )
+
+    response = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["analysisStatus"] == "FAILED"
+    assert response.json()["personCount"] is None
+    assert response.json()["personConfidences"] == []
+    assert response.json()["qualityIssues"] == []
