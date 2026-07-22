@@ -1,7 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router'
-import { AdminLayout } from '../layouts/AdminLayout'
 import { AppLayout } from '../layouts/AppLayout'
-import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage'
 import { NotFoundPage } from '../pages/common/NotFoundPage'
 import { GuidePage } from '../pages/app/guide/GuidePage'
 import { PrivacyPage } from '../pages/app/guide/PrivacyPage'
@@ -55,11 +53,6 @@ export const router = createBrowserRouter([
       { path: 'terms', element: <TermsPage /> },
       { path: 'privacy', element: <PrivacyPage /> },
     ],
-  },
-  {
-    path: '/admin',
-    element: <AdminLayout />,
-    children: [{ index: true, element: <AdminDashboardPage /> }],
   },
   {
     path: '*',

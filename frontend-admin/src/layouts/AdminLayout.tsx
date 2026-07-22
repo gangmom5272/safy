@@ -5,7 +5,7 @@ export function AdminLayout() {
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <strong>SAFE:ON Admin</strong>
-        <NavLink to="/admin" end>
+        <NavLink to="/" end>
           대시보드
         </NavLink>
       </aside>
