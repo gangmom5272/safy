@@ -3,6 +3,14 @@ spring:
     url: jdbc:h2:mem:safy;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     username: sa
     password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+app:
+  auth:
+    jwt-secret: test-only-secret-key-must-be-at-least-32-bytes-long
 
 logging:
   level:

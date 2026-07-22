@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import com.ojimasam.safy.common.api.ApiErrorResponse;
 import com.ojimasam.safy.common.api.FieldErrorDetail;
@@ -127,6 +128,14 @@ public class GlobalExceptionHandler {
 			HttpServletRequest request
 	) {
 		return createResponse(CommonErrorCode.FILE_SIZE_EXCEEDED, request);
+	}
+
+	@ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+	public ResponseEntity<ApiErrorResponse> handleOptimisticLockingFailure(
+			ObjectOptimisticLockingFailureException exception,
+			HttpServletRequest request
+	) {
+		return createResponse(CommonErrorCode.CONCURRENT_MODIFICATION, request);
 	}
 
 	@ExceptionHandler(Exception.class)
