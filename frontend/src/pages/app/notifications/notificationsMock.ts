@@ -11,7 +11,7 @@ const at = (daysAgo: number, hour: number, minute: number) => {
 }
 
 export const mockNotifications: AppNotification[] = [
-  { id: 1, type: 'SAFETY', title: '홍대입구역 인근 매우 혼잡', content: '홍대입구역 9번 출구 주변 인파가 빠르게 늘고 있어요. 이동 시 주의해 주세요.', createdAt: at(0, 9, 41), isRead: false, isImportant: true, targetType: 'AREA', targetId: 1, areaId: 1, areaName: '홍대입구역' },
+  { id: 1, type: 'SAFETY', title: '홍대입구역 인근 매우 혼잡', content: '홍대입구역 9번 출구 주변 인파가 빠르게 늘고 있어요. 이동 시 주의해 주세요.', createdAt: at(0, 9, 41), isRead: false, isImportant: true, targetType: 'AREA', targetId: 'hongdae-station', areaId: 'hongdae-station', areaName: '홍대입구역' },
   { id: 2, type: 'REPORT', title: '제보 분석이 완료되었어요', content: '등록한 인파 제보의 분석이 완료되었습니다. 분석 결과를 확인해 보세요.', createdAt: at(0, 8, 25), isRead: false, isImportant: false, targetType: 'REPORT', targetId: 101, reportId: 101 },
   { id: 3, type: 'REPORT', title: '관리자가 제보를 확인했어요', content: '제보해 주신 내용을 관리자가 확인하고 처리 중입니다.', createdAt: at(1, 18, 12), isRead: true, isImportant: false, targetType: 'REPORT', targetId: 102, reportId: 102 },
   { id: 4, type: 'SYSTEM', title: '서비스 점검 안내', content: '더 안정적인 서비스를 위해 새벽 시간에 시스템 점검이 진행됩니다.', createdAt: at(1, 11, 0), isRead: false, isImportant: true, targetType: 'NONE' },
