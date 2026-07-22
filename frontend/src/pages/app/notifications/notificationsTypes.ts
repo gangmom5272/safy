@@ -11,10 +11,13 @@ export interface AppNotification {
   isRead: boolean
   isImportant: boolean
   targetType?: NotificationTargetType | null
-  targetId?: number | null
-  areaId?: number | null
-  reportId?: number | null
+  targetId?: number | string | null
+  areaId?: number | string | null
+  locationId?: number | string | null
+  reportId?: number | string | null
   areaName?: string | null
+  locationName?: string | null
+  regionName?: string | null
 }
 
 export interface NotificationSettingsData {

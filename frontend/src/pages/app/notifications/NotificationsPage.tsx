@@ -63,7 +63,7 @@ export function NotificationsPage() {
   }
 
   return <div className="notifications-page">
-    <header className="notifications-header"><div><p>NOTIFICATIONS</p><h1>알림 {unreadCount > 0 && <span>{unreadCount}</span>}</h1></div><div className="header-actions"><button type="button" className="read-all-button" onClick={handleReadAll} disabled={unreadCount === 0}>전체 읽음</button><button type="button" className="settings-icon-button" aria-label="알림 설정 열기" onClick={() => setShowSettings(true)}>⚙</button></div></header>
+    <header className="notifications-header"><div><p>NOTIFICATIONS</p><h1>알림 {unreadCount > 0 && <span>{unreadCount}</span>}</h1></div><div className="header-actions"><button type="button" className="read-all-button" onClick={handleReadAll} disabled={unreadCount === 0}>전체 읽음</button></div></header>
     <NotificationTabs selected={filter} counts={counts} onSelect={setFilter} />
     <NotificationBanner onOpenSettings={() => setShowSettings(true)} />
     {usingMock && <p className="mock-notice">연결 전 예시 알림을 표시하고 있어요.</p>}
