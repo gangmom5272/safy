@@ -12,6 +12,13 @@ import type {
   RiskLevel,
 } from './types'
 
+const riskOrder: Record<RiskLevel, number> = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+}
+
 export const mockLocations: LocationSearchResult[] = [
   {
     id: 'hongdae-station',
@@ -21,18 +28,32 @@ export const mockLocations: LocationSearchResult[] = [
     longitude: 126.9254,
   },
   {
-    id: 'jamsil-sports-complex',
-    name: '잠실종합운동장',
-    address: '서울특별시 송파구 올림픽로 25',
-    latitude: 37.515,
-    longitude: 127.0729,
+    id: 'gangnam-station',
+    name: '강남역',
+    address: '서울특별시 강남구 강남대로 396',
+    latitude: 37.4979,
+    longitude: 127.0276,
   },
   {
-    id: 'gocheok-skydome',
-    name: '고척스카이돔',
-    address: '서울특별시 구로구 경인로 430',
-    latitude: 37.4982,
-    longitude: 126.8671,
+    id: 'sinnonhyeon-station',
+    name: '신논현역',
+    address: '서울특별시 강남구 봉은사로 102',
+    latitude: 37.5046,
+    longitude: 127.0255,
+  },
+  {
+    id: 'cgv-gangnam',
+    name: 'CGV 강남',
+    address: '서울특별시 강남구 강남대로 438',
+    latitude: 37.5016,
+    longitude: 127.0263,
+  },
+  {
+    id: 'jamsil-station',
+    name: '잠실역',
+    address: '서울특별시 송파구 올림픽로 265',
+    latitude: 37.5133,
+    longitude: 127.1002,
   },
   {
     id: 'seoul-station',
@@ -46,165 +67,142 @@ export const mockLocations: LocationSearchResult[] = [
 export const mockReports: LiveReportSummary[] = [
   {
     id: 'report-hongdae-crowd-live',
-    title: '홍대입구역 9번 출구 인파 과밀',
-    description: '인파가 너무 많아 이동이 매우 어렵습니다.',
+    title: '홍대입구역 9번 출구 인근 인파 과밀',
+    description:
+      '인파가 너무 몰려서 9번 출구 앞이 완전히 막혔어요. 이동이 매우 어려운 상황입니다. 우회로를 이용해 주세요.',
     type: 'crowd',
     riskLevel: 'critical',
-    locationName: '홍대입구역 9번 출구',
+    locationName: '홍대입구역 9번 출구 앞',
     address: '서울특별시 마포구 양화로 160',
-    reportedAt: '2026-07-20T14:23:00+09:00',
+    latitude: 37.5575,
+    longitude: 126.9251,
+    reportedAt: '2026-07-21T09:38:00+09:00',
+    relativeTime: '3분 전',
     maskedThumbnailUrl: null,
     isWebRtc: true,
     isLive: true,
+    viewerCount: 128,
+    thumbnailType: 'crowd',
   },
   {
-    id: 'report-road-accident',
-    title: '도로 위 위험물로 차량 정체 발생',
-    description: '차량 이동이 지연되고 있으니 우회가 필요합니다.',
-    type: 'accident',
+    id: 'report-gangnam-crowd-live',
+    title: '강남역 출구 앞 인파 밀집',
+    description: '강남역 11번 출구 앞 대기 줄이 길어져 보행자 동선이 좁아졌습니다.',
+    type: 'crowd',
     riskLevel: 'high',
-    locationName: '강남대로 교차로',
+    locationName: '강남역 11번 출구',
     address: '서울특별시 강남구 강남대로 396',
-    reportedAt: '2026-07-20T14:08:00+09:00',
+    latitude: 37.4982,
+    longitude: 127.0278,
+    reportedAt: '2026-07-21T09:31:00+09:00',
+    relativeTime: '10분 전',
     maskedThumbnailUrl: null,
     isWebRtc: true,
-    isLive: false,
+    isLive: true,
+    viewerCount: 84,
+    thumbnailType: 'live',
   },
   {
-    id: 'report-weather-flood',
-    title: '지하보도 입구 침수 위험',
-    description: '갑작스러운 비로 보행로 일부에 물이 고이고 있습니다.',
-    type: 'flood_weather',
-    riskLevel: 'medium',
-    locationName: '잠실역 지하보도',
-    address: '서울특별시 송파구 올림픽로 265',
-    reportedAt: '2026-07-20T13:47:00+09:00',
+    id: 'report-sinnonhyeon-accident',
+    title: '신논현역 인근 도로 사고',
+    description: '신논현역 사거리 인근 접촉 사고로 우측 차로 통행이 지연되고 있습니다.',
+    type: 'accident',
+    riskLevel: 'high',
+    locationName: '신논현역 사거리',
+    address: '서울특별시 강남구 봉은사로 102',
+    latitude: 37.5044,
+    longitude: 127.0252,
+    reportedAt: '2026-07-21T09:22:00+09:00',
+    relativeTime: '19분 전',
     maskedThumbnailUrl: null,
     isWebRtc: false,
     isLive: false,
+    viewerCount: 42,
+    thumbnailType: 'road',
   },
   {
-    id: 'report-facility-road',
-    title: '시설물 파손으로 보행 주의 필요',
-    description: '보도블록 일부가 파손되어 야간 보행 시 주의가 필요합니다.',
+    id: 'report-jamsil-event-crowd',
+    title: '잠실역 행사 종료 후 혼잡',
+    description: '행사 종료 인파가 잠실역 방향으로 몰리며 개찰구 주변 대기가 발생했습니다.',
+    type: 'crowd',
+    riskLevel: 'medium',
+    locationName: '잠실역 2번 출구',
+    address: '서울특별시 송파구 올림픽로 265',
+    latitude: 37.513,
+    longitude: 127.1005,
+    reportedAt: '2026-07-21T09:04:00+09:00',
+    relativeTime: '37분 전',
+    maskedThumbnailUrl: null,
+    isWebRtc: true,
+    isLive: false,
+    viewerCount: 67,
+    thumbnailType: 'event',
+  },
+  {
+    id: 'report-seoul-station-facility',
+    title: '서울역 시설물 파손',
+    description: '서울역 대합실 연결 통로의 안내 표지 일부가 파손되어 보행 주의가 필요합니다.',
     type: 'facility_road',
     riskLevel: 'medium',
-    locationName: '고척스카이돔 앞 보행로',
-    address: '서울특별시 구로구 경인로 430',
-    reportedAt: '2026-07-20T13:21:00+09:00',
-    maskedThumbnailUrl: null,
-    isWebRtc: false,
-    isLive: false,
-  },
-  {
-    id: 'report-etc-low',
-    title: '역사 내부 안전 안내 요청',
-    description: '이동 동선 안내가 부족해 일부 이용객이 혼란을 겪고 있습니다.',
-    type: 'etc',
-    riskLevel: 'low',
     locationName: '서울역 대합실',
     address: '서울특별시 중구 한강대로 405',
-    reportedAt: '2026-07-20T12:58:00+09:00',
+    latitude: 37.5549,
+    longitude: 126.9704,
+    reportedAt: '2026-07-21T08:48:00+09:00',
+    relativeTime: '53분 전',
     maskedThumbnailUrl: null,
     isWebRtc: false,
     isLive: false,
+    viewerCount: 21,
+    thumbnailType: 'facility',
   },
   {
-    id: 'report-analysis-processing',
-    title: '출입구 주변 혼잡 분석 진행 중',
-    description: '관리자 마스킹 이후 AI 분석이 진행 중입니다.',
-    type: 'crowd',
-    riskLevel: 'high',
-    locationName: '잠실종합운동장 3문',
-    address: '서울특별시 송파구 올림픽로 25',
-    reportedAt: '2026-07-20T12:42:00+09:00',
-    maskedThumbnailUrl: null,
-    isWebRtc: true,
-    isLive: true,
-  },
-  {
-    id: 'report-analysis-completed',
-    title: '행사장 주변 인파 분석 완료',
-    description: '인파 흐름이 느려 우회 동선 안내가 필요합니다.',
-    type: 'crowd',
+    id: 'report-gangnam-weather-flood',
+    title: '강남역 인근 침수 위험',
+    description: '강한 비로 CGV 강남 앞 보행로 배수구 주변에 물이 고이고 있습니다.',
+    type: 'flood_weather',
     riskLevel: 'critical',
-    locationName: '고척스카이돔 1루 출입구',
-    address: '서울특별시 구로구 경인로 430',
-    reportedAt: '2026-07-20T12:17:00+09:00',
+    locationName: 'CGV 강남 앞',
+    address: '서울특별시 강남구 강남대로 438',
+    latitude: 37.5016,
+    longitude: 127.0263,
+    reportedAt: '2026-07-21T08:35:00+09:00',
+    relativeTime: '1시간 전',
     maskedThumbnailUrl: null,
     isWebRtc: false,
     isLive: false,
+    viewerCount: 96,
+    thumbnailType: 'weather',
   },
   {
-    id: 'report-webrtc-ended',
-    title: '실시간 제보 종료된 사고 현장',
-    description: '현장 실시간 연결은 종료되었고 마스킹된 대표 이미지만 확인할 수 있습니다.',
-    type: 'accident',
-    riskLevel: 'high',
-    locationName: '서울역 버스환승센터',
-    address: '서울특별시 중구 한강대로 405',
-    reportedAt: '2026-07-20T11:52:00+09:00',
-    maskedThumbnailUrl: null,
-    isWebRtc: true,
-    isLive: false,
-  },
-  {
-    id: 'report-webrtc-failed',
-    title: '실시간 연결 실패 제보',
-    description: '현장 네트워크 문제로 실시간 연결이 실패했습니다.',
+    id: 'report-gangnam-etc',
+    title: '강남역 안내 방송 요청',
+    description: '출구별 혼잡도가 달라 현장 안내 방송이 필요해 보입니다.',
     type: 'etc',
     riskLevel: 'low',
-    locationName: '홍대입구역 내부',
-    address: '서울특별시 마포구 양화로 160',
-    reportedAt: '2026-07-20T11:30:00+09:00',
+    locationName: '강남역 지하상가',
+    address: '서울특별시 강남구 강남대로 396',
+    latitude: 37.4977,
+    longitude: 127.028,
+    reportedAt: '2026-07-21T08:10:00+09:00',
+    relativeTime: '1시간 전',
     maskedThumbnailUrl: null,
-    isWebRtc: true,
+    isWebRtc: false,
     isLive: false,
+    viewerCount: 13,
+    thumbnailType: 'etc',
   },
 ]
 
 export const mockAreaStatus: AreaStatus = {
-  riskLevel: 'critical',
-  congestionLevel: 'very_crowded',
-  recentReportCount: 18,
+  riskLevel: 'high',
+  congestionLevel: 'crowded',
+  recentReportCount: 6,
   weather: {
     condition: '흐림',
     temperature: 28,
   },
-  updatedAt: '2026-07-20T14:25:00+09:00',
-}
-
-export const mockAreaMapData: AreaMapData = {
-  center: { latitude: 37.5572, longitude: 126.9254 },
-  zones: [
-    {
-      id: 'zone-hongdae-main',
-      name: '인파 집중 구역',
-      level: 'critical',
-      coordinates: [
-        { latitude: 37.5572, longitude: 126.9254 },
-        { latitude: 37.5577, longitude: 126.9262 },
-        { latitude: 37.5568, longitude: 126.9266 },
-      ],
-    },
-    {
-      id: 'zone-side-road',
-      name: '우회 권장 구역',
-      level: 'high',
-      coordinates: [
-        { latitude: 37.5565, longitude: 126.9239 },
-        { latitude: 37.5569, longitude: 126.9244 },
-        { latitude: 37.5561, longitude: 126.9248 },
-      ],
-    },
-  ],
-  reportMarkers: mockReports.slice(0, 5).map((report, index) => ({
-    reportId: report.id,
-    locationName: report.locationName,
-    riskLevel: report.riskLevel,
-    latitude: 37.5572 + index * 0.0008,
-    longitude: 126.9254 - index * 0.0006,
-  })),
+  updatedAt: '2026-07-21T09:41:00+09:00',
 }
 
 export const mockReportDetails: ReportDetail[] = mockReports.map((report) => ({
@@ -212,81 +210,68 @@ export const mockReportDetails: ReportDetail[] = mockReports.map((report) => ({
   maskedMediaUrl: null,
 }))
 
-export const mockReportAnalyses: ReportAnalysis[] = [
-  {
-    reportId: 'report-hongdae-crowd-live',
-    status: 'completed',
-    congestionLevel: 'critical',
-    estimatedPeopleCount: 920,
-    aiSummary: '출구 주변 밀집도가 높고 이동 속도가 크게 저하되어 우회 안내가 필요합니다.',
-    analyzedAt: '2026-07-20T14:26:00+09:00',
-  },
-  {
-    reportId: 'report-road-accident',
-    status: 'completed',
-    congestionLevel: 'high',
-    estimatedPeopleCount: 35,
-    aiSummary: '차량 정체가 이어지고 있어 현장 통제와 우회 안내가 필요합니다.',
-    analyzedAt: '2026-07-20T14:12:00+09:00',
-  },
-  {
-    reportId: 'report-weather-flood',
-    status: 'pending',
-  },
-  {
-    reportId: 'report-analysis-processing',
-    status: 'processing',
-  },
-  {
-    reportId: 'report-analysis-completed',
-    status: 'completed',
-    congestionLevel: 'critical',
-    estimatedPeopleCount: 1280,
-    aiSummary: '행사장 출입구에 인파가 집중되어 분산 입장이 필요합니다.',
-    analyzedAt: '2026-07-20T12:25:00+09:00',
-  },
-  {
-    reportId: 'report-webrtc-failed',
-    status: 'failed',
-    errorMessage: '마스킹된 대표 이미지 품질이 낮아 분석을 완료하지 못했습니다.',
-  },
-]
+export const mockReportAnalyses: ReportAnalysis[] = mockReports.map((report) => ({
+  reportId: report.id,
+  status: report.riskLevel === 'low' ? 'pending' : 'completed',
+  congestionLevel: report.riskLevel,
+  estimatedPeopleCount: report.viewerCount ? report.viewerCount * 8 : undefined,
+  aiSummary: `${report.locationName} 주변 상황을 목업 데이터로 표시하고 있습니다.`,
+  analyzedAt: '2026-07-21T09:42:00+09:00',
+}))
 
-export const mockWebRtcInfos: ReportWebRtcInfo[] = [
-  {
-    reportId: 'report-hongdae-crowd-live',
-    roomId: 'room-hongdae-live',
-    status: 'waiting',
-  },
-  {
-    reportId: 'report-road-accident',
-    roomId: 'room-road-accident',
-    status: 'ended',
-  },
-  {
-    reportId: 'report-analysis-processing',
-    roomId: 'room-analysis-processing',
-    status: 'connecting',
-  },
-  {
-    reportId: 'report-webrtc-ended',
-    roomId: 'room-ended',
-    status: 'ended',
-  },
-  {
-    reportId: 'report-webrtc-failed',
-    roomId: 'room-failed',
-    status: 'failed',
-  },
-]
+export const mockWebRtcInfos: ReportWebRtcInfo[] = mockReports.map((report) => ({
+  reportId: report.id,
+  roomId: report.isWebRtc ? `mock-room-${report.id}` : undefined,
+  status: report.isWebRtc ? (report.isLive ? 'waiting' : 'ended') : 'none',
+}))
 
-export function filterMockLocations(keyword: string) {
-  const normalizedKeyword = keyword.trim().toLowerCase()
+function normalize(value: string) {
+  return value.trim().toLowerCase()
+}
 
-  return mockLocations.filter((location) => {
-    const target = `${location.name} ${location.address}`.toLowerCase()
-    return target.includes(normalizedKeyword)
-  })
+function compact(value: string) {
+  return normalize(value).replace(/\s/g, '')
+}
+
+function matchesKeyword(target: string, keyword: string) {
+  const normalizedKeyword = normalize(keyword)
+  const compactKeyword = compact(keyword)
+
+  if (!normalizedKeyword) {
+    return true
+  }
+
+  return normalize(target).includes(normalizedKeyword) || compact(target).includes(compactKeyword)
+}
+
+export function filterMockLocations(keyword: string): LocationSearchResult[] {
+  return mockLocations.filter((location) =>
+    matchesKeyword(`${location.name} ${location.address}`, keyword),
+  )
+}
+
+export function getBestMockLocation(keyword: string): LocationSearchResult | null {
+  const matches = filterMockLocations(keyword)
+
+  if (matches.length) {
+    return matches[0]
+  }
+
+  const report = mockReports.find((item) =>
+    matchesKeyword(`${item.title} ${item.description ?? ''} ${item.locationName} ${item.address ?? ''}`, keyword),
+  )
+
+  if (!report) {
+    return null
+  }
+
+  return {
+    id: `search-${compact(keyword)}`,
+    name: keyword.trim(),
+    address: report.address ?? report.locationName,
+    latitude: report.latitude,
+    longitude: report.longitude,
+  }
 }
 
 export function getMockArea(areaId: string): AreaDetail {
@@ -296,20 +281,68 @@ export function getMockArea(areaId: string): AreaDetail {
     id: location.id,
     name: location.name,
     address: location.address,
-    latitude: location.latitude ?? 37.5572,
-    longitude: location.longitude ?? 126.9254,
+    latitude: location.latitude ?? 37.4979,
+    longitude: location.longitude ?? 127.0276,
   }
 }
 
-export function getMockAreaMap(areaId: string): AreaMapData {
-  const area = getMockArea(areaId)
+export function getMockAreaByQuery(keyword: string): AreaDetail | null {
+  const location = getBestMockLocation(keyword)
+
+  if (!location) {
+    return null
+  }
 
   return {
-    ...mockAreaMapData,
-    center: {
-      latitude: area.latitude,
-      longitude: area.longitude,
-    },
+    id: location.id,
+    name: location.name,
+    address: location.address,
+    latitude: location.latitude ?? 37.4979,
+    longitude: location.longitude ?? 127.0276,
+  }
+}
+
+export function getMockAreaMap(areaIdOrQuery: string): AreaMapData {
+  const area = getMockAreaByQuery(areaIdOrQuery) ?? getMockArea(areaIdOrQuery)
+  const reports = filterMockReportsByKeyword(area.name)
+  const markers = (reports.length ? reports : mockReports.slice(0, 4)).map((report, index) => ({
+    reportId: report.id,
+    locationName: report.locationName,
+    riskLevel: report.riskLevel,
+    latitude: report.latitude ?? area.latitude + index * 0.0007,
+    longitude: report.longitude ?? area.longitude - index * 0.0006,
+  }))
+
+  return {
+    center: { latitude: area.latitude, longitude: area.longitude },
+    zones: [
+      {
+        id: `${area.id}-critical-zone`,
+        name: '매우 혼잡',
+        level: 'critical',
+        coordinates: [
+          { latitude: area.latitude, longitude: area.longitude },
+          { latitude: area.latitude + 0.0008, longitude: area.longitude + 0.0008 },
+          { latitude: area.latitude - 0.0006, longitude: area.longitude + 0.0005 },
+        ],
+      },
+      {
+        id: `${area.id}-crowded-zone`,
+        name: '혼잡',
+        level: 'high',
+        coordinates: [
+          { latitude: area.latitude + 0.001, longitude: area.longitude - 0.001 },
+          { latitude: area.latitude + 0.0014, longitude: area.longitude - 0.0004 },
+        ],
+      },
+      {
+        id: `${area.id}-normal-zone`,
+        name: '보통',
+        level: 'medium',
+        coordinates: [{ latitude: area.latitude - 0.001, longitude: area.longitude - 0.001 }],
+      },
+    ],
+    reportMarkers: markers,
   }
 }
 
@@ -322,42 +355,41 @@ export function getMockReportAnalysis(reportId: string) {
 }
 
 export function getMockWebRtcInfo(reportId: string): ReportWebRtcInfo {
-  return (
-    mockWebRtcInfos.find((info) => info.reportId === reportId) ?? {
-      reportId,
-      status: 'none',
-    }
+  return mockWebRtcInfos.find((info) => info.reportId === reportId) ?? { reportId, status: 'none' }
+}
+
+export function filterMockReportsByKeyword(keyword: string): LiveReportSummary[] {
+  return mockReports.filter((report) =>
+    matchesKeyword(
+      `${report.title} ${report.description ?? ''} ${report.locationName} ${report.address ?? ''}`,
+      keyword,
+    ),
   )
 }
 
 export function filterAndSortMockReports(types: ReportType[], sort: ReportSort) {
-  const riskOrder: Record<RiskLevel, number> = {
-    critical: 4,
-    high: 3,
-    medium: 2,
-    low: 1,
-  }
+  return sortReports(types.length ? mockReports.filter((report) => types.includes(report.type)) : mockReports, sort)
+}
 
-  const filteredReports = types.length
-    ? mockReports.filter((report) => types.includes(report.type))
-    : [...mockReports]
+export function filterAndSortMockAreaReports(areaIdOrQuery: string, types: ReportType[], sort: ReportSort) {
+  const area = getMockAreaByQuery(areaIdOrQuery) ?? getMockArea(areaIdOrQuery)
+  const areaKeyword = area.name.replace(/역$/, '')
+  const reports = mockReports.filter((report) => {
+    const target = `${report.title} ${report.description ?? ''} ${report.locationName} ${report.address ?? ''}`
+    return matchesKeyword(target, area.name) || matchesKeyword(target, areaKeyword)
+  })
+  const filtered = types.length ? reports.filter((report) => types.includes(report.type)) : reports
 
-  return filteredReports.sort((a, b) => {
+  return sortReports(filtered, sort)
+}
+
+function sortReports(reports: LiveReportSummary[], sort: ReportSort) {
+  return [...reports].sort((a, b) => {
     if (sort === 'latest') {
       return new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime()
     }
 
-    const direction = sort === 'risk_desc' ? -1 : 1
-    return (riskOrder[a.riskLevel] - riskOrder[b.riskLevel]) * direction
-  })
-}
-
-export function filterAndSortMockAreaReports(areaId: string, types: ReportType[], sort: ReportSort) {
-  const area = getMockArea(areaId)
-  const areaKeyword = area.name.replace('역', '')
-
-  return filterAndSortMockReports(types, sort).filter((report) => {
-    const target = `${report.locationName} ${report.address ?? ''}`
-    return target.includes(area.name) || target.includes(areaKeyword) || target.includes(area.address)
+    const diff = riskOrder[b.riskLevel] - riskOrder[a.riskLevel]
+    return sort === 'risk_desc' ? diff : -diff
   })
 }

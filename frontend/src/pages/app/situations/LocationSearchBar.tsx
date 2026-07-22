@@ -8,6 +8,8 @@ type LocationSearchBarProps = {
   error: unknown
   onKeywordChange: (keyword: string) => void
   onSelect: (location: LocationSearchResult) => void
+  onSubmit: () => void
+  onClear: () => void
 }
 
 export function LocationSearchBar({
@@ -17,6 +19,8 @@ export function LocationSearchBar({
   error,
   onKeywordChange,
   onSelect,
+  onSubmit,
+  onClear,
 }: LocationSearchBarProps) {
   const [activeIndex, setActiveIndex] = useState(-1)
   const [isListOpen, setIsListOpen] = useState(false)
@@ -34,11 +38,10 @@ export function LocationSearchBar({
   }, [activeIndex, suggestions])
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!showSuggestions) {
-      return
-    }
-
     if (event.key === 'ArrowDown') {
+      if (!showSuggestions) {
+        return
+      }
       event.preventDefault()
       setActiveIndex((currentIndex) =>
         Math.min(currentIndex + 1, Math.max(suggestions.length - 1, 0)),
@@ -46,13 +49,21 @@ export function LocationSearchBar({
     }
 
     if (event.key === 'ArrowUp') {
+      if (!showSuggestions) {
+        return
+      }
       event.preventDefault()
       setActiveIndex((currentIndex) => Math.max(currentIndex - 1, 0))
     }
 
-    if (event.key === 'Enter' && activeIndex >= 0 && suggestions[activeIndex]) {
+    if (event.key === 'Enter') {
       event.preventDefault()
-      selectSuggestion(suggestions[activeIndex])
+      if (showSuggestions && activeIndex >= 0 && suggestions[activeIndex]) {
+        selectSuggestion(suggestions[activeIndex])
+      } else {
+        setIsListOpen(false)
+        onSubmit()
+      }
     }
 
     if (event.key === 'Escape') {
@@ -94,12 +105,15 @@ export function LocationSearchBar({
             className="search-clear-button"
             type="button"
             aria-label="검색어 지우기"
-            onClick={() => onKeywordChange('')}
+            onClick={onClear}
           >
-            지우기
+            ×
           </button>
         ) : null}
       </label>
+      <button className="search-submit-button" type="button" onClick={onSubmit}>
+        검색
+      </button>
 
       {showSuggestions ? (
         <LocationSuggestionList

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useSearchParams } from 'react-router'
 import { queryKeys } from '../../../api/queryKeys'
 import {
   getArea,
+  getAreaByQuery,
   getAreaLiveReports,
   getAreaMap,
   getAreaStatus,
@@ -15,7 +17,10 @@ const SEARCH_DEBOUNCE_MS = 300
 const MIN_SEARCH_LENGTH = 2
 
 export function useSituationCheck() {
-  const [searchKeyword, setSearchKeyword] = useState('')
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const queryParam = searchParams.get('query') ?? ''
+  const [searchKeyword, setSearchKeyword] = useState(() => queryParam.trim())
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [selectedArea, setSelectedArea] = useState<LocationSearchResult | null>(null)
   const [selectedTypes, setSelectedTypes] = useState<ReportType[]>([])
@@ -33,6 +38,8 @@ export function useSituationCheck() {
 
   const typeParam = selectedTypes.join(',')
   const canSearch = debouncedKeyword.length >= MIN_SEARCH_LENGTH
+  const submittedQuery = queryParam.trim()
+  const hasSubmittedQuery = submittedQuery.length > 0
 
   const searchQuery = useQuery({
     queryKey: queryKeys.locations.search(debouncedKeyword),
@@ -41,51 +48,76 @@ export function useSituationCheck() {
   })
 
   const areaQuery = useQuery({
-    queryKey: queryKeys.areas.detail(selectedArea?.id ?? ''),
+    queryKey: queryKeys.areas.detail(selectedArea?.id ?? submittedQuery),
     queryFn: () => getArea(selectedArea!.id),
-    enabled: Boolean(selectedArea),
+    enabled: Boolean(selectedArea) && !hasSubmittedQuery,
   })
 
+  const submittedAreaQuery = useQuery({
+    queryKey: queryKeys.areas.detail(submittedQuery),
+    queryFn: () => getAreaByQuery(submittedQuery),
+    enabled: hasSubmittedQuery,
+  })
+
+  const activeArea = submittedAreaQuery.data ?? areaQuery.data ?? selectedArea
+  const areaKey = activeArea?.id ?? submittedQuery
+
   const areaMapQuery = useQuery({
-    queryKey: queryKeys.areas.map(selectedArea?.id ?? ''),
-    queryFn: () => getAreaMap(selectedArea!.id),
-    enabled: Boolean(selectedArea),
+    queryKey: queryKeys.areas.map(areaKey),
+    queryFn: () => getAreaMap(areaKey),
+    enabled: Boolean(activeArea),
   })
 
   const areaStatusQuery = useQuery({
-    queryKey: queryKeys.areas.status(selectedArea?.id ?? ''),
-    queryFn: () => getAreaStatus(selectedArea!.id),
-    enabled: Boolean(selectedArea),
+    queryKey: queryKeys.areas.status(areaKey),
+    queryFn: () => getAreaStatus(areaKey),
+    enabled: Boolean(activeArea),
   })
 
   const globalReportsQuery = useQuery({
     queryKey: queryKeys.reports.live({ sort, type: typeParam, limit: 20 }),
     queryFn: () => getLiveReports({ sort, types: selectedTypes, limit: 20 }),
-    enabled: !selectedArea,
+    enabled: !activeArea && !hasSubmittedQuery,
   })
 
   const areaReportsQuery = useQuery({
-    queryKey: queryKeys.areas.liveReports(selectedArea?.id ?? '', { sort, type: typeParam }),
-    queryFn: () => getAreaLiveReports(selectedArea!.id, { sort, types: selectedTypes }),
-    enabled: Boolean(selectedArea),
+    queryKey: queryKeys.areas.liveReports(areaKey, { sort, type: typeParam }),
+    queryFn: () => getAreaLiveReports(areaKey, { sort, types: selectedTypes }),
+    enabled: Boolean(activeArea),
   })
 
-  const reportsQuery = selectedArea ? areaReportsQuery : globalReportsQuery
+  const reportsQuery = activeArea ? areaReportsQuery : globalReportsQuery
+  const isSubmittedEmpty = hasSubmittedQuery && !activeArea && !submittedAreaQuery.isFetching
 
   useEffect(() => {
     reportListRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [sort, typeParam, selectedArea?.id])
+  }, [sort, typeParam, areaKey])
 
   const selectArea = (area: LocationSearchResult) => {
     setSelectedArea(area)
     setSearchKeyword(area.name)
     setDebouncedKeyword('')
+    navigate(`/app/situations?query=${encodeURIComponent(area.name)}`, { replace: false })
+  }
+
+  const submitSearch = () => {
+    const trimmed = searchKeyword.trim()
+
+    if (!trimmed) {
+      clearSelectedArea()
+      return
+    }
+
+    setSelectedArea(null)
+    setDebouncedKeyword('')
+    navigate(`/app/situations?query=${encodeURIComponent(trimmed)}`, { replace: false })
   }
 
   const clearSelectedArea = () => {
     setSelectedArea(null)
     setSearchKeyword('')
     setDebouncedKeyword('')
+    navigate('/app/situations', { replace: false })
   }
 
   const refreshAreaStatus = () => {
@@ -106,13 +138,14 @@ export function useSituationCheck() {
     searchSuggestions,
     isSearchLoading: searchQuery.isFetching,
     searchError: searchQuery.error,
-    selectedArea: areaQuery.data ?? selectedArea,
+    selectedArea: activeArea,
+    submittedQuery,
     selectedTypes,
     setSelectedTypes,
     sort,
     setSort,
-    reports: reportsQuery.data ?? [],
-    isReportsLoading: reportsQuery.isFetching,
+    reports: isSubmittedEmpty ? [] : (reportsQuery.data ?? []),
+    isReportsLoading: submittedAreaQuery.isFetching || reportsQuery.isFetching,
     reportsError: reportsQuery.error,
     areaStatus: areaStatusQuery.data,
     isAreaStatusLoading: areaStatusQuery.isFetching,
@@ -124,6 +157,7 @@ export function useSituationCheck() {
     setIsFilterOpen,
     reportListRef,
     selectArea,
+    submitSearch,
     clearSelectedArea,
     refreshAreaStatus,
     retryReports: reportsQuery.refetch,

@@ -35,11 +35,13 @@ export function AreaMap({ mapData, isLoading, error }: AreaMapProps) {
       </div>
 
       <div className="map-data-summary">
+        <span>검색 위치</span>
         <span>혼잡 구역 {mapData.zones.length}개</span>
         <span>제보 마커 {mapData.reportMarkers.length}개</span>
       </div>
 
       <div className="map-placeholder" role="img" aria-label="추후 지도 SDK 연결 영역">
+        <span className="map-center-label">검색 위치</span>
         {mapData.zones.map((zone, index) => (
           <span
             key={zone.id}
@@ -83,6 +85,10 @@ export function AreaMap({ mapData, isLoading, error }: AreaMapProps) {
       </div>
 
       <ul className="map-marker-list" aria-label="지도 제보 마커 목록">
+        <li>
+          <strong>범례</strong>
+          <span>매우 혼잡 · 혼잡 · 보통 · 여유</span>
+        </li>
         {mapData.reportMarkers.map((marker) => (
           <li key={marker.reportId}>
             <strong>{marker.locationName}</strong>
