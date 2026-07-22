@@ -45,7 +45,7 @@ import com.ojimasam.safy.report.domain.ReportType;
 				+ "OAuth2ClientWebSecurityAutoConfiguration",
 		excludeFilters = @ComponentScan.Filter(
 				type = FilterType.REGEX,
-				pattern = "com\\.ojimasam\\.safy\\.domain\\.auth\\..*"
+				pattern = "com\\.ojimasam\\.safy\\.auth\\..*"
 		)
 )
 @AutoConfigureMockMvc(addFilters = false)
