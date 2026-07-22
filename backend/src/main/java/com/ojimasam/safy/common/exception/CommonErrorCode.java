@@ -11,7 +11,10 @@ public enum CommonErrorCode implements ErrorCode {
 	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "COMMON_006", "지원하지 않는 HTTP 메서드입니다."),
 	UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "COMMON_007", "지원하지 않는 미디어 타입입니다."),
 	FILE_SIZE_EXCEEDED(HttpStatus.CONTENT_TOO_LARGE, "COMMON_008", "업로드 가능한 파일 크기를 초과했습니다."),
-	CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "COMMON_009", "다른 요청에서 정보가 변경되었습니다. 다시 시도해 주세요."),
+	UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "COMMON_009", "인증이 필요합니다."),
+	CONFLICT(HttpStatus.CONFLICT, "COMMON_010", "현재 상태에서는 요청을 처리할 수 없습니다."),
+	CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "COMMON_011", "다른 요청에서 정보가 변경되었습니다. 다시 시도해 주세요."),
+	TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "COMMON_012", "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."),
 	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_999", "서버 내부 오류가 발생했습니다.");
 
 	private final HttpStatus status;

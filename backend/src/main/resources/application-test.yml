@@ -15,3 +15,10 @@ app:
 logging:
   level:
     root: WARN
+
+minio:
+  endpoint: http://localhost:9000
+  public-endpoint: http://localhost:9000
+  access-key: test-access-key
+  secret-key: test-secret-key
+  upload-bucket: safy-test
