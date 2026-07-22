@@ -15,6 +15,14 @@ class FrameAnalysisResponse(BaseModel):
         default_factory=list,
         alias="personConfidences",
     )
+    visual_congestion_score: float | None = Field(
+        default=None,
+        alias="visualCongestionScore",
+    )
+    local_peak_congestion_score: float | None = Field(
+        default=None,
+        alias="localPeakCongestionScore",
+    )
     density_level: None = Field(default=None, alias="densityLevel")
     risk_score: None = Field(default=None, alias="riskScore")
     confidence: None = None
