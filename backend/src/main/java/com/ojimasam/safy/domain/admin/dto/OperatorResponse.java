@@ -1,5 +1,6 @@
 package com.ojimasam.safy.domain.admin.dto;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 import com.ojimasam.safy.domain.admin.entity.AdminCenterMembership;
@@ -17,7 +18,7 @@ public record OperatorResponse(
 		@Schema(example = "1") Long controlCenterId,
 		@Schema(example = "MANAGER") String membershipRole,
 		LocalDateTime lastLoginAt,
-		LocalDateTime createdAt
+		Instant createdAt
 ) {
 	public static OperatorResponse of(User user, AdminCredential credential, AdminCenterMembership membership) {
 		return new OperatorResponse(user.getId(), credential.getLoginId(), user.getDisplayName(),
