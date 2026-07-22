@@ -47,9 +47,16 @@ python -m ruff check .
 
 ## Current scope
 
-- 이미지 파일 입력
+- 이미지 파일 입력 및 프레임 품질 검사
 - YOLO 사전학습 모델의 `person` 클래스 탐지
 - `personCount` 및 탐지별 confidence 반환
+- YOLO 바운딩 박스 중심점 기반 임시 C·L 계산
+- 전체 시각적 혼잡도 `visualCongestionScore` 반환
+- 국소 최대 혼잡도 `localPeakCongestionScore` 반환
+- `COMPLETED`, `INVALID_FRAME`, `FAILED` 분석 상태 처리
 - GPU 추론 처리시간 측정
 
-혼잡도, 위험도, 프레임 품질 검사와 개인정보 블러는 후속 구현 범위입니다.
+C·L 계산은 SAFY MVP를 위한 임시 규칙입니다. 계산식과 한계는
+[C·L 임시 혼잡도 계산 규칙](docs/congestion-scoring.md)을 참고합니다.
+
+혼잡 지속성 P, 혼잡 증가 추세 G, 최종 위험도 계산과 개인정보 블러는 후속 구현 범위입니다.

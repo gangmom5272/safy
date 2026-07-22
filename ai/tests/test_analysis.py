@@ -25,6 +25,19 @@ def fake_detect_people(_: bytes) -> PersonDetectionResult:
         person_count=2,
         confidences=[0.9, 0.8],
         processing_time_ms=10,
+        person_centers=[
+            (0.10, 0.10),
+            (0.11, 0.11),
+        ],
+    )
+
+
+def fake_detect_no_people(_: bytes) -> PersonDetectionResult:
+    return PersonDetectionResult(
+        person_count=0,
+        confidences=[],
+        processing_time_ms=5,
+        person_centers=[],
     )
 
 
@@ -65,6 +78,8 @@ def test_analyze_frame(monkeypatch) -> None:
         "analysisStatus": "COMPLETED",
         "personCount": 2,
         "personConfidences": [0.9, 0.8],
+        "visualCongestionScore": 0.94,
+        "localPeakCongestionScore": 15.0,
         "densityLevel": None,
         "riskScore": None,
         "confidence": None,
@@ -97,6 +112,8 @@ def test_invalid_frame_skips_detection(monkeypatch) -> None:
     assert response.json()["analysisStatus"] == "INVALID_FRAME"
     assert response.json()["personCount"] is None
     assert response.json()["qualityIssues"] == ["TOO_DARK"]
+    assert response.json()["visualCongestionScore"] is None
+    assert response.json()["localPeakCongestionScore"] is None
 
 
 def test_analysis_failure_returns_failed_status(monkeypatch) -> None:
@@ -121,3 +138,30 @@ def test_analysis_failure_returns_failed_status(monkeypatch) -> None:
     assert response.json()["personCount"] is None
     assert response.json()["personConfidences"] == []
     assert response.json()["qualityIssues"] == []
+    assert response.json()["visualCongestionScore"] is None
+    assert response.json()["localPeakCongestionScore"] is None
+
+def test_no_people_returns_completed_with_zero_congestion(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_valid_quality,
+    )
+    monkeypatch.setattr(
+        analysis,
+        "detect_people",
+        fake_detect_no_people,
+    )
+
+    response = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("empty.jpg", b"fake-image", "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["analysisStatus"] == "COMPLETED"
+    assert response.json()["personCount"] == 0
+    assert response.json()["visualCongestionScore"] == 0.0
+    assert response.json()["localPeakCongestionScore"] == 0.0
