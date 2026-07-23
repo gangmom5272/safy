@@ -16,6 +16,9 @@ services:
   # ==========================================
   backend:
     build: ../backend
+    # DEPLOY_TAG는 배포 시 커밋 해시로 지정한다 (기본값 latest는 로컬 개발용).
+    # 태그별로 이미지를 남겨둬야 롤백 시 재빌드 없이 그 이미지로 바로 되돌릴 수 있다.
+    image: safy-backend:${DEPLOY_TAG:-latest}
     ports:
       # 8080은 OpenVidu ingress가 이미 점유 중(실서버 실측, 2026-07-23).
       # 컨테이너 내부는 기본값 8080 그대로 두고, 호스트에는 디버깅용으로만

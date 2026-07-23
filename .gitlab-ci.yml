@@ -105,4 +105,9 @@ deploy:
         ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-admin"
         rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" frontend-admin/dist "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/frontend-admin/"
       fi
-    - ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "cd ~/S15P11A503/infra && docker compose --project-directory .. up -d --build backend db redis minio nginx"
+    - |
+      ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "
+        cd ~/S15P11A503/infra &&
+        DEPLOY_TAG=$CI_COMMIT_SHORT_SHA docker compose --project-directory .. up -d --build backend db redis minio nginx &&
+        echo '$CI_COMMIT_SHORT_SHA $(date -u +%Y-%m-%dT%H:%M:%SZ)' >> ~/S15P11A503/.deployed_tags
+      "
