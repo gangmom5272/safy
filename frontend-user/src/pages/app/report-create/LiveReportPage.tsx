@@ -30,6 +30,8 @@ interface LiveReportPageProps {
 const fallbackFormData: ReportFormData = {
   method: DEFAULT_REPORT_METHOD,
   category: DEFAULT_REPORT_CATEGORY,
+  selectedTags: [],
+  content: '',
   location: null,
 }
 
@@ -274,6 +276,7 @@ export function LiveReportPage({
   const locationText = formData.location
     ? `위도 ${formatCoordinate(formData.location.latitude)}, 경도 ${formatCoordinate(formData.location.longitude)}`
     : '위치 정보 없음'
+  const categoryLabel = formData.category ? REPORT_CATEGORY_LABELS[formData.category] : '선택 없음'
   const cameraMessage = getCameraMessage(cameraStatus)
   const canStart = cameraStatus === 'ready' && !isReporting
 
@@ -285,7 +288,7 @@ export function LiveReportPage({
         </button>
         <div className="report-live-status" aria-live="polite">
           {isReporting ? <span className="report-live-badge">제보 중 {formatElapsedTime(elapsedSeconds)}</span> : null}
-          <span className="report-info-badge">{REPORT_CATEGORY_LABELS[formData.category]}</span>
+          <span className="report-info-badge">{categoryLabel}</span>
         </div>
       </div>
 
@@ -315,7 +318,7 @@ export function LiveReportPage({
             <span>{locationText}</span>
           </li>
           <li>
-            <span>{REPORT_CATEGORY_LABELS[formData.category]}</span>
+            <span>{categoryLabel}</span>
           </li>
         </ul>
         <ul className="report-live-safety" aria-label="안전 안내">

@@ -15,6 +15,8 @@ interface ReportCompletePageProps {
 const fallbackFormData: ReportFormData = {
   method: DEFAULT_REPORT_METHOD,
   category: DEFAULT_REPORT_CATEGORY,
+  selectedTags: [],
+  content: '',
   location: null,
 }
 
@@ -26,6 +28,7 @@ export function ReportCompletePage({ formData = fallbackFormData, onRestart }: R
   const locationText = formData.location
     ? `위도 ${formatCoordinate(formData.location.latitude)}, 경도 ${formatCoordinate(formData.location.longitude)}`
     : '위치 정보 없음'
+  const categoryLabel = formData.category ? REPORT_CATEGORY_LABELS[formData.category] : '선택 없음'
 
   return (
     <section className="report-create-page" aria-labelledby="report-complete-title">
@@ -42,11 +45,19 @@ export function ReportCompletePage({ formData = fallbackFormData, onRestart }: R
           </div>
           <div>
             <dt>선택한 카테고리</dt>
-            <dd>{REPORT_CATEGORY_LABELS[formData.category]}</dd>
+            <dd>{categoryLabel}</dd>
           </div>
           <div>
             <dt>위치 정보</dt>
             <dd>{locationText}</dd>
+          </div>
+          <div>
+            <dt>상황 태그</dt>
+            <dd>{formData.selectedTags.length > 0 ? formData.selectedTags.join(', ') : '선택 없음'}</dd>
+          </div>
+          <div>
+            <dt>제보 내용</dt>
+            <dd>{formData.content}</dd>
           </div>
         </dl>
         <button type="button" className="report-primary-button" onClick={onRestart}>
