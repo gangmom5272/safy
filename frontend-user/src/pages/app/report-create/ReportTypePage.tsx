@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { type ChangeEvent, useState } from 'react'
 import {
-  DEFAULT_REPORT_CATEGORY,
   DEFAULT_REPORT_METHOD,
+  REPORT_CONTENT_MAX_LENGTH,
+  REPORT_CONTENT_MIN_LENGTH,
   REPORT_CATEGORIES,
   REPORT_CATEGORY_LABELS,
+  REPORT_TAG_LABELS,
 } from './reportConstants'
-import type { ReportCategory, ReportFormData, ReportMethod } from './reportTypes'
+import type { ReportCategory, ReportFormData, ReportMethod, ReportTag } from './reportTypes'
 import { useGeolocation } from './useGeolocation'
 import './report-create.css'
 
@@ -20,21 +22,54 @@ function formatCoordinate(value: number): string {
 
 export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps) {
   const [method, setMethod] = useState<ReportMethod>(initialFormData?.method ?? DEFAULT_REPORT_METHOD)
-  const [category, setCategory] = useState<ReportCategory>(
-    initialFormData?.category ?? DEFAULT_REPORT_CATEGORY,
+  const [category, setCategory] = useState<ReportCategory | null>(initialFormData?.category ?? null)
+  const [selectedTags, setSelectedTags] = useState<ReportTag[]>(
+    initialFormData?.selectedTags ?? [],
   )
+  const [content, setContent] = useState(initialFormData?.content ?? '')
   const { status, location, message, requestLocation } = useGeolocation()
 
+  const handleCategorySelect = (nextCategory: ReportCategory) => {
+    setCategory(nextCategory)
+    setSelectedTags([])
+  }
+
+  const handleTagToggle = (tag: ReportTag) => {
+    setSelectedTags((currentTags) =>
+      currentTags.includes(tag)
+        ? currentTags.filter((currentTag) => currentTag !== tag)
+        : [...currentTags, tag],
+    )
+  }
+
+  const handleContentChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(event.target.value.slice(0, REPORT_CONTENT_MAX_LENGTH))
+  }
+
   const handleStart = () => {
+    if (!canStart || !category) {
+      return
+    }
+
     onStart?.({
       method,
       category,
+      selectedTags,
+      content: content.trim(),
       location,
     })
   }
 
   const ctaLabel = method === 'live' ? '실시간 영상 제보 시작하기' : '사진 제보 시작하기'
   const hasLocation = status === 'success' && location
+  const availableTags = category ? REPORT_TAG_LABELS[category] : []
+  const trimmedContentLength = content.trim().length
+  const isContentValid = trimmedContentLength >= REPORT_CONTENT_MIN_LENGTH
+  const contentErrorMessage =
+    trimmedContentLength === 0
+      ? '제보 내용을 입력해주세요.'
+      : `제보 내용은 공백 제외 ${REPORT_CONTENT_MIN_LENGTH}자 이상 입력해주세요.`
+  const canStart = Boolean(method && category && hasLocation && isContentValid)
 
   return (
     <section className="report-create-page" aria-labelledby="report-create-title">
@@ -107,26 +142,76 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
         </div>
       </section>
 
-      <section className="report-create-card" aria-labelledby="report-category-title">
-        <h2 id="report-category-title">제보 카테고리</h2>
-        <div className="report-category-grid" role="radiogroup" aria-label="제보 카테고리">
-          {REPORT_CATEGORIES.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={`report-category-button ${category === item ? 'selected' : ''}`}
-              role="radio"
-              aria-checked={category === item}
-              onClick={() => setCategory(item)}
-            >
-              {REPORT_CATEGORY_LABELS[item]}
-            </button>
-          ))}
+      <section className="report-create-card" aria-labelledby="report-classification-title">
+        <h2 id="report-classification-title">제보 분류</h2>
+        <div className="report-classification-group">
+          <h3 className="report-section-label">제보 카테고리</h3>
+          <div className="report-category-grid" role="radiogroup" aria-label="제보 카테고리">
+            {REPORT_CATEGORIES.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={`report-category-button ${category === item ? 'selected' : ''}`}
+                role="radio"
+                aria-checked={category === item}
+                onClick={() => handleCategorySelect(item)}
+              >
+                {REPORT_CATEGORY_LABELS[item]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {category ? (
+          <div className="report-classification-group report-classification-group-separated">
+            <h3 className="report-section-label">세부 상황</h3>
+            <p>현장 상황에 맞는 항목을 여러 개 선택해주세요.</p>
+            <div className="report-tag-grid" aria-label="세부 상황">
+              {availableTags.map((tag) => {
+                const isSelected = selectedTags.includes(tag)
+
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    className={`report-tag-button ${isSelected ? 'selected' : ''}`}
+                    aria-pressed={isSelected}
+                    onClick={() => handleTagToggle(tag)}
+                  >
+                    {tag}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="report-create-card" aria-labelledby="report-content-title">
+        <h2 id="report-content-title">제보 내용</h2>
+        <p>현재 현장 상황을 구체적으로 작성해주세요.</p>
+        <textarea
+          className="report-content-textarea"
+          value={content}
+          maxLength={REPORT_CONTENT_MAX_LENGTH}
+          rows={5}
+          aria-describedby="report-content-guide report-content-count"
+          aria-invalid={!isContentValid}
+          placeholder="예: 2번 출구 앞에 사람이 몰려 이동하기 어렵고, 인파가 계속 증가하고 있습니다."
+          onChange={handleContentChange}
+        />
+        <div className="report-content-meta">
+          <p id="report-content-guide" className={!isContentValid ? 'report-error-text' : 'report-create-muted'}>
+            {!isContentValid ? contentErrorMessage : '제보 내용이 입력되었습니다.'}
+          </p>
+          <span id="report-content-count" className="report-content-count">
+            {content.length} / {REPORT_CONTENT_MAX_LENGTH}
+          </span>
         </div>
       </section>
 
       <div className="report-create-actions">
-        <button type="button" className="report-primary-button" onClick={handleStart}>
+        <button type="button" className="report-primary-button" disabled={!canStart} onClick={handleStart}>
           {ctaLabel}
         </button>
       </div>

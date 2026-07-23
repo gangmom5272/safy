@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { DEFAULT_REPORT_CATEGORY, DEFAULT_REPORT_METHOD } from './reportConstants'
+import { DEFAULT_REPORT_METHOD } from './reportConstants'
 import { LiveReportPage } from './LiveReportPage'
 import { MediaReportPage } from './MediaReportPage'
 import { ReportCompletePage } from './ReportCompletePage'
@@ -10,7 +10,9 @@ import './report-create.css'
 function createInitialFormData(): ReportFormData {
   return {
     method: DEFAULT_REPORT_METHOD,
-    category: DEFAULT_REPORT_CATEGORY,
+    category: null,
+    selectedTags: [],
+    content: '',
     location: null,
   }
 }

@@ -43,6 +43,8 @@ interface MediaReportPageProps {
 const fallbackFormData: ReportFormData = {
   method: 'photo',
   category: DEFAULT_REPORT_CATEGORY,
+  selectedTags: [],
+  content: '',
   location: null,
 }
 
@@ -450,6 +452,7 @@ export function MediaReportPage({
   const locationText = formData.location
     ? `위도 ${formatCoordinate(formData.location.latitude)}, 경도 ${formatCoordinate(formData.location.longitude)}`
     : '위치 정보 없음'
+  const categoryLabel = formData.category ? REPORT_CATEGORY_LABELS[formData.category] : '선택 없음'
   const cameraMessage = getCameraMessage(cameraStatus)
 
   return (
@@ -467,11 +470,19 @@ export function MediaReportPage({
         <dl className="report-summary-list">
           <div>
             <dt>카테고리</dt>
-            <dd>{REPORT_CATEGORY_LABELS[formData.category]}</dd>
+            <dd>{categoryLabel}</dd>
           </div>
           <div>
             <dt>현재 위치</dt>
             <dd>{locationText}</dd>
+          </div>
+          <div>
+            <dt>상황 태그</dt>
+            <dd>{formData.selectedTags.length > 0 ? formData.selectedTags.join(', ') : '선택 없음'}</dd>
+          </div>
+          <div>
+            <dt>제보 내용</dt>
+            <dd>{formData.content}</dd>
           </div>
         </dl>
       </section>
