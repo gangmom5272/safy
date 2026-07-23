@@ -304,6 +304,16 @@ button:disabled {
   font-size: 14px;
 }
 
+.logout-button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text);
+  font-weight: 800;
+}
+
 .admin-main {
   padding: 28px 32px 48px;
 }
@@ -808,6 +818,118 @@ button:disabled {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 8px;
+}
+
+.login-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background:
+    linear-gradient(135deg, rgba(21, 112, 239, 0.1), rgba(16, 24, 40, 0.05)),
+    var(--bg);
+}
+
+.login-card {
+  width: min(100%, 440px);
+  display: grid;
+  gap: 22px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.login-brand {
+  display: grid;
+  gap: 4px;
+}
+
+.login-brand strong {
+  color: var(--sidebar);
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.login-brand span,
+.mock-account span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.login-card h1 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  letter-spacing: 0;
+}
+
+.login-card p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.login-form {
+  display: grid;
+  gap: 10px;
+}
+
+.login-form label {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.login-form input {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.login-error {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: var(--danger) !important;
+  font-weight: 700;
+}
+
+.login-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.mock-account {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.mock-account dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.mock-account div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mock-account dt {
+  color: var(--text-muted);
+}
+
+.mock-account dd {
+  margin: 0;
+  font-weight: 800;
 }
 
 @media (max-width: 1180px) {

@@ -1,6 +1,9 @@
 import { Navigate, createBrowserRouter } from 'react-router'
+import { ProtectedRoute } from '../auth/ProtectedRoute'
+import { PublicOnlyRoute } from '../auth/PublicOnlyRoute'
 import { AdminLayout } from '../layouts/AdminLayout'
 import { DashboardPage } from '../pages/dashboard/DashboardPage'
+import { LoginPage } from '../pages/login/LoginPage'
 import { MonitoringPage } from '../pages/monitoring/MonitoringPage'
 import { NotFoundPage } from '../pages/not-found/NotFoundPage'
 import { ReportDetailPage } from '../pages/reports/ReportDetailPage'
@@ -12,15 +15,38 @@ export const router = createBrowserRouter(
   [
     {
       path: '/',
-      element: <AdminLayout />,
       children: [
-        { index: true, element: <Navigate to={ROUTE_PATHS.DASHBOARD} replace /> },
-        { path: 'dashboard', element: <DashboardPage /> },
-        { path: 'reports', element: <ReportListPage /> },
-        { path: 'reports/:reportId', element: <ReportDetailPage /> },
-        { path: 'monitoring', element: <MonitoringPage /> },
-        { path: 'risk-map', element: <RiskMapPage /> },
-        { path: '*', element: <NotFoundPage /> },
+        {
+          index: true,
+          element: (
+            <ProtectedRoute>
+              <Navigate to={ROUTE_PATHS.DASHBOARD} replace />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: 'login',
+          element: (
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
+          ),
+        },
+        {
+          element: (
+            <ProtectedRoute>
+              <AdminLayout />
+            </ProtectedRoute>
+          ),
+          children: [
+            { path: 'dashboard', element: <DashboardPage /> },
+            { path: 'reports', element: <ReportListPage /> },
+            { path: 'reports/:reportId', element: <ReportDetailPage /> },
+            { path: 'monitoring', element: <MonitoringPage /> },
+            { path: 'risk-map', element: <RiskMapPage /> },
+            { path: '*', element: <NotFoundPage /> },
+          ],
+        },
       ],
     },
   ],

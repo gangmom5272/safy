@@ -1,4 +1,5 @@
-import { useLocation } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
+import { useAuth } from '../../auth/useAuth'
 import { ROUTE_PATHS } from '../../router/paths'
 
 const pageTitleByPath: Record<string, string> = {
@@ -18,6 +19,13 @@ function getPageTitle(pathname: string) {
 
 export function AdminHeader() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const { adminEmail, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    navigate(ROUTE_PATHS.LOGIN, { replace: true })
+  }
 
   return (
     <header className="admin-header">
@@ -34,8 +42,11 @@ export function AdminHeader() {
           !
         </button>
         <div className="admin-profile" aria-label="관리자 계정">
-          admin@safy.kr
+          {adminEmail ?? 'admin'}
         </div>
+        <button type="button" className="logout-button" onClick={handleLogout}>
+          로그아웃
+        </button>
       </div>
     </header>
   )
