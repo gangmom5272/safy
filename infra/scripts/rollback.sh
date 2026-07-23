@@ -39,7 +39,7 @@ fi
 
 echo "롤백 대상: safy-backend:$TARGET_TAG"
 
-DEPLOY_TAG="$TARGET_TAG" docker compose --project-directory .. up -d backend
+DEPLOY_TAG="$TARGET_TAG" docker compose up -d backend
 
 echo "rollback-to:$TARGET_TAG $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$LOG_FILE"
 
