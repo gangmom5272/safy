@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ErrorState, LoadingSkeleton } from './SituationStates'
 import { riskLevelLabels, type AreaMapData, type ReportMarker } from './types'
 
@@ -6,9 +6,10 @@ type AreaMapProps = {
   mapData?: AreaMapData
   isLoading: boolean
   error: unknown
+  children?: ReactNode
 }
 
-export function AreaMap({ mapData, isLoading, error }: AreaMapProps) {
+export function AreaMap({ mapData, isLoading, error, children }: AreaMapProps) {
   const [selectedMarker, setSelectedMarker] = useState<ReportMarker | null>(null)
 
   if (isLoading && !mapData) {
@@ -84,18 +85,7 @@ export function AreaMap({ mapData, isLoading, error }: AreaMapProps) {
         ) : null}
       </div>
 
-      <ul className="map-marker-list" aria-label="지도 제보 마커 목록">
-        <li>
-          <strong>범례</strong>
-          <span>매우 혼잡 · 혼잡 · 보통 · 여유</span>
-        </li>
-        {mapData.reportMarkers.map((marker) => (
-          <li key={marker.reportId}>
-            <strong>{marker.locationName}</strong>
-            <span>{riskLevelLabels[marker.riskLevel]}</span>
-          </li>
-        ))}
-      </ul>
+      {children}
     </section>
   )
 }

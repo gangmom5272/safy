@@ -1,5 +1,4 @@
 import type { RefObject } from 'react'
-import { useNavigate } from 'react-router'
 import { EmptyState, ErrorState, LoadingSkeleton } from './SituationStates'
 import { LiveReportCard } from './LiveReportCard'
 import {
@@ -31,8 +30,6 @@ export function LiveReportSection({
   onRetry,
   emptyMessage = '조건에 맞는 실시간 제보가 없습니다.',
 }: LiveReportSectionProps) {
-  const navigate = useNavigate()
-
   return (
     <section className="live-report-section" aria-labelledby="live-report-title">
       <div className="section-title-row">
@@ -40,9 +37,6 @@ export function LiveReportSection({
           <h2 id="live-report-title">실시간 제보</h2>
           <p>{reportSortLabels[sort]}</p>
         </div>
-        <button type="button" onClick={() => navigate('/app/situations')}>
-          지도 보기
-        </button>
       </div>
 
       {selectedTypes.length ? (
