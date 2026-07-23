@@ -1,5 +1,6 @@
 stages:
   - test
+  - deploy
 
 variables:
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
@@ -19,6 +20,10 @@ frontend-user:
     - npm ci
     - npm run lint
     - npm run build
+  artifacts:
+    paths:
+      - frontend-user/dist
+    expire_in: 1 hour
 
 frontend-admin:
   stage: test
@@ -35,6 +40,10 @@ frontend-admin:
     - npm ci
     - npm run lint
     - npm run build
+  artifacts:
+    paths:
+      - frontend-admin/dist
+    expire_in: 1 hour
 
 backend:
   stage: test
@@ -69,3 +78,31 @@ ai:
     - cd ai
     - pip install -r requirements-ci.txt
     - pytest
+
+# AI 서비스는 배포 대상에서 제외 (팀 결정 대기 중 - INFRA_DECISIONS.md 참고 예정).
+# backend/frontend-user/frontend-admin만 배포한다.
+deploy:
+  stage: deploy
+  image: alpine:3.20
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/id_deploy
+    - chmod 600 ~/.ssh/id_deploy
+    - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+  script:
+    - ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503"
+    - rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" backend infra "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/"
+    - |
+      if [ -d frontend-user/dist ]; then
+        ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-user"
+        rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" frontend-user/dist "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/frontend-user/"
+      fi
+    - |
+      if [ -d frontend-admin/dist ]; then
+        ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-admin"
+        rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" frontend-admin/dist "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/frontend-admin/"
+      fi
+    - ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "cd ~/S15P11A503/infra && docker compose --project-directory .. up -d --build backend db redis minio nginx"
