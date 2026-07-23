@@ -1,5 +1,3 @@
-version: "3.8"
-
 # SAFY 개발 환경 Docker Compose
 # ⬜ 표시된 서비스는 BE/AI/DB 담당자 확정 후 세부 설정 채워야 함
 #
@@ -17,9 +15,15 @@ services:
   # Spring Boot (Java 21, Spring Boot 4.1.0) - 확정
   # ==========================================
   backend:
-    build: ./backend
+    build: ../backend
+    # DEPLOY_TAG는 배포 시 커밋 해시로 지정한다 (기본값 latest는 로컬 개발용).
+    # 태그별로 이미지를 남겨둬야 롤백 시 재빌드 없이 그 이미지로 바로 되돌릴 수 있다.
+    image: safy-backend:${DEPLOY_TAG:-latest}
     ports:
-      - "${SPRING_PORT}:${SPRING_PORT}"
+      # 8080은 OpenVidu ingress가 이미 점유 중(실서버 실측, 2026-07-23).
+      # 컨테이너 내부는 기본값 8080 그대로 두고, 호스트에는 디버깅용으로만
+      # 8090을 매핑한다. 정식 진입점은 nginx(8091)다.
+      - "8090:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
       - DB_HOST=db
@@ -78,11 +82,10 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     ports:
-      # ⬜ OpenVidu 자체 MinIO(녹화/Egress용)를 public으로 노출할 경우
-      #   해당 스택도 기본적으로 9000 포트를 사용하므로 호스트 포트가 겹칠 수 있음.
-      #   OpenVidu 스택 배포 시 포트 매핑 재확인 필요 (미해결)
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # 관리 콘솔
+      # OpenVidu 자체 MinIO(녹화/Egress용)와 충돌해서 9200/9201로 이미 재배정함
+      # (실서버 실측 확인, 2026-07-21, INFRA_DECISIONS.md 참고)
+      - "9200:9000"   # S3 API
+      - "9201:9001"   # 관리 콘솔
     environment:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
@@ -93,7 +96,7 @@ services:
   # Python (AI 서버) - FastAPI 확정
   # ==========================================
   ai-server:
-    build: ./ai
+    build: ../ai
     ports:
       - "${AI_SERVER_PORT}:${AI_SERVER_PORT}"
     environment:
@@ -105,17 +108,21 @@ services:
     # 예상 형태: uvicorn main:app --host 0.0.0.0 --port ${AI_SERVER_PORT}
 
   # ==========================================
-  # Nginx (reverse proxy) - 확정, 세부 라우팅 미확정
+  # Nginx (reverse proxy + 정적 파일 서빙) - 확정
   # ==========================================
-  # nginx:
-  #   image: nginx:latest
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./infra/nginx.conf:/etc/nginx/nginx.conf
-  #   depends_on:
-  #     - backend
+  # 주의: 80/443은 OpenVidu 스택의 Caddy가 이미 점유 중이라(실서버 실측, 2026-07-23)
+  # 8091로 노출한다. 도메인 루트(https://i15a503.p.ssafy.io/)로 바로 붙게 하려면
+  # Caddy 쪽에 리버스프록시 라우팅을 추가해야 하며, 이는 47과 별개 작업이다.
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8091:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../frontend-user/dist:/usr/share/nginx/frontend-user:ro
+      - ../frontend-admin/dist:/usr/share/nginx/frontend-admin:ro
+    depends_on:
+      - backend
 
 volumes:
   db_data:
