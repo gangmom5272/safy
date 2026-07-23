@@ -97,12 +97,12 @@ deploy:
     - rsync -az --delete --exclude=.env -e "ssh -i ~/.ssh/id_deploy" backend infra "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/"
     - |
       if [ -d frontend-user/dist ]; then
-        ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-user"
+        ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-user/dist"
         rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" frontend-user/dist "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/frontend-user/"
       fi
     - |
       if [ -d frontend-admin/dist ]; then
-        ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-admin"
+        ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-admin/dist"
         rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" frontend-admin/dist "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/frontend-admin/"
       fi
     - |
