@@ -17,6 +17,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(
@@ -30,6 +31,7 @@ public class MediaAsset extends BaseEntity {
 
 	@Version
 	@Column(nullable = false)
+	@ColumnDefault("0")
 	private long version;
 
 	@Column(name = "owner_user_id", nullable = false)
