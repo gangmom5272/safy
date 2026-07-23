@@ -52,23 +52,22 @@ public class IssueImageUploadService {
 		Instant now = clock.instant();
 		validateQuota(command.userId(), now);
 		Instant expiresAt = now.plus(UPLOAD_EXPIRY);
-		String objectKey = createObjectKey(command.userId(), command.filename());
+		String normalizedContentType = command.contentType().toLowerCase(Locale.ROOT);
+		String objectKey = createObjectKey(command.userId(), normalizedContentType);
 		MediaAsset asset = MediaAsset.prepareOriginal(
 				command.userId(), uploadBucket, objectKey, command.filename(),
-				command.contentType().toLowerCase(Locale.ROOT), expiresAt
+				normalizedContentType, expiresAt
 		);
 		MediaAsset saved = mediaAssetRepository.save(asset);
-		PresignedPostUpload upload = mediaObjectStorage.createPresignedPost(
-				uploadBucket, objectKey, asset.getContentType(), expiresAt, MAX_IMAGE_SIZE
-		);
-		return new IssuedImageUpload(saved.getId(), upload.uploadUrl(), upload.formFields(), MAX_IMAGE_SIZE, expiresAt);
+		String uploadUrl = mediaObjectStorage.createPresignedPutUrl(uploadBucket, objectKey, UPLOAD_EXPIRY);
+		return new IssuedImageUpload(saved.getId(), uploadUrl, normalizedContentType, MAX_IMAGE_SIZE, expiresAt);
 	}
 
 	private void validate(IssueImageUploadCommand command) {
 		if (command.filename() == null || command.filename().isBlank()) throw new IllegalArgumentException("파일명은 필수입니다.");
 		if (command.filename().length() > 255) throw new IllegalArgumentException("파일명은 255자 이하여야 합니다.");
 		if (command.contentType() == null || !ALLOWED_CONTENT_TYPES.contains(command.contentType().toLowerCase(Locale.ROOT))) {
-			throw new IllegalArgumentException("JPEG, PNG, WEBP 이미지만 업로드할 수 있습니다.");
+			throw new IllegalArgumentException("JPEG, PNG, WEBP 이미지만 업로드할 수 있습니다. HEIC/HEIF는 업로드 전에 변환해 주세요.");
 		}
 	}
 
@@ -85,12 +84,13 @@ public class IssueImageUploadService {
 		}
 	}
 
-	private String createObjectKey(Long userId, String filename) {
-		String extension = "";
-		int dotIndex = filename.lastIndexOf('.');
-		if (dotIndex >= 0 && dotIndex < filename.length() - 1) {
-			extension = "." + filename.substring(dotIndex + 1).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
-		}
+	private String createObjectKey(Long userId, String contentType) {
+		String extension = switch (contentType) {
+			case "image/jpeg" -> ".jpg";
+			case "image/png" -> ".png";
+			case "image/webp" -> ".webp";
+			default -> throw new IllegalArgumentException("지원하지 않는 이미지 형식입니다.");
+		};
 		LocalDate date = LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC);
 		return "reports/%d/%s/%s%s".formatted(userId, date, UUID.randomUUID(), extension);
 	}

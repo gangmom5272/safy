@@ -20,10 +20,21 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import com.ojimasam.safy.report.application.CreateImageReportCommand;
 import com.ojimasam.safy.report.application.CreateImageReportService;
@@ -50,6 +61,7 @@ import com.ojimasam.safy.report.domain.ReportType;
 )
 @AutoConfigureMockMvc(addFilters = false)
 @EnableConfigurationProperties(CorsProperties.class)
+@Import(ReportControllerTest.SecurityArgumentResolverConfig.class)
 class ReportControllerTest {
 	@Autowired MockMvc mockMvc;
 	@MockitoBean CreateTextReportService createTextReportService;
@@ -60,7 +72,7 @@ class ReportControllerTest {
 	@Test
 	void cancelsMyReport() throws Exception {
 		mockMvc.perform(patch("/api/v1/reports/42/cancel")
-						.requestAttr(ReportController.AUTHENTICATED_USER_ID_ATTRIBUTE, 1L))
+						.with(authenticatedUser(1L)))
 				.andExpect(status().isNoContent());
 
 		verify(cancelReportService).cancel(1L, 42L);
@@ -75,7 +87,7 @@ class ReportControllerTest {
 		));
 
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/reports/42")
-						.requestAttr(ReportController.AUTHENTICATED_USER_ID_ATTRIBUTE, 1L))
+						.with(authenticatedUser(1L)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.reportId").value(42))
 				.andExpect(jsonPath("$.data.images").isArray());
@@ -90,18 +102,9 @@ class ReportControllerTest {
 		)));
 
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/reports/me")
-						.requestAttr(ReportController.AUTHENTICATED_USER_ID_ATTRIBUTE, 1L))
+						.with(authenticatedUser(1L)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.content[0].reportId").value(42));
-	}
-
-	@Test
-	void returnsUnauthorizedWithoutAuthenticatedUser() throws Exception {
-		mockMvc.perform(post("/api/v1/reports")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(textBody("TEXT", "제보 내용")))
-				.andExpect(status().isUnauthorized())
-				.andExpect(jsonPath("$.code").value("COMMON_009"));
 	}
 
 	@Test
@@ -113,7 +116,7 @@ class ReportControllerTest {
 		mockMvc.perform(post("/api/v1/reports")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(textBody("TEXT", "출구 주변이 혼잡합니다."))
-						.requestAttr(ReportController.AUTHENTICATED_USER_ID_ATTRIBUTE, 1L))
+						.with(authenticatedUser(1L)))
 				.andExpect(status().isCreated())
 				.andExpect(header().string("Location", "/api/v1/reports/42"))
 				.andExpect(jsonPath("$.data.reportType").value("TEXT"));
@@ -139,7 +142,7 @@ class ReportControllerTest {
 								  "mediaAssetIds": [10, 11]
 								}
 								""")
-						.requestAttr(ReportController.AUTHENTICATED_USER_ID_ATTRIBUTE, 1L))
+						.with(authenticatedUser(1L)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.data.reportId").value(43))
 				.andExpect(jsonPath("$.data.reportType").value("IMAGE"));
@@ -158,7 +161,7 @@ class ReportControllerTest {
 								  "mediaAssetIds": [10]
 								}
 								""")
-						.requestAttr(ReportController.AUTHENTICATED_USER_ID_ATTRIBUTE, 1L))
+						.with(authenticatedUser(1L)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("COMMON_001"));
 	}
@@ -173,5 +176,29 @@ class ReportControllerTest {
 				  "address": "서울특별시 중구"
 				}
 				""".formatted(reportType, description);
+	}
+
+	private RequestPostProcessor authenticatedUser(Long userId) {
+		return request -> {
+			Jwt jwt = Jwt.withTokenValue("test-access-token")
+					.header("alg", "HS256")
+					.subject(userId.toString())
+					.build();
+			JwtAuthenticationToken authentication = new JwtAuthenticationToken(
+					jwt, List.of(new SimpleGrantedAuthority("ROLE_CITIZEN")), userId.toString());
+			SecurityContext context = SecurityContextHolder.createEmptyContext();
+			context.setAuthentication(authentication);
+			SecurityContextHolder.setContext(context);
+			request.setUserPrincipal(authentication);
+			return request;
+		};
+	}
+
+	@TestConfiguration
+	static class SecurityArgumentResolverConfig implements WebMvcConfigurer {
+		@Override
+		public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+			resolvers.add(new AuthenticationPrincipalArgumentResolver());
+		}
 	}
 }

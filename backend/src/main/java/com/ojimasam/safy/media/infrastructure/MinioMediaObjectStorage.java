@@ -1,10 +1,6 @@
 package com.ojimasam.safy.media.infrastructure;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -13,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 import com.ojimasam.safy.media.application.MediaObjectMetadata;
 import com.ojimasam.safy.media.application.MediaObjectStorage;
-import com.ojimasam.safy.media.application.PresignedPostUpload;
 
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
@@ -22,7 +17,6 @@ import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.Http.Method;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
-import io.minio.PostPolicy;
 import io.minio.RemoveObjectArgs;
 import io.minio.StatObjectArgs;
 import io.minio.StatObjectResponse;
@@ -44,20 +38,19 @@ public class MinioMediaObjectStorage implements MediaObjectStorage {
 	}
 
 	@Override
-	public PresignedPostUpload createPresignedPost(String bucketName, String objectKey, String contentType,
-			Instant expiresAt, long maxFileSize) {
+	public String createPresignedPutUrl(String bucketName, String objectKey, Duration expiry) {
 		try {
 			ensureBucket(bucketName);
-			PostPolicy policy = new PostPolicy(bucketName, expiresAt.atZone(ZoneOffset.UTC));
-			policy.addEqualsCondition("key", objectKey);
-			policy.addEqualsCondition("Content-Type", contentType);
-			policy.addContentLengthRangeCondition(1, maxFileSize);
-			Map<String, String> formFields = new HashMap<>(presignClient.getPresignedPostFormData(policy));
-			formFields.put("key", objectKey);
-			formFields.put("Content-Type", contentType);
-			return new PresignedPostUpload(publicEndpoint + "/" + bucketName, formFields);
+			return presignClient.getPresignedObjectUrl(
+					GetPresignedObjectUrlArgs.builder()
+							.method(Method.PUT)
+							.bucket(bucketName)
+							.object(objectKey)
+							.expiry(Math.toIntExact(expiry.toSeconds()), TimeUnit.SECONDS)
+							.build()
+			);
 		} catch (Exception exception) {
-			throw new IllegalStateException("이미지 업로드 정책을 생성하지 못했습니다.", exception);
+			throw new IllegalStateException("이미지 업로드 URL을 생성하지 못했습니다.", exception);
 		}
 	}
 

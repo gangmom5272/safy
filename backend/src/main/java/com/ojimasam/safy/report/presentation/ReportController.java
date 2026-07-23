@@ -1,16 +1,17 @@
 package com.ojimasam.safy.report.presentation;
 
 import java.net.URI;
-import java.security.Principal;
 import java.util.List;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,6 +21,7 @@ import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
+import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
 import com.ojimasam.safy.report.application.CreateImageReportCommand;
 import com.ojimasam.safy.report.application.CreateImageReportService;
 import com.ojimasam.safy.report.application.CreateReportResult;
@@ -35,9 +37,8 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/reports")
+@PreAuthorize("hasRole('CITIZEN')")
 public class ReportController implements ReportApiDocs {
-	public static final String AUTHENTICATED_USER_ID_ATTRIBUTE = "authenticatedUserId";
-
 	private final CreateTextReportService createTextReportService;
 	private final CreateImageReportService createImageReportService;
 	private final ReportQueryService reportQueryService;
@@ -55,11 +56,10 @@ public class ReportController implements ReportApiDocs {
 	@PatchMapping("/{reportId}/cancel")
 	@Override
 	public ResponseEntity<Void> cancel(
-			Principal principal,
-			@RequestAttribute(value = AUTHENTICATED_USER_ID_ATTRIBUTE, required = false) Long localReporterId,
+			@AuthenticationPrincipal Jwt jwt,
 			@PathVariable Long reportId
 	) {
-		Long reporterId = resolveAuthenticatedUserId(principal, localReporterId);
+		Long reporterId = CurrentUser.id(jwt);
 		try {
 			cancelReportService.cancel(reporterId, reportId);
 			return ResponseEntity.noContent().build();
@@ -71,23 +71,21 @@ public class ReportController implements ReportApiDocs {
 	@GetMapping("/{reportId}")
 	@Override
 	public ResponseEntity<ApiResponse<ReportDetailView>> getMine(
-			Principal principal,
-			@RequestAttribute(value = AUTHENTICATED_USER_ID_ATTRIBUTE, required = false) Long localReporterId,
+			@AuthenticationPrincipal Jwt jwt,
 			@PathVariable Long reportId
 	) {
-		Long reporterId = resolveAuthenticatedUserId(principal, localReporterId);
+		Long reporterId = CurrentUser.id(jwt);
 		return ResponseEntity.ok(ApiResponse.success(reportQueryService.getMine(reporterId, reportId)));
 	}
 
 	@GetMapping("/me")
 	@Override
 	public ResponseEntity<ApiResponse<PageResponse<ReportListItemView>>> getMyList(
-			Principal principal,
-			@RequestAttribute(value = AUTHENTICATED_USER_ID_ATTRIBUTE, required = false) Long localReporterId,
+			@AuthenticationPrincipal Jwt jwt,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "20") int size
 	) {
-		Long reporterId = resolveAuthenticatedUserId(principal, localReporterId);
+		Long reporterId = CurrentUser.id(jwt);
 		try {
 			return ResponseEntity.ok(ApiResponse.success(PageResponse.from(reportQueryService.getMyList(reporterId, page, size))));
 		} catch (IllegalArgumentException exception) {
@@ -98,11 +96,10 @@ public class ReportController implements ReportApiDocs {
 	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
 	@Override
 	public ResponseEntity<ApiResponse<CreateReportResponse>> create(
-			Principal principal,
-			@RequestAttribute(value = AUTHENTICATED_USER_ID_ATTRIBUTE, required = false) Long localReporterId,
+			@AuthenticationPrincipal Jwt jwt,
 			@Valid @RequestBody CreateReportRequest request
 	) {
-		Long reporterId = resolveAuthenticatedUserId(principal, localReporterId);
+		Long reporterId = CurrentUser.id(jwt);
 		try {
 			CreateReportResult result = switch (request.reportType()) {
 				case TEXT -> createText(reporterId, request);
@@ -115,18 +112,6 @@ public class ReportController implements ReportApiDocs {
 			throw new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE, exception.getMessage());
 		} catch (IllegalStateException exception) {
 			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
-		}
-	}
-
-	private Long resolveAuthenticatedUserId(Principal principal, Long localReporterId) {
-		if (principal == null) {
-			if (localReporterId == null) throw new BusinessException(CommonErrorCode.UNAUTHORIZED);
-			return localReporterId;
-		}
-		try {
-			return Long.valueOf(principal.getName());
-		} catch (NumberFormatException exception) {
-			throw new BusinessException(CommonErrorCode.UNAUTHORIZED);
 		}
 	}
 
