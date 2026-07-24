@@ -160,9 +160,34 @@ public class Report extends BaseEntity {
 		);
 	}
 
+	public static Report createLive(
+			Long reporterId,
+			String description,
+			BigDecimal latitude,
+			BigDecimal longitude,
+			String address
+	) {
+		if (reporterId == null) throw new IllegalArgumentException("제보자 ID는 필수입니다.");
+		validateCoordinates(latitude, longitude);
+		return new Report(
+				reporterId,
+				ReportType.LIVE,
+				description == null ? "" : description.strip(),
+				latitude,
+				longitude,
+				address,
+				ReportStatus.RECEIVED,
+				Instant.now()
+		);
+	}
+
 	private static void validateCommon(Long reporterId, String description, BigDecimal latitude, BigDecimal longitude) {
 		if (reporterId == null) throw new IllegalArgumentException("제보자 ID는 필수입니다.");
 		if (description == null || description.isBlank()) throw new IllegalArgumentException("제보 내용은 비어 있을 수 없습니다.");
+		validateCoordinates(latitude, longitude);
+	}
+
+	private static void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
 		if (latitude == null || longitude == null) throw new IllegalArgumentException("위도와 경도는 필수입니다.");
 		if (latitude.compareTo(new BigDecimal("-90")) < 0 || latitude.compareTo(new BigDecimal("90")) > 0) {
 			throw new IllegalArgumentException("위도는 -90 이상 90 이하여야 합니다.");

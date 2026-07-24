@@ -1,6 +1,8 @@
 spring:
   application:
     name: safy
+  config:
+    import: optional:file:.env[.properties]
   jpa:
     properties:
       hibernate:
@@ -77,6 +79,9 @@ openvidu:
   url: ${OPENVIDU_URL:}
   api-key: ${OPENVIDU_API_KEY:}
   api-secret: ${OPENVIDU_API_SECRET:}
+  token-ttl: ${OPENVIDU_TOKEN_TTL:PT10M}
+  session-ttl: ${OPENVIDU_SESSION_TTL:PT30M}
+  cleanup-delay: ${OPENVIDU_CLEANUP_DELAY:PT1M}
 
 minio:
   endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
