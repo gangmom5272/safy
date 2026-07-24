@@ -61,6 +61,25 @@ python -m scripts.render_congestion_debug runs/bus.jpg \
 [혼잡도 계산 및 디버그 시각화 검증](docs/congestion-validation.md)을 참고합니다.
 
 
+## Evaluate YOLO baseline
+
+COCO128 대표 표본으로 YOLO 사람 계수 정확도와 C·L 결과를
+평가하고 JSON 보고서를 생성합니다.
+
+```bash
+python -m scripts.evaluate_yolo_baseline \
+  docs/yolo-baseline-manifest.example.csv \
+  --output runs/yolo-baseline-report.json
+```
+
+평가 이미지와 결과 JSON은 `runs/`에 저장하며 Git에 포함하지
+않습니다.
+
+표본 선별 기준, 기준 평가 결과와 제한사항은
+[YOLO 기준 모델 평가](docs/yolo-baseline-evaluation.md)를 참고합니다.
+
+
+
 ## Test
 
 ```bash
