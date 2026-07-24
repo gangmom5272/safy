@@ -15,6 +15,7 @@ public enum CommonErrorCode implements ErrorCode {
 	CONFLICT(HttpStatus.CONFLICT, "COMMON_010", "현재 상태에서는 요청을 처리할 수 없습니다."),
 	CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "COMMON_011", "다른 요청에서 정보가 변경되었습니다. 다시 시도해 주세요."),
 	TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "COMMON_012", "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."),
+	ACCESS_DENIED(HttpStatus.FORBIDDEN, "COMMON_013", "접근 권한이 없습니다."),
 	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_999", "서버 내부 오류가 발생했습니다.");
 
 	private final HttpStatus status;

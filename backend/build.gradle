@@ -27,6 +27,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 	implementation 'io.minio:minio:9.0.1'
+	implementation 'io.livekit:livekit-server:0.14.0'
 	runtimeOnly 'org.postgresql:postgresql'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -41,4 +42,51 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+tasks.register('openViduSmokeTest', Test) {
+	description = 'Runs an OpenVidu room and token smoke test against the configured server.'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	def dotenv = file('.env')
+	if (dotenv.exists()) {
+		dotenv.eachLine { line ->
+			def matcher = line =~ /^\s*(OPENVIDU_URL|OPENVIDU_API_KEY|OPENVIDU_API_SECRET)\s*=\s*(.*?)\s*$/
+			if (matcher.matches() && !System.getenv(matcher.group(1))) {
+				def value = matcher.group(2)
+				if ((value.startsWith('"') && value.endsWith('"')) ||
+						(value.startsWith("'") && value.endsWith("'"))) {
+					value = value.substring(1, value.length() - 1)
+				}
+				environment matcher.group(1), value
+			}
+		}
+	}
+	useJUnitPlatform()
+	filter {
+		includeTestsMatching 'com.ojimasam.safy.live.infrastructure.OpenViduSmokeTest'
+	}
+}
+
+tasks.register('openViduManualSession', JavaExec) {
+	description = 'Generates a local browser page for a real OpenVidu camera publish/subscribe test.'
+	group = 'verification'
+	dependsOn testClasses
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.ojimasam.safy.live.infrastructure.OpenViduManualSession'
+	def dotenv = file('.env')
+	if (dotenv.exists()) {
+		dotenv.eachLine { line ->
+			def matcher = line =~ /^\s*(OPENVIDU_URL|OPENVIDU_API_KEY|OPENVIDU_API_SECRET)\s*=\s*(.*?)\s*$/
+			if (matcher.matches() && !System.getenv(matcher.group(1))) {
+				def value = matcher.group(2)
+				if ((value.startsWith('"') && value.endsWith('"')) ||
+						(value.startsWith("'") && value.endsWith("'"))) {
+					value = value.substring(1, value.length() - 1)
+				}
+				environment matcher.group(1), value
+			}
+		}
+	}
 }

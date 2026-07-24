@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -136,6 +137,14 @@ public class GlobalExceptionHandler {
 			HttpServletRequest request
 	) {
 		return createResponse(CommonErrorCode.CONCURRENT_MODIFICATION, request);
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<ApiErrorResponse> handleAccessDenied(
+			AccessDeniedException exception,
+			HttpServletRequest request
+	) {
+		return createResponse(CommonErrorCode.ACCESS_DENIED, request);
 	}
 
 	@ExceptionHandler(Exception.class)
