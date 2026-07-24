@@ -585,6 +585,15 @@
     #d7e9e6;
 }
 
+.map-placeholder-content {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.65) 1px, transparent 1px) 0 0 / 34px 34px,
+    linear-gradient(rgba(255, 255, 255, 0.65) 1px, transparent 1px) 0 0 / 34px 34px,
+    #d7e9e6;
+}
+
 .map-center-label {
   position: absolute;
   left: 50%;

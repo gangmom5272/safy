@@ -1,35 +1,24 @@
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 
-const appNavItems = [
-  { to: '/app', label: '홈', end: true },
-  { to: '/app/situations', label: '상황 확인' },
-  { to: '/app/report', label: '제보하기' },
-  { to: '/app/notifications', label: '알림' },
-  { to: '/app/mypage', label: '마이페이지' },
-]
+function NotificationIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+}
 
 export function AppLayout() {
+  const { pathname } = useLocation()
+  const isHome = pathname === '/app' || pathname === '/app/'
+  const isNotifications = pathname === '/app/notifications'
+  const isMyPage = pathname.startsWith('/app/mypage')
+
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <strong>SAFE:ON</strong>
-        <span>사용자 앱</span>
-      </header>
-      <main className="app-main">
+    <div className={`app-shell ${isHome ? 'app-shell--landing' : ''}`}>
+      {!isHome && !isNotifications && !isMyPage && <header className="app-header">
+        <div className="app-brand"><strong>SAFY</strong><span>Safe Area For You</span></div>
+        <NavLink className="app-header__notification" to="/app/notifications" aria-label="알림"><NotificationIcon /></NavLink>
+      </header>}
+      <main className={`app-main ${isHome ? 'app-main--landing' : ''}`}>
         <Outlet />
       </main>
-      <nav className="app-bottom-nav" aria-label="사용자 주요 메뉴">
-        {appNavItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) => (isActive ? 'active' : undefined)}
-          >
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
     </div>
   )
 }

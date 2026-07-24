@@ -7,10 +7,10 @@ import { getNotificationTargetUrl } from './notificationsUtils'
 import './notifications.css'
 
 const tabs: { value: NotificationFilter; label: string }[] = [
-  { value: 'ALL', label: '전체' }, { value: 'REPORT', label: '제보 관련' }, { value: 'SAFETY', label: '안전 정보' }, { value: 'SYSTEM', label: '시스템' },
+  { value: 'ALL', label: '전체' }, { value: 'REPORT', label: '제보 관련' }, { value: 'SAFETY', label: '안전 정보' }, { value: 'SYSTEM', label: '기타' },
 ]
-const typeMeta: Record<NotificationType, { icon: string; label: string }> = {
-  REPORT: { icon: '✓', label: '제보 관련' }, SAFETY: { icon: '!', label: '안전 정보' }, SYSTEM: { icon: 'i', label: '시스템' },
+const typeMeta: Record<NotificationType, { label: string }> = {
+  REPORT: { label: '제보 관련' }, SAFETY: { label: '안전 정보' }, SYSTEM: { label: '시스템' },
 }
 
 export function NotificationsPage() {
@@ -63,11 +63,12 @@ export function NotificationsPage() {
   }
 
   return <div className="notifications-page">
-    <header className="notifications-header"><div><p>NOTIFICATIONS</p><h1>알림 {unreadCount > 0 && <span>{unreadCount}</span>}</h1></div><div className="header-actions"><button type="button" className="read-all-button" onClick={handleReadAll} disabled={unreadCount === 0}>전체 읽음</button></div></header>
+    <header className="notifications-header"><button type="button" className="notifications-back" aria-label="뒤로가기" onClick={() => navigate(-1)}><UiIcon name="back" /></button><h1>알림</h1><span className="notifications-header-spacer" aria-hidden="true" /></header>
     <NotificationTabs selected={filter} counts={counts} onSelect={setFilter} />
     <NotificationBanner onOpenSettings={() => setShowSettings(true)} />
     {usingMock && <p className="mock-notice">연결 전 예시 알림을 표시하고 있어요.</p>}
-    {loading ? <NotificationLoading /> : groups.length ? <div className="notification-groups">{groups.map(([label, items]) => <NotificationSection key={label} label={label} items={items} onSelect={handleNotification} />)}</div> : <div className="notifications-empty"><span>✓</span><strong>새로운 알림이 없어요</strong><p>필요한 소식이 생기면 바로 알려드릴게요.</p></div>}
+    <div className="notification-list-toolbar"><span>{unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}개` : '모든 알림을 확인했어요'}</span><button type="button" onClick={handleReadAll} disabled={unreadCount === 0}>모두 읽음</button></div>
+    {loading ? <NotificationLoading /> : groups.length ? <div className="notification-groups">{groups.map(([label, items]) => <NotificationSection key={label} label={label} items={items} onSelect={handleNotification} />)}</div> : <div className="notifications-empty"><span><UiIcon name="check" /></span><strong>새로운 알림이 없어요</strong><p>필요한 소식이 생기면 바로 알려드릴게요.</p></div>}
     {showSettings && <NotificationSettings settings={settings} onToggle={handleSetting} onClose={() => setShowSettings(false)} />}
   </div>
 }
@@ -77,7 +78,7 @@ function NotificationTabs({ selected, counts, onSelect }: { selected: Notificati
 }
 
 function NotificationBanner({ onOpenSettings }: { onOpenSettings: () => void }) {
-  return <aside className="notification-banner"><span aria-hidden="true">🔔</span><div><strong>중요 알림을 놓치지 마세요!</strong><p>알림을 켜두면 더 빠르게 정보를 받아볼 수 있어요.</p></div><button type="button" onClick={onOpenSettings}>설정</button></aside>
+  return <aside className="notification-banner"><span className="notification-banner-icon"><UiIcon name="bell" /></span><div><strong>중요 알림을 놓치지 마세요!</strong><p>알림을 켜두면 더 빠르게 정보를 받아볼 수 있어요.</p></div><button type="button" onClick={onOpenSettings}>설정</button></aside>
 }
 
 function NotificationSection({ label, items, onSelect }: { label: string; items: AppNotification[]; onSelect: (item: AppNotification) => void }) {
@@ -86,7 +87,19 @@ function NotificationSection({ label, items, onSelect }: { label: string; items:
 
 function NotificationCard({ notification, onSelect }: { notification: AppNotification; onSelect: (item: AppNotification) => void }) {
   const meta = typeMeta[notification.type]
-  return <button type="button" className={`notification-card type-${notification.type.toLowerCase()}${notification.isRead ? ' read' : ' unread'}`} onClick={() => onSelect(notification)}><span className="notification-type-icon" aria-hidden="true">{meta.icon}</span><span className="notification-body"><span className="notification-meta"><span>{meta.label}{notification.areaName ? ` · ${notification.areaName}` : ''}</span><time dateTime={notification.createdAt}>{formatNotificationTime(notification.createdAt)}</time></span><strong>{notification.title}</strong><span className="notification-content">{notification.content}</span><span className="notification-badges">{!notification.isRead && <em>NEW</em>}{notification.isImportant && <em className="important">중요</em>}</span></span></button>
+  return <button type="button" className={`notification-card type-${notification.type.toLowerCase()}${notification.isRead ? ' read' : ' unread'}`} onClick={() => onSelect(notification)}><span className="notification-accent" aria-hidden="true"/><span className="notification-type-icon" aria-hidden="true"><UiIcon name={notification.type.toLowerCase() as 'report' | 'safety' | 'system'} /></span><span className="notification-body"><span className="notification-meta"><span>{meta.label}{notification.areaName ? ` · ${notification.areaName}` : ''}</span><time dateTime={notification.createdAt}>{formatNotificationTime(notification.createdAt)}</time></span><strong>{notification.title}</strong><span className="notification-content">{notification.content}</span><span className="notification-badges">{!notification.isRead && <em>NEW</em>}{notification.isImportant && <em className="important">중요</em>}</span></span></button>
+}
+
+function UiIcon({ name }: { name: 'back' | 'bell' | 'check' | 'report' | 'safety' | 'system' }) {
+  const paths = {
+    back: <><path d="m15 5-7 7 7 7"/><path d="M8 12h12"/></>,
+    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
+    check: <path d="m5 12 4 4 10-10"/>,
+    report: <><path d="M5 3h14v18l-7-4-7 4Z"/><path d="M9 8h6M9 12h4"/></>,
+    safety: <><path d="M12 3 3 20h18Z"/><path d="M12 9v4M12 17h.01"/></>,
+    system: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></>,
+  }
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
 function NotificationSettings({ settings, onToggle, onClose }: { settings: NotificationSettingsData; onToggle: (key: keyof NotificationSettingsData) => void; onClose: () => void }) {

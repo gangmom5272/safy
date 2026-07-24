@@ -8,6 +8,7 @@ import { Faqs, Favorites, Guide, Inquiries, InquiryDetail, InquiryForm, NoticeDe
 import './mypage.css'
 import './mypageRestored.css'
 import './mypageMenuContrast.css'
+import './mypageMainRedesign.css'
 
 const statusLabel: Record<ReportStatus, string> = { RECEIVED: '검토 중', CHECKING: '확인 중', COMPLETED: '채택됨', REJECTED: '반려됨' }
 type Initial = { view?: MyPageView; reportId?: number }
@@ -32,7 +33,7 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
   const removeReport = (id: number) => { if (!window.confirm('이 제보를 삭제할까요?')) return; setReports((items) => items.filter((item) => item.id !== id)); setSummary((item) => ({ ...item, totalCount: Math.max(0, item.totalCount - 1) })); setView('REPORTS'); if (!usingMock) void deleteMyReport(id).catch((error: unknown) => console.error('Report delete failed', error)) }
   if (loading) return <div className="mypage-shell"><div className="mypage-loading">마이페이지를 불러오는 중...</div></div>
 
-  return <div className="mypage-shell">{usingMock && <p className="mypage-mock">연결 전 예시 데이터를 표시하고 있어요.</p>}{message && <p className="mypage-message" role="status">{message}</p>}
+  return <div className="mypage-shell">{view === 'MAIN' && <PageHeader title="마이페이지" onBack={() => navigate(-1)} />}{usingMock && <p className="mypage-mock">연결 전 예시 데이터를 표시하고 있어요.</p>}{message && <p className="mypage-message" role="status">{message}</p>}
     {view === 'MAIN' && <Main user={user} summary={summary} reports={reports} onGo={go} onLogout={() => { if (!window.confirm('로그아웃할까요?')) return; setMessage('로그아웃이 완료되었습니다.'); void logout().catch((error: unknown) => console.error('Logout failed', error)) }} />}
     {view === 'SETTINGS' && <Settings onBack={back} onGo={go} />}
     {view === 'ACCOUNT' && <Account user={user} usingMock={usingMock} onBack={back} onSaved={(nextUser) => { setUser(nextUser); setMessage('프로필이 수정되었습니다.'); setHistory([]); setView('MAIN') }} />}
@@ -48,8 +49,21 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
 }
 
 function Main({ user, summary, reports, onGo, onLogout }: { user: UserProfile; summary: ReportSummary; reports: MyReport[]; onGo: (view: MyPageView) => void; onLogout: () => void }) {
-  const menus: [string, string, MyPageView][] = [['★','즐겨찾기','FAVORITES'],['⚙','설정','SETTINGS'],['?','고객센터','SUPPORT'],['i','이용안내','GUIDE']]
-  return <><PageHeader title="마이페이지" /><section className="profile-card"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0, 1)}</div><div><h2>{user.nickname}</h2><p>{user.email}</p><span>{user.grade ?? 'SAFE:ON 사용자'}</span></div><span className="profile-intro">함께 만드는 안전한 일상</span></section><section className="mypage-card"><SectionTitle title="내 제보 관리" action="전체 보기" onAction={() => onGo('REPORTS')} /><div className="report-status-grid">{(['RECEIVED','CHECKING','COMPLETED','REJECTED'] as ReportStatus[]).map((status) => <span key={status}><b>{reports.filter((item) => item.status === status).length || summary[status === 'RECEIVED' ? 'receivedCount' : status === 'CHECKING' ? 'checkingCount' : status === 'COMPLETED' ? 'completedCount' : 'rejectedCount']}</b>{statusLabel[status]}</span>)}</div></section><section className="mypage-menu">{menus.map(([icon,label,target]) => <button key={target} type="button" onClick={() => onGo(target)}><span>{icon}</span><b>{label}</b><em>›</em></button>)}</section><button type="button" className="logout-button" onClick={onLogout}>로그아웃</button></>
+  const menus: [MenuIconName, string, MyPageView][] = [['favorite','즐겨찾기','FAVORITES'],['settings','설정','SETTINGS'],['support','고객센터','SUPPORT'],['guide','이용안내','GUIDE']]
+  return <><section className="profile-card"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0, 1)}</div><div className="profile-details"><h2>{user.nickname}</h2><p>{user.email}</p><span>{user.grade ?? 'SAFY 사용자'}</span></div><span className="profile-intro">함께 만드는 안전한 일상</span></section><section className="mypage-card my-report-summary"><SectionTitle title="내 제보 관리" action="전체 보기" onAction={() => onGo('REPORTS')} /><div className="report-status-grid">{(['RECEIVED','CHECKING','COMPLETED','REJECTED'] as ReportStatus[]).map((status) => <span key={status}><b>{reports.filter((item) => item.status === status).length || summary[status === 'RECEIVED' ? 'receivedCount' : status === 'CHECKING' ? 'checkingCount' : status === 'COMPLETED' ? 'completedCount' : 'rejectedCount']}</b>{statusLabel[status]}</span>)}</div></section><section className="mypage-menu">{menus.map(([icon,label,target]) => <button key={target} type="button" onClick={() => onGo(target)}><span className="mypage-menu-icon"><MenuIcon name={icon} /></span><b>{label}</b><em aria-hidden="true"><MenuIcon name="chevron" /></em></button>)}</section><button type="button" className="logout-button" onClick={onLogout}>로그아웃</button></>
+}
+
+type MenuIconName = 'favorite' | 'settings' | 'support' | 'guide'
+
+function MenuIcon({ name }: { name: MenuIconName | 'chevron' }) {
+  const paths = {
+    favorite: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z"/>,
+    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></>,
+    support: <><path d="M4 13a8 8 0 0 1 16 0"/><path d="M4 13v5h4v-6H4M20 13v5h-4v-6h4M16 20c-1 1-2 1-4 1"/></>,
+    guide: <><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></>,
+    chevron: <path d="m9 5 7 7-7 7"/>,
+  }
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
 function Settings({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageView) => void }) { const items: [string,string,string,MyPageView][] = [['♙','계정 관리','표시 이름과 회원 정보를 관리해요.','ACCOUNT'],['◇','개인·보안','개인정보와 계정 보안 안내를 확인해요.','PRIVACY'],['♧','알림','유형별 알림 수신 여부를 설정해요.','NOTIFICATION_SETTINGS']]; return <><PageHeader title="설정" onBack={onBack} /><section className="settings-cards">{items.map(([icon,title,description,target]) => <button type="button" key={target} onClick={() => onGo(target)}><span>{icon}</span><span><strong>{title}</strong><small>{description}</small></span><b>›</b></button>)}</section></> }
