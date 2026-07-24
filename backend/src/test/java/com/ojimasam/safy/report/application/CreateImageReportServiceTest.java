@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.ojimasam.safy.media.application.MediaObjectMetadata;
 import com.ojimasam.safy.media.application.MediaObjectStorage;
@@ -33,6 +34,7 @@ class CreateImageReportServiceTest {
 	@Mock ReportImageRepository reportImageRepository;
 	@Mock MediaAssetRepository mediaAssetRepository;
 	@Mock MediaObjectStorage mediaObjectStorage;
+	@Mock ApplicationEventPublisher eventPublisher;
 
 	@Test
 	void verifiesObjectsAndCreatesImageReport() {
@@ -53,7 +55,7 @@ class CreateImageReportServiceTest {
 		});
 		CreateImageReportService service = new CreateImageReportService(
 				reportRepository, reportImageRepository, mediaAssetRepository, mediaObjectStorage,
-				Clock.fixed(now, ZoneOffset.UTC)
+				Clock.fixed(now, ZoneOffset.UTC), eventPublisher
 		);
 
 		CreateReportResult result = service.create(new CreateImageReportCommand(
@@ -65,5 +67,6 @@ class CreateImageReportServiceTest {
 		assertThat(asset.getStorageStatus()).isEqualTo(MediaStorageStatus.AVAILABLE);
 		assertThat(asset.getFileSize()).isEqualTo(1024L);
 		verify(reportImageRepository).save(any());
+		verify(eventPublisher).publishEvent(any(ReportRoutingRequestedEvent.class));
 	}
 }

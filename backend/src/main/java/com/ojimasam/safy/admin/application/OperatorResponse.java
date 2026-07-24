@@ -15,6 +15,8 @@ public record OperatorResponse(
 		@Schema(allowableValues = {"OPERATOR", "SUPER_ADMIN"}) String role,
 		@Schema(allowableValues = {"ACTIVE", "SUSPENDED"}) String status,
 		@Schema(example = "1") Long controlCenterId,
+		@Schema(example = "CC-1168000000") String controlCenterCode,
+		@Schema(example = "강남구 재난안전상황실") String controlCenterName,
 		@Schema(example = "MANAGER") String membershipRole,
 		Instant lastLoginAt,
 		Instant createdAt
@@ -23,6 +25,8 @@ public record OperatorResponse(
 		return new OperatorResponse(user.getId(), credential.getLoginId(), user.getDisplayName(),
 				user.getRole().name(), user.getStatus().name(),
 				membership == null ? null : membership.getControlCenterId(),
+				membership == null ? null : membership.getControlCenter().getCode(),
+				membership == null ? null : membership.getControlCenter().getName(),
 				membership == null ? null : membership.getMembershipRole(),
 				credential.getLastLoginAt(), user.getCreatedAt());
 	}

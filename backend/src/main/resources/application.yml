@@ -52,6 +52,19 @@ app:
     login-id: ${SUPER_ADMIN_LOGIN_ID:}
     password: ${SUPER_ADMIN_PASSWORD:}
     display-name: ${SUPER_ADMIN_DISPLAY_NAME:Super Admin}
+  kakao:
+    local:
+      rest-api-key: ${KAKAO_LOCAL_REST_API_KEY:}
+      base-url: ${KAKAO_LOCAL_BASE_URL:https://dapi.kakao.com}
+      connect-timeout: ${KAKAO_LOCAL_CONNECT_TIMEOUT:PT2S}
+      read-timeout: ${KAKAO_LOCAL_READ_TIMEOUT:PT3S}
+  report-routing:
+    max-attempts: ${REPORT_ROUTING_MAX_ATTEMPTS:5}
+    retry-delay: ${REPORT_ROUTING_RETRY_DELAY:PT1M}
+    batch-size: ${REPORT_ROUTING_BATCH_SIZE:50}
+    scheduler-delay: ${REPORT_ROUTING_SCHEDULER_DELAY:PT30S}
+  report-assignment:
+    scheduler-delay: ${REPORT_ASSIGNMENT_SCHEDULER_DELAY:PT30S}
 springdoc:
   api-docs:
     path: /v3/api-docs

@@ -7,6 +7,7 @@ import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.report.application.ReportDetailView;
 import com.ojimasam.safy.report.application.ReportListItemView;
+import com.ojimasam.safy.report.application.ReportStatusHistoryResponse;
 import com.ojimasam.safy.report.presentation.CreateReportRequest;
 import com.ojimasam.safy.report.presentation.CreateReportResponse;
 
@@ -23,6 +24,12 @@ public interface ReportApiDocs {
 
 	@Operation(summary = "내 제보 상세 조회")
 	ResponseEntity<ApiResponse<ReportDetailView>> getMine(Jwt jwt, Long reportId);
+
+	@Operation(summary = "내 제보 상태 변경 이력 조회")
+	ResponseEntity<ApiResponse<java.util.List<ReportStatusHistoryResponse>>> getMyStatusHistory(
+			Jwt jwt,
+			Long reportId
+	);
 
 	@Operation(summary = "내 제보 목록 조회")
 	ResponseEntity<ApiResponse<PageResponse<ReportListItemView>>> getMyList(Jwt jwt,

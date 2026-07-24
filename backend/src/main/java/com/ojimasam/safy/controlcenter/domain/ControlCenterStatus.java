@@ -1,4 +1,4 @@
-package com.ojimasam.safy.admin.domain;
+package com.ojimasam.safy.controlcenter.domain;
 
 public enum ControlCenterStatus {
 	ACTIVE,

@@ -11,10 +11,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
-import com.ojimasam.safy.admin.domain.ControlCenterRepository;
 import com.ojimasam.safy.auth.domain.AdminCredential;
 import com.ojimasam.safy.auth.domain.AdminCredentialRepository;
 import com.ojimasam.safy.auth.infrastructure.security.RefreshTokenStore;
+import com.ojimasam.safy.controlcenter.domain.ControlCenter;
+import com.ojimasam.safy.controlcenter.domain.ControlCenterRepository;
 import com.ojimasam.safy.user.domain.User;
 import com.ojimasam.safy.user.domain.UserRole;
 import com.ojimasam.safy.user.domain.UserStatus;
@@ -52,13 +53,15 @@ class AdminServiceTest {
 		AdminCenterMembershipRepository membershipRepository = mock(AdminCenterMembershipRepository.class);
 		RefreshTokenStore refreshTokenStore = mock(RefreshTokenStore.class);
 		User user = mock(User.class);
+		AdminCenterMembership membership = mock(AdminCenterMembership.class);
+		ControlCenter controlCenter = mock(ControlCenter.class);
 		when(userRepository.findById(15L)).thenReturn(Optional.of(user));
 		when(user.getId()).thenReturn(15L);
 		when(user.getRole()).thenReturn(UserRole.OPERATOR);
 		when(user.getStatus()).thenReturn(UserStatus.SUSPENDED);
 		when(credentialRepository.findById(15L)).thenReturn(Optional.of(mock(AdminCredential.class)));
-		when(membershipRepository.findByUserIdAndIsPrimaryTrue(15L))
-				.thenReturn(Optional.of(mock(AdminCenterMembership.class)));
+		when(membership.getControlCenter()).thenReturn(controlCenter);
+		when(membershipRepository.findByUserIdAndIsPrimaryTrue(15L)).thenReturn(Optional.of(membership));
 		AdminService service = new AdminService(userRepository, credentialRepository, membershipRepository,
 				mock(ControlCenterRepository.class), mock(PasswordEncoder.class), refreshTokenStore);
 

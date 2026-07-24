@@ -71,8 +71,8 @@ class ReportTest {
 		report.cancel();
 
 		assertThat(report.getStatus()).isEqualTo(ReportStatus.CANCELLED);
-		assertThatThrownBy(report::cancel)
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessage("접수 상태의 제보만 변경할 수 있습니다.");
+			assertThatThrownBy(report::cancel)
+					.isInstanceOf(IllegalStateException.class)
+					.hasMessage("접수 또는 배정 상태의 제보만 취소할 수 있습니다.");
 	}
 }

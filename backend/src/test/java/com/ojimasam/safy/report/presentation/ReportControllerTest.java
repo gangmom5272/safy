@@ -48,6 +48,7 @@ import com.ojimasam.safy.report.application.CancelReportService;
 import com.ojimasam.safy.common.config.CorsProperties;
 import com.ojimasam.safy.report.domain.ReportStatus;
 import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.ReportRoutingStatus;
 
 @WebMvcTest(
 		controllers = ReportController.class,
@@ -83,7 +84,8 @@ class ReportControllerTest {
 		Instant now = Instant.parse("2026-07-21T04:00:00Z");
 		when(reportQueryService.getMine(1L, 42L)).thenReturn(new ReportDetailView(
 				42L, ReportType.TEXT, "제보 내용", new BigDecimal("37.5"), new BigDecimal("127.0"),
-				"서울특별시 중구", ReportStatus.RECEIVED, now, now, now, List.of()
+				"서울특별시 중구", ReportStatus.RECEIVED, ReportRoutingStatus.ROUTED,
+				2L, "1114000000", "중구", null, now, now, now, List.of()
 		));
 
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/reports/42")
@@ -98,7 +100,7 @@ class ReportControllerTest {
 		Instant now = Instant.parse("2026-07-21T04:00:00Z");
 		when(reportQueryService.getMyList(1L, 0, 20)).thenReturn(new PageImpl<>(List.of(
 				new ReportListItemView(42L, ReportType.TEXT, "제보 내용", "서울특별시 중구",
-						ReportStatus.RECEIVED, now, 0, null)
+						ReportStatus.RECEIVED, ReportRoutingStatus.ROUTED, "중구", now, 0, null)
 		)));
 
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/reports/me")
@@ -110,7 +112,7 @@ class ReportControllerTest {
 	@Test
 	void createsTextReportFromJson() throws Exception {
 		when(createTextReportService.create(any(CreateTextReportCommand.class)))
-				.thenReturn(new CreateReportResult(42L, ReportType.TEXT, ReportStatus.RECEIVED,
+				.thenReturn(new CreateReportResult(42L, ReportType.TEXT, ReportStatus.RECEIVED, ReportRoutingStatus.PENDING,
 						Instant.parse("2026-07-21T01:00:00Z")));
 
 		mockMvc.perform(post("/api/v1/reports")
@@ -127,7 +129,7 @@ class ReportControllerTest {
 	@Test
 	void createsImageReportFromMediaAssetIds() throws Exception {
 		when(createImageReportService.create(any(CreateImageReportCommand.class)))
-				.thenReturn(new CreateReportResult(43L, ReportType.IMAGE, ReportStatus.RECEIVED,
+				.thenReturn(new CreateReportResult(43L, ReportType.IMAGE, ReportStatus.RECEIVED, ReportRoutingStatus.PENDING,
 						Instant.parse("2026-07-21T04:00:00Z")));
 
 		mockMvc.perform(post("/api/v1/reports")

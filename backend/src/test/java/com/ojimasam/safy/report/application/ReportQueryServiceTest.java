@@ -25,12 +25,19 @@ import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportImage;
 import com.ojimasam.safy.report.domain.ReportImageRepository;
 import com.ojimasam.safy.report.domain.ReportRepository;
+import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
+import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
+import com.ojimasam.safy.report.domain.ReportCenterRoute;
+import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.controlcenter.domain.ControlCenter;
 
 @ExtendWith(MockitoExtension.class)
 class ReportQueryServiceTest {
 	@Mock ReportRepository reportRepository;
 	@Mock ReportImageRepository reportImageRepository;
 	@Mock MediaObjectStorage mediaObjectStorage;
+	@Mock ReportCenterRouteRepository routeRepository;
+	@Mock ReportStatusHistoryRepository historyRepository;
 
 	@Test
 	void getsOwnedReportWithTemporaryPreviewUrl() {
@@ -59,6 +66,26 @@ class ReportQueryServiceTest {
 	}
 
 	@Test
+	void includesAssignedControlCenterInOwnedReportDetail() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = Report.createText(1L, "침수 제보", new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+		ReflectionTestUtils.setField(report, "id", 42L);
+		ControlCenter center = org.mockito.Mockito.mock(ControlCenter.class);
+		ReportCenterRoute route = org.mockito.Mockito.mock(ReportCenterRoute.class);
+		when(center.getName()).thenReturn("중구 재난안전상황실");
+		when(route.getControlCenter()).thenReturn(center);
+		when(reportRepository.findByIdAndReporterId(42L, 1L)).thenReturn(Optional.of(report));
+		when(reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(42L)).thenReturn(List.of());
+		when(routeRepository.findByReport_IdAndStatus(42L, ReportCenterRouteStatus.ACTIVE))
+				.thenReturn(Optional.of(route));
+
+		ReportDetailView result = service(now).getMine(1L, 42L);
+
+		assertThat(result.assignedControlCenter()).isNotNull();
+		assertThat(result.assignedControlCenter().name()).isEqualTo("중구 재난안전상황실");
+	}
+
+	@Test
 	void hidesOtherUsersReportAsNotFound() {
 		when(reportRepository.findByIdAndReporterId(42L, 1L)).thenReturn(Optional.empty());
 
@@ -83,6 +110,7 @@ class ReportQueryServiceTest {
 
 	private ReportQueryService service(Instant now) {
 		return new ReportQueryService(reportRepository, reportImageRepository, mediaObjectStorage,
+				routeRepository, historyRepository,
 				Clock.fixed(now, ZoneOffset.UTC));
 	}
 }
