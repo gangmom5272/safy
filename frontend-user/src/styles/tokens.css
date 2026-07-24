@@ -1,0 +1,170 @@
+/* =====================================================
+   Design System - Color Tokens
+   ===================================================== */
+
+:root {
+  /* Primary Color */
+  --color-primary: #004AAD;
+  --color-primary-light: #E6F0FF;
+  --color-primary-lighter: #F0F7FF;
+
+  /* Background & Surface */
+  --color-background: #F7F9FC;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F5F7FA;
+
+  /* Text Colors */
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-text-tertiary: #9CA3AF;
+  --color-text-inverse: #FFFFFF;
+
+  /* Borders & Dividers */
+  --color-border: #E8EEF7;
+  --color-divider: #E5E7EB;
+
+  /* Status Colors */
+  --color-danger: #EF4444;
+  --color-danger-light: #FEE2E2;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FEF3C7;
+  --color-success: #22C55E;
+  --color-success-light: #DCFCE7;
+  --color-info: #3B82F6;
+  --color-info-light: #DBEAFE;
+
+  /* Congestion Status */
+  --color-congestion-very-crowded: #EF4444;
+  --color-congestion-crowded: #F59E0B;
+  --color-congestion-normal: #EAB308;
+  --color-congestion-relaxed: #22C55E;
+
+  /* Risk Levels */
+  --color-risk-danger: #D92D20;
+  --color-risk-warning: #F79009;
+  --color-risk-caution: #0EA5E9;
+  --color-risk-safe: #16A34A;
+
+  /* =====================================================
+     Design System - Radius (Border Radius)
+     ===================================================== */
+
+  --radius-card: 20px;
+  --radius-button: 16px;
+  --radius-badge: 999px;
+  --radius-input: 12px;
+  --radius-small: 8px;
+
+  /* =====================================================
+     Design System - Shadow
+     ===================================================== */
+
+  --shadow-xs: 0 1px 2px rgba(16, 32, 51, 0.04);
+  --shadow-sm: 0 2px 4px rgba(16, 32, 51, 0.06);
+  --shadow-md: 0 4px 8px rgba(16, 32, 51, 0.08);
+  --shadow-lg: 0 8px 16px rgba(16, 32, 51, 0.1);
+  --shadow-xl: 0 12px 24px rgba(16, 32, 51, 0.12);
+
+  /* =====================================================
+     Design System - Typography
+     ===================================================== */
+
+  /* Font Family */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Font Sizes */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 28px;
+
+  /* Font Weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Line Heights */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+  --line-height-relaxed: 1.6;
+
+  /* =====================================================
+     Design System - Spacing
+     ===================================================== */
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+  --spacing-4xl: 40px;
+
+  /* =====================================================
+     Design System - Icon Sizes
+     ===================================================== */
+
+  --icon-xs: 16px;
+  --icon-sm: 20px;
+  --icon-md: 24px;
+  --icon-lg: 32px;
+  --icon-xl: 40px;
+
+  /* =====================================================
+     Design System - Transitions
+     ===================================================== */
+
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =====================================================
+   Typography Utility Classes
+   ===================================================== */
+
+.text-title-lg {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.text-title-md {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.text-title-sm {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+}
+
+.text-body-lg {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+}
+
+.text-body-md {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+}
+
+.text-caption {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}
+
+.text-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+}

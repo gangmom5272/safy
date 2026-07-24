@@ -1,0 +1,349 @@
+.mypage-shell {
+  gap: 18px;
+  color: #111827;
+  background: var(--color-background);
+}
+
+.mypage-header {
+  grid-template-columns: 44px 1fr 44px;
+  min-height: 56px;
+  background: var(--color-background);
+}
+
+.mypage-header.main {
+  grid-template-columns: 44px 1fr 44px;
+}
+
+.mypage-header h1,
+.mypage-header.main h1 {
+  color: #111827;
+  font-size: 20px;
+  text-align: center;
+}
+
+.mypage-header > button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  color: #111827;
+  background: transparent;
+  cursor: pointer;
+}
+
+.mypage-header > button svg {
+  width: 24px;
+  height: 24px;
+}
+
+.mypage-mock {
+  position: relative;
+  margin: 0;
+  padding: 10px 12px 10px 30px;
+  border: 1px solid #fde7b2;
+  border-radius: 12px;
+  color: #92600a;
+  background: #fffae9;
+  font-size: 11px;
+}
+
+.mypage-mock::before {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  width: 7px;
+  height: 7px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: #f59e0b;
+  content: '';
+}
+
+.mypage-message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #004aad;
+  background: #eef4ff;
+  font-size: 11px;
+}
+
+.profile-card,
+.mypage-card,
+.mypage-menu,
+.settings-cards,
+.privacy-list,
+.notification-setting-list {
+  border-color: #e5eaf2;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 7px 24px rgba(17, 24, 39, .055);
+}
+
+.profile-card {
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 16px;
+  padding: 22px;
+}
+
+.profile-card .avatar {
+  width: 70px;
+  height: 70px;
+  color: #fff;
+  background: #004aad;
+  font-size: 25px;
+}
+
+.profile-details {
+  min-width: 0;
+}
+
+.profile-card .profile-details h2 {
+  color: #111827;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.profile-card .profile-details p {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.profile-card .profile-details > span {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #004aad;
+  background: #eaf1ff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.mypage-shell .profile-card .profile-details > span {
+  color: #004aad !important;
+  background: #eaf1ff !important;
+}
+
+.profile-card .profile-intro {
+  grid-column: 1 / -1;
+  display: block;
+  margin: 2px 0 0;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #004aad;
+  background: #eef4ff;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mypage-card {
+  gap: 18px;
+  padding: 20px;
+}
+
+.mypage-title h2 {
+  color: #111827;
+  font-size: 18px;
+}
+
+.mypage-title button {
+  padding: 5px 0;
+  color: #004aad;
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.report-status-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.report-status-grid span,
+.mypage-shell .report-status-grid span:nth-child(n) {
+  min-width: 0;
+  min-height: 72px;
+  padding: 12px 3px;
+  align-content: center;
+  gap: 4px;
+  border-radius: 15px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.mypage-shell .report-status-grid span:nth-child(1) {
+  color: #a86200;
+  background: #fff7e8;
+}
+
+.mypage-shell .report-status-grid span:nth-child(2) {
+  color: #004aad;
+  background: #eef4ff;
+}
+
+.mypage-shell .report-status-grid span:nth-child(3) {
+  color: #16835d;
+  background: #ecf8f2;
+}
+
+.mypage-shell .report-status-grid span:nth-child(4) {
+  color: #d14343;
+  background: #fff0f0;
+}
+
+.report-status-grid b {
+  color: inherit;
+  font-size: 20px;
+}
+
+.mypage-menu {
+  overflow: hidden;
+}
+
+.mypage-shell .mypage-menu button {
+  grid-template-columns: 42px minmax(0, 1fr) 22px;
+  min-height: 70px;
+  gap: 13px;
+  padding: 0 18px;
+  border-bottom: 1px solid #edf0f4;
+  color: #111827;
+  background: #fff;
+  cursor: pointer;
+}
+
+.mypage-shell .mypage-menu button:hover {
+  background: #fafcff;
+}
+
+.mypage-shell .mypage-menu button > .mypage-menu-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  border-radius: 13px;
+  color: #004aad;
+  background: #eef4ff;
+}
+
+.mypage-menu-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mypage-shell .mypage-menu button > b {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mypage-menu em {
+  display: grid;
+  color: #9ca3af;
+  place-items: center;
+}
+
+.mypage-menu em svg {
+  width: 18px;
+  height: 18px;
+}
+
+.logout-button {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid #f1b5b5;
+  border-radius: 16px;
+  color: #d92d20;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mypage-header > button:focus-visible,
+.mypage-title button:focus-visible,
+.mypage-menu button:focus-visible,
+.logout-button:focus-visible {
+  outline: 3px solid rgba(0, 74, 173, .25);
+  outline-offset: 2px;
+}
+
+/* Keep MyPage subviews in the same blue design system. */
+.mypage-tabs button.active {
+  border-color: #004aad;
+  color: #fff;
+  background: #004aad;
+}
+
+.history-list li {
+  border-left-color: #004aad;
+}
+
+.detail-actions button,
+.mypage-form > button,
+.inline-actions button {
+  background: #004aad;
+}
+
+.mypage-form input:focus,
+.mypage-form select:focus,
+.mypage-form textarea:focus {
+  border-color: #004aad;
+}
+
+.accordion-list button span {
+  color: #004aad;
+}
+
+.settings-cards button > span:first-child,
+.privacy-list article > span {
+  color: #004aad;
+  background: #eef4ff;
+}
+
+.settings-banner {
+  border-color: #dce9fb;
+  background: #edf5ff;
+}
+
+.settings-banner p {
+  color: #6b7280;
+}
+
+.setting-toggle.on {
+  background: #004aad;
+}
+
+@media (max-width: 360px) {
+  .profile-card {
+    grid-template-columns: 60px minmax(0, 1fr);
+    padding: 18px;
+  }
+
+  .profile-card .avatar {
+    width: 60px;
+    height: 60px;
+  }
+
+  .report-status-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .report-status-grid span,
+  .mypage-shell .report-status-grid span:nth-child(n) {
+    min-height: 66px;
+    font-size: 9px;
+  }
+}
