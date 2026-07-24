@@ -5,6 +5,7 @@ export const ROUTE_PATHS = {
   REPORT_DETAIL: '/reports/:reportId',
   MONITORING: '/monitoring',
   RISK_MAP: '/risk-map',
+  SETTINGS: '/settings',
 } as const
 
 export const createReportDetailPath = (reportId: number | string) =>

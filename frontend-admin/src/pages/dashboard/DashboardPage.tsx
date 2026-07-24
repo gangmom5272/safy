@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router'
 import {
   adminReports,
   connectionStatusLabels,
-  dashboardStats,
   emergencyBanner,
   reportStatusLabels,
   riskLevelLabels,
@@ -11,17 +10,6 @@ import {
   webrtcConnections,
 } from '../../mocks/adminMockData'
 import { ROUTE_PATHS, createReportDetailPath } from '../../router/paths'
-
-const summaryCards = [
-  { label: '전체 제보 수', value: dashboardStats.totalReports, path: ROUTE_PATHS.REPORTS },
-  { label: '위험 제보 수', value: dashboardStats.dangerReports, path: ROUTE_PATHS.REPORTS },
-  {
-    label: '현재 WebRTC 연결 수',
-    value: dashboardStats.webrtcConnections,
-    path: ROUTE_PATHS.MONITORING,
-  },
-  { label: '높은 위험 지역 수', value: dashboardStats.highRiskAreas, path: ROUTE_PATHS.RISK_MAP },
-]
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -54,20 +42,6 @@ export function DashboardPage() {
   return (
     <section className="page-stack">
       <div className="emergency-banner">{emergencyBanner}</div>
-
-      <div className="summary-grid">
-        {summaryCards.map((card) => (
-          <button
-            key={card.label}
-            type="button"
-            className="summary-card"
-            onClick={() => navigate(card.path)}
-          >
-            <span>{card.label}</span>
-            <strong>{card.value.toLocaleString()}</strong>
-          </button>
-        ))}
-      </div>
 
       <div className="dashboard-grid">
         <article className="admin-card dashboard-map-card">
