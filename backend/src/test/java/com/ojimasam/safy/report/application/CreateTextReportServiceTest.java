@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
@@ -24,6 +25,8 @@ import com.ojimasam.safy.report.domain.ReportType;
 class CreateTextReportServiceTest {
 	@Mock
 	private ReportRepository reportRepository;
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	@InjectMocks
 	private CreateTextReportService createTextReportService;
@@ -57,5 +60,6 @@ class CreateTextReportServiceTest {
 		assertThat(savedReport.getLongitude()).isEqualByComparingTo("126.9780000");
 		assertThat(result.reportId()).isEqualTo(42L);
 		assertThat(result.status()).isEqualTo(ReportStatus.RECEIVED);
+		verify(eventPublisher).publishEvent(any(ReportRoutingRequestedEvent.class));
 	}
 }

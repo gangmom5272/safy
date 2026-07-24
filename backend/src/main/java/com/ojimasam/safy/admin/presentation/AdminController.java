@@ -76,6 +76,19 @@ public class AdminController {
 		return ApiResponse.success(adminService.get(operatorId));
 	}
 
+	@GetMapping("/control-centers/{controlCenterId}/operators")
+	@PreAuthorize("hasRole('SUPER_ADMIN')")
+	@Operation(summary = "관제센터 소속 관리자 목록 조회")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "관제센터 소속 관리자 목록 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "관제센터를 찾을 수 없음", content = @Content)
+	public ApiResponse<PageResponse<OperatorResponse>> listByControlCenter(
+			@PathVariable Long controlCenterId,
+			Pageable pageable
+	) {
+		return ApiResponse.success(adminService.listByControlCenter(controlCenterId, pageable));
+	}
+
 	@PatchMapping("/operators/{operatorId}")
 	@PreAuthorize("hasRole('SUPER_ADMIN')")
 	@Operation(summary = "관리자 정보·소속 수정")

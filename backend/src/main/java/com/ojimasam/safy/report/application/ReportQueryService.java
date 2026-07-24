@@ -25,6 +25,10 @@ import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportImage;
 import com.ojimasam.safy.report.domain.ReportImageRepository;
 import com.ojimasam.safy.report.domain.ReportRepository;
+import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
+import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
+import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 
 @Service
 public class ReportQueryService {
@@ -33,17 +37,28 @@ public class ReportQueryService {
 	private final ReportRepository reportRepository;
 	private final ReportImageRepository reportImageRepository;
 	private final MediaObjectStorage mediaObjectStorage;
+	private final ReportCenterRouteRepository routeRepository;
+	private final ReportStatusHistoryRepository historyRepository;
 	private final Clock clock;
 
 	@Autowired
-	public ReportQueryService(ReportRepository reports, ReportImageRepository images, MediaObjectStorage storage) {
-		this(reports, images, storage, Clock.systemUTC());
+	public ReportQueryService(
+			ReportRepository reports,
+			ReportImageRepository images,
+			MediaObjectStorage storage,
+			ReportCenterRouteRepository routeRepository,
+			ReportStatusHistoryRepository historyRepository
+	) {
+		this(reports, images, storage, routeRepository, historyRepository, Clock.systemUTC());
 	}
 
-	ReportQueryService(ReportRepository reports, ReportImageRepository images, MediaObjectStorage storage, Clock clock) {
+	ReportQueryService(ReportRepository reports, ReportImageRepository images, MediaObjectStorage storage,
+			ReportCenterRouteRepository routeRepository, ReportStatusHistoryRepository historyRepository, Clock clock) {
 		this.reportRepository = reports;
 		this.reportImageRepository = images;
 		this.mediaObjectStorage = storage;
+		this.routeRepository = routeRepository;
+		this.historyRepository = historyRepository;
 		this.clock = clock;
 	}
 
@@ -54,10 +69,32 @@ public class ReportQueryService {
 		Instant expiresAt = clock.instant().plus(PREVIEW_URL_EXPIRY);
 		List<ReportImageView> images = reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(reportId)
 				.stream().map(image -> toImageView(image, expiresAt)).toList();
+		AdministrativeArea area = report.getAdministrativeArea();
+		var currentRoute = routeRepository.findByReport_IdAndStatus(reportId, ReportCenterRouteStatus.ACTIVE)
+				.or(() -> routeRepository.findTopByReport_IdOrderByRoutedAtDesc(reportId));
+		AssignedControlCenterView assignedCenter = currentRoute
+				.map(route -> AssignedControlCenterView.of(
+						route.getControlCenter(),
+						area == null ? null : area.getName()
+				))
+				.orElse(null);
 		return new ReportDetailView(
 				report.getId(), report.getType(), report.getDescription(), report.getLatitude(), report.getLongitude(),
-				report.getAddress(), report.getStatus(), report.getReportedAt(), report.getCreatedAt(), report.getUpdatedAt(), images
+				report.getAddress(), report.getStatus(), report.getRoutingStatus(),
+				area == null ? null : area.getId(), area == null ? null : area.getCode(), area == null ? null : area.getName(),
+				assignedCenter,
+				report.getReportedAt(), report.getCreatedAt(), report.getUpdatedAt(), images
 		);
+	}
+
+	@Transactional(readOnly = true)
+	public List<ReportStatusHistoryResponse> getMyStatusHistory(Long reporterId, Long reportId) {
+		reportRepository.findByIdAndReporterId(reportId, reporterId)
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+		return historyRepository.findAllByReport_IdOrderByChangedAtAscIdAsc(reportId)
+				.stream()
+				.map(ReportStatusHistoryResponse::from)
+				.toList();
 	}
 
 	@Transactional(readOnly = true)
@@ -78,9 +115,11 @@ public class ReportQueryService {
 		List<ReportListItemView> content = reports.getContent().stream().map(report -> {
 			List<ReportImage> images = imagesByReportId.getOrDefault(report.getId(), List.of());
 			ReportImageView representative = images.isEmpty() ? null : toImageView(images.getFirst(), expiresAt);
+			AdministrativeArea area = report.getAdministrativeArea();
 			return new ReportListItemView(
 					report.getId(), report.getType(), report.getDescription(), report.getAddress(), report.getStatus(),
-					report.getReportedAt(), images.size(), representative
+					report.getRoutingStatus(), area == null ? null : area.getName(), report.getReportedAt(),
+					images.size(), representative
 			);
 		}).toList();
 		return new PageImpl<>(content, pageable, reports.getTotalElements());

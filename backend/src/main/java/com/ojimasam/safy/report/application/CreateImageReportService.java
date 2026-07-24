@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.media.application.MediaObjectMetadata;
@@ -29,20 +30,25 @@ public class CreateImageReportService {
 	private final MediaAssetRepository mediaAssetRepository;
 	private final MediaObjectStorage mediaObjectStorage;
 	private final Clock clock;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Autowired
 	public CreateImageReportService(ReportRepository reportRepository, ReportImageRepository reportImageRepository,
-			MediaAssetRepository mediaAssetRepository, MediaObjectStorage mediaObjectStorage) {
-		this(reportRepository, reportImageRepository, mediaAssetRepository, mediaObjectStorage, Clock.systemUTC());
+			MediaAssetRepository mediaAssetRepository, MediaObjectStorage mediaObjectStorage,
+			ApplicationEventPublisher eventPublisher) {
+		this(reportRepository, reportImageRepository, mediaAssetRepository, mediaObjectStorage, Clock.systemUTC(),
+				eventPublisher);
 	}
 
 	CreateImageReportService(ReportRepository reports, ReportImageRepository images,
-			MediaAssetRepository assets, MediaObjectStorage storage, Clock clock) {
+			MediaAssetRepository assets, MediaObjectStorage storage, Clock clock,
+			ApplicationEventPublisher eventPublisher) {
 		this.reportRepository = reports;
 		this.reportImageRepository = images;
 		this.mediaAssetRepository = assets;
 		this.mediaObjectStorage = storage;
 		this.clock = clock;
+		this.eventPublisher = eventPublisher;
 	}
 
 	@Transactional
@@ -76,6 +82,7 @@ public class CreateImageReportService {
 		for (int index = 0; index < orderedAssets.size(); index++) {
 			reportImageRepository.save(ReportImage.create(report, orderedAssets.get(index), index));
 		}
+		eventPublisher.publishEvent(new ReportRoutingRequestedEvent(report.getId()));
 		return CreateReportResult.from(report);
 	}
 

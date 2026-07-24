@@ -1,5 +1,6 @@
 package com.ojimasam.safy.admin.application;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -15,12 +16,15 @@ import com.ojimasam.safy.admin.application.OperatorResponse;
 import com.ojimasam.safy.admin.application.UpdateOperatorRequest;
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
-import com.ojimasam.safy.admin.domain.ControlCenterRepository;
-import com.ojimasam.safy.admin.domain.AdminErrorCode;
+import com.ojimasam.safy.admin.domain.MembershipStatus;
 import com.ojimasam.safy.auth.domain.AdminCredential;
 import com.ojimasam.safy.auth.domain.AuthErrorCode;
 import com.ojimasam.safy.auth.domain.AdminCredentialRepository;
 import com.ojimasam.safy.auth.infrastructure.security.RefreshTokenStore;
+import com.ojimasam.safy.controlcenter.domain.ControlCenter;
+import com.ojimasam.safy.controlcenter.domain.ControlCenterErrorCode;
+import com.ojimasam.safy.controlcenter.domain.ControlCenterRepository;
+import com.ojimasam.safy.controlcenter.domain.ControlCenterStatus;
 import com.ojimasam.safy.user.domain.User;
 import com.ojimasam.safy.user.domain.UserRole;
 import com.ojimasam.safy.user.domain.UserStatus;
@@ -60,12 +64,12 @@ public class AdminService {
 	public OperatorResponse create(CreateOperatorRequest request) {
 		if (credentialRepository.existsByLoginId(request.loginId()))
 			throw new BusinessException(AuthErrorCode.LOGIN_ID_DUPLICATED);
-		validateControlCenter(request.controlCenterId());
+		ControlCenter controlCenter = activeControlCenter(request.controlCenterId());
 		User user = userRepository.save(User.operator(request.displayName(), UserRole.OPERATOR));
 		AdminCredential credential = credentialRepository.save(
 				new AdminCredential(user, request.loginId(), passwordEncoder.encode(request.password())));
 		AdminCenterMembership membership = membershipRepository.save(
-				new AdminCenterMembership(user, request.controlCenterId(), request.membershipRole()));
+				new AdminCenterMembership(user, controlCenter, request.membershipRole()));
 		return OperatorResponse.of(user, credential, membership);
 	}
 
@@ -81,14 +85,36 @@ public class AdminService {
 
 	@Transactional
 	public OperatorResponse update(Long operatorId, UpdateOperatorRequest request) {
-		validateControlCenter(request.controlCenterId());
+		ControlCenter targetCenter = activeControlCenter(request.controlCenterId());
 		User user = operator(operatorId);
 		user.updateDisplayName(request.displayName());
 		AdminCenterMembership membership = membershipRepository.findByUserIdAndIsPrimaryTrue(operatorId)
-				.orElseGet(() -> membershipRepository.save(
-						new AdminCenterMembership(user, request.controlCenterId(), request.membershipRole())));
-		membership.update(request.controlCenterId(), request.membershipRole());
+				.orElse(null);
+		if (membership == null) {
+			membershipRepository.save(new AdminCenterMembership(user, targetCenter, request.membershipRole()));
+		} else if (membership.getControlCenterId().equals(targetCenter.getId())) {
+			membership.changeRole(request.membershipRole());
+		} else {
+			membership.end(Instant.now());
+			membershipRepository.save(new AdminCenterMembership(user, targetCenter, request.membershipRole()));
+		}
 		return response(user);
+	}
+
+	@Transactional(readOnly = true)
+	public PageResponse<OperatorResponse> listByControlCenter(Long centerId, Pageable pageable) {
+		if (controlCenterRepository.findById(centerId).isEmpty()) {
+			throw new BusinessException(ControlCenterErrorCode.CONTROL_CENTER_NOT_FOUND);
+		}
+		Page<OperatorResponse> page = membershipRepository
+				.findAllByControlCenter_IdAndStatus(centerId, MembershipStatus.ACTIVE, pageable)
+				.map(membership -> {
+					User user = membership.getUser();
+					AdminCredential credential = credentialRepository.findById(user.getId())
+							.orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+					return OperatorResponse.of(user, credential, membership);
+				});
+		return PageResponse.from(page);
 	}
 
 	@Transactional
@@ -119,8 +145,8 @@ public class AdminService {
 		return OperatorResponse.of(user, credential, membership);
 	}
 
-	private void validateControlCenter(Long centerId) {
-		if (!controlCenterRepository.existsById(centerId))
-			throw new BusinessException(AdminErrorCode.CONTROL_CENTER_NOT_FOUND);
+	private ControlCenter activeControlCenter(Long centerId) {
+		return controlCenterRepository.findByIdAndStatus(centerId, ControlCenterStatus.ACTIVE)
+				.orElseThrow(() -> new BusinessException(ControlCenterErrorCode.CONTROL_CENTER_NOT_FOUND));
 	}
 }
