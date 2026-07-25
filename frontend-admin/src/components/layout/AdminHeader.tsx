@@ -7,6 +7,7 @@ const pageTitleByPath: Record<string, string> = {
   [ROUTE_PATHS.REPORTS]: '제보 관리',
   [ROUTE_PATHS.MONITORING]: '실시간 모니터링',
   [ROUTE_PATHS.RISK_MAP]: '위험도 지도',
+  [ROUTE_PATHS.SETTINGS]: '시스템 설정',
 }
 
 function getPageTitle(pathname: string) {

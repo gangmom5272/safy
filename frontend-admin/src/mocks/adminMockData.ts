@@ -7,6 +7,8 @@ import type {
   ReviewStatus,
   RiskLevel,
   RiskMarker,
+  DashboardStats,
+  SystemStatus,
   WebRTCConnection,
   WebRTCConnectionStatus,
 } from '../types/admin'
@@ -34,7 +36,7 @@ export const reportStatusLabels: Record<ReportStatus, string> = {
 }
 
 export const reviewStatusLabels: Record<ReviewStatus, string> = {
-  pending: '검토 대기',
+  pending: '검토 전',
   approved: '승인',
   rejected: '반려',
 }
@@ -62,14 +64,15 @@ export const connectionQualityLabels: Record<ConnectionQuality, string> = {
 export const emergencyBanner =
   '긴급재난명령 수신 · 서울 마포구 홍대입구역 인근 집회 발생 중'
 
-export const systemStatus = {
+export const systemStatus: SystemStatus = {
   serverStatus: '정상 운영',
   webrtcConnections: 2,
   activeReports: 14,
   aiAnalysisStatus: '정상 분석 중',
+  lastUpdatedAt: '2026-07-23 14:25',
 }
 
-export const dashboardStats = {
+export const dashboardStats: DashboardStats = {
   totalReports: 847,
   dangerReports: 14,
   webrtcConnections: 2,

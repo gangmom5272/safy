@@ -9,6 +9,7 @@ import { NotFoundPage } from '../pages/not-found/NotFoundPage'
 import { ReportDetailPage } from '../pages/reports/ReportDetailPage'
 import { ReportListPage } from '../pages/reports/ReportListPage'
 import { RiskMapPage } from '../pages/risk-map/RiskMapPage'
+import { SystemSettingsPage } from '../pages/settings/SystemSettingsPage'
 import { ROUTE_PATHS } from '../router/paths'
 
 export const router = createBrowserRouter(
@@ -44,6 +45,7 @@ export const router = createBrowserRouter(
             { path: 'reports/:reportId', element: <ReportDetailPage /> },
             { path: 'monitoring', element: <MonitoringPage /> },
             { path: 'risk-map', element: <RiskMapPage /> },
+            { path: 'settings', element: <SystemSettingsPage /> },
             { path: '*', element: <NotFoundPage /> },
           ],
         },

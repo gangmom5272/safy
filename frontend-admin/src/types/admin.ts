@@ -66,3 +66,18 @@ export interface RiskMarker {
   top: number
   left: number
 }
+
+export interface SystemStatus {
+  serverStatus: string
+  webrtcConnections: number
+  activeReports: number
+  aiAnalysisStatus: string
+  lastUpdatedAt: string
+}
+
+export interface DashboardStats {
+  totalReports: number
+  dangerReports: number
+  webrtcConnections: number
+  highRiskAreas: number
+}
