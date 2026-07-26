@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { deleteMyReport, getFavorites, getMe, getMyReports, getNotificationSettings, getReportSummary, logout, updateMyProfile, updateMyReport, updateNotificationSettings } from './mypageApi'
+import { useLocation, useNavigate } from 'react-router'
+import { getFavorites, getMe, getMyReports, getNotificationSettings, getReportSummary, logout, updateMyProfile, updateNotificationSettings } from './mypageApi'
 import { mockFavorites, mockInquiries, mockNotificationSettings, mockReports, mockSummary, mockUser, USE_MYPAGE_MOCK_FALLBACK } from './mypageMock'
 import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, NotificationSettingsData, ReportStatus, ReportSummary, UserProfile } from './mypageTypes'
 import { buildFavoriteSituationUrl } from './mypageUtils'
-import { Faqs, Favorites, Guide, Inquiries, InquiryDetail, InquiryForm, NoticeDetail, Notices, PageHeader, ReportDetail, ReportEdit, Reports, SectionTitle, Support } from './MyPageFeatures'
+import { Faqs, Favorites, Guide, Inquiries, InquiryDetail, InquiryForm, NoticeDetail, Notices, PageHeader, ReportDetail, Reports, SectionTitle, Support } from './MyPageFeatures'
 import './mypage.css'
 import './mypageRestored.css'
 import './mypageMenuContrast.css'
@@ -12,15 +12,20 @@ import './mypageMainRedesign.css'
 
 const statusLabel: Record<ReportStatus, string> = { RECEIVED: '검토 중', CHECKING: '확인 중', COMPLETED: '채택됨', REJECTED: '반려됨' }
 type Initial = { view?: MyPageView; reportId?: number }
+type ReportNavigationState = {
+  from?: 'notifications' | 'my-report-list'
+  returnTo?: string
+  notificationFilter?: string
+}
 
 export function MyPage() { return <MyPageApp /> }
 export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
-  const navigate = useNavigate(); const mounted = useRef(true)
+  const navigate = useNavigate(); const location = useLocation(); const mounted = useRef(true)
   const [view, setView] = useState<MyPageView>(initialView); const [history, setHistory] = useState<MyPageView[]>([])
   const [user, setUser] = useState<UserProfile>(mockUser); const [summary, setSummary] = useState<ReportSummary>(mockSummary)
   const [reports, setReports] = useState<MyReport[]>([]); const [favorites, setFavorites] = useState<FavoriteLocation[]>([]); const [inquiries, setInquiries] = useState<Inquiry[]>(mockInquiries)
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsData>(mockNotificationSettings)
-  const [selectedReportId, setSelectedReportId] = useState<number | null>(reportId ?? null); const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null); const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null)
+  const selectedReportId = reportId ?? null; const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null); const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null)
   const [loading, setLoading] = useState(true); const [usingMock, setUsingMock] = useState(false); const [notificationUsingMock, setNotificationUsingMock] = useState(false); const [message, setMessage] = useState('')
   const selectedReport = reports.find((item) => item.id === selectedReportId) ?? null
   const go = (next: MyPageView) => { setHistory((items) => [...items, view]); setView(next); setMessage(''); window.scrollTo({ top: 0, behavior: 'smooth' }) }
@@ -28,20 +33,29 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
 
   useEffect(() => { mounted.current = true; const timer = window.setTimeout(async () => { const results = await Promise.allSettled([getMe(), getReportSummary(), getMyReports(), getFavorites(), getNotificationSettings()]); if (!mounted.current) return; const [u, s, r, f, n] = results; if (u.status === 'fulfilled') setUser(u.value); if (s.status === 'fulfilled') setSummary(s.value); if (r.status === 'fulfilled') setReports(r.value); if (f.status === 'fulfilled') setFavorites(f.value); if (n.status === 'fulfilled') setNotificationSettings(n.value); if (results.some((result) => result.status === 'rejected') && USE_MYPAGE_MOCK_FALLBACK) { console.error('Mypage API failed; using mock fallback', results); if (u.status === 'rejected') setUser(mockUser); if (s.status === 'rejected') setSummary(mockSummary); if (r.status === 'rejected') setReports(mockReports); if (f.status === 'rejected') setFavorites(mockFavorites); if (n.status === 'rejected') { setNotificationSettings(mockNotificationSettings); setNotificationUsingMock(true) } setUsingMock(true) } setLoading(false) }, 0); return () => { mounted.current = false; window.clearTimeout(timer) } }, [])
 
-  const openReport = (id: number) => { setSelectedReportId(id); go('REPORT_DETAIL') }
-  const saveReport = (next: MyReport) => { setReports((items) => items.map((item) => item.id === next.id ? next : item)); setView('REPORT_DETAIL'); if (!usingMock) void updateMyReport(next.id, { type: next.type, description: next.description, locationName: next.locationName }).catch((error: unknown) => console.error('Report update failed', error)) }
-  const removeReport = (id: number) => { if (!window.confirm('이 제보를 삭제할까요?')) return; setReports((items) => items.filter((item) => item.id !== id)); setSummary((item) => ({ ...item, totalCount: Math.max(0, item.totalCount - 1) })); setView('REPORTS'); if (!usingMock) void deleteMyReport(id).catch((error: unknown) => console.error('Report delete failed', error)) }
+  const openReport = (id: number) => navigate(`/app/mypage/reports/${id}`, {
+    state: { from: 'my-report-list', returnTo: '/app/mypage/reports' } satisfies ReportNavigationState,
+  })
+  const handleReportDetailBack = () => {
+    const navigationState = location.state as ReportNavigationState | null
+    const returnTo = navigationState?.returnTo === '/app/notifications'
+      ? '/app/notifications'
+      : '/app/mypage/reports'
+    const state = returnTo === '/app/notifications' && navigationState?.notificationFilter
+      ? { notificationFilter: navigationState.notificationFilter }
+      : undefined
+    navigate(returnTo, { replace: true, state })
+  }
   if (loading) return <div className="mypage-shell"><div className="mypage-loading">마이페이지를 불러오는 중...</div></div>
 
-  return <div className="mypage-shell">{view === 'MAIN' && <PageHeader title="마이페이지" onBack={() => navigate(-1)} />}{usingMock && <p className="mypage-mock">연결 전 예시 데이터를 표시하고 있어요.</p>}{message && <p className="mypage-message" role="status">{message}</p>}
-    {view === 'MAIN' && <Main user={user} summary={summary} reports={reports} onGo={go} onLogout={() => { if (!window.confirm('로그아웃할까요?')) return; setMessage('로그아웃이 완료되었습니다.'); void logout().catch((error: unknown) => console.error('Logout failed', error)) }} />}
+  return <div className="mypage-shell">{view === 'MAIN' && <PageHeader title="마이페이지" onBack={() => navigate('/app', { replace: true })} />}{message && <p className="mypage-message" role="status">{message}</p>}
+    {view === 'MAIN' && <Main user={user} summary={summary} reports={reports} onGo={(next) => { if (next === 'REPORTS') navigate('/app/mypage/reports'); else go(next) }} onLogout={() => { if (!window.confirm('로그아웃할까요?')) return; setMessage('로그아웃이 완료되었습니다.'); void logout().catch((error: unknown) => console.error('Logout failed', error)) }} />}
     {view === 'SETTINGS' && <Settings onBack={back} onGo={go} />}
     {view === 'ACCOUNT' && <Account user={user} usingMock={usingMock} onBack={back} onSaved={(nextUser) => { setUser(nextUser); setMessage('프로필이 수정되었습니다.'); setHistory([]); setView('MAIN') }} />}
     {view === 'PRIVACY' && <Privacy onBack={back} />}
     {view === 'NOTIFICATION_SETTINGS' && <NotificationPreferences settings={notificationSettings} usingMock={notificationUsingMock} onBack={back} onChange={setNotificationSettings} />}
-    {view === 'REPORTS' && <Reports reports={reports} onBack={back} onOpen={openReport} />}
-    {view === 'REPORT_DETAIL' && selectedReport && <ReportDetail report={selectedReport} onBack={back} onEdit={() => go('REPORT_EDIT')} onDelete={() => removeReport(selectedReport.id)} />}
-    {view === 'REPORT_EDIT' && selectedReport && <ReportEdit report={selectedReport} onBack={back} onSave={saveReport} />}
+    {view === 'REPORTS' && <Reports reports={reports} onBack={() => navigate('/app/mypage', { replace: true })} onOpen={openReport} />}
+    {view === 'REPORT_DETAIL' && selectedReport && <ReportDetail report={selectedReport} onBack={handleReportDetailBack} />}
     {view === 'FAVORITES' && <Favorites items={favorites} onBack={back} onChange={setFavorites} onNavigate={(item) => navigate(buildFavoriteSituationUrl(item))} usingMock={usingMock} />}
     {view === 'SUPPORT' && <Support onBack={back} onGo={go} />}{view === 'FAQ' && <Faqs onBack={back} />}{view === 'NOTICES' && <Notices onBack={back} onOpen={(notice) => { setSelectedNotice(notice); go('NOTICE_DETAIL') }} />}{view === 'NOTICE_DETAIL' && selectedNotice && <NoticeDetail notice={selectedNotice} onBack={back} />}
     {view === 'INQUIRY_FORM' && <InquiryForm onBack={back} onSubmit={(item) => { setInquiries((items) => [item, ...items]); setMessage('문의가 등록되었습니다.'); setView('SUPPORT') }} />}{view === 'INQUIRIES' && <Inquiries items={inquiries} onBack={back} onOpen={(item) => { setSelectedInquiry(item); go('INQUIRY_DETAIL') }} />}{view === 'INQUIRY_DETAIL' && selectedInquiry && <InquiryDetail item={selectedInquiry} onBack={back} />}{view === 'GUIDE' && <Guide onBack={back} />}
@@ -66,7 +80,19 @@ function MenuIcon({ name }: { name: MenuIconName | 'chevron' }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-function Settings({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageView) => void }) { const items: [string,string,string,MyPageView][] = [['♙','계정 관리','표시 이름과 회원 정보를 관리해요.','ACCOUNT'],['◇','개인·보안','개인정보와 계정 보안 안내를 확인해요.','PRIVACY'],['♧','알림','유형별 알림 수신 여부를 설정해요.','NOTIFICATION_SETTINGS']]; return <><PageHeader title="설정" onBack={onBack} /><section className="settings-cards">{items.map(([icon,title,description,target]) => <button type="button" key={target} onClick={() => onGo(target)}><span>{icon}</span><span><strong>{title}</strong><small>{description}</small></span><b>›</b></button>)}</section></> }
-function Account({ user, usingMock, onBack, onSaved }: { user: UserProfile; usingMock: boolean; onBack: () => void; onSaved: (user: UserProfile) => void }) { const [nickname, setNickname] = useState(user.nickname); const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const trimmed = nickname.trim(); const unchanged = trimmed === user.nickname; const submit = async (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); setError(''); if (!trimmed) { setError('표시 이름을 입력해 주세요.'); return } if (unchanged) return; setSaving(true); if (usingMock) { onSaved({ ...user, nickname: trimmed }); return } try { const response = await updateMyProfile(trimmed); onSaved({ ...user, ...response, nickname: response.nickname ?? trimmed }) } catch (requestError) { console.error('Profile update failed', requestError); setError('프로필을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.'); setSaving(false) } }; return <><PageHeader title="계정 관리" onBack={onBack} /><form className="mypage-form account-form" onSubmit={submit}><div className="profile-edit-avatar"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0,1)}</div><span>프로필 이미지 변경은 준비 중입니다.</span></div><label>표시 이름<input value={nickname} onChange={(event) => { setNickname(event.target.value); setError('') }} /></label><label>이메일<input value={user.email} readOnly /></label>{error && <p className="profile-edit-error" role="alert">{error}</p>}{unchanged && <p className="profile-edit-hint">현재 표시 이름과 동일합니다.</p>}<button type="submit" disabled={!trimmed || unchanged || saving}>{saving ? '저장 중...' : '저장'}</button></form></> }
+function Settings({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageView) => void }) { const items: [SettingsIconName,string,string,MyPageView][] = [['account','계정 관리','표시 이름과 회원 정보를 관리해요.','ACCOUNT'],['privacy','개인·보안','개인정보와 계정 보안 안내를 확인해요.','PRIVACY'],['notification','알림','유형별 알림 수신 여부를 설정해요.','NOTIFICATION_SETTINGS']]; return <><PageHeader title="설정" onBack={onBack} className="settings-header" /><section className="settings-cards">{items.map(([icon,title,description,target]) => <button type="button" key={target} onClick={() => onGo(target)}><span><SettingsIcon name={icon} /></span><span><strong>{title}</strong><small>{description}</small></span><b><SettingsIcon name="chevron" /></b></button>)}</section></> }
+function Account({ user, usingMock, onBack, onSaved }: { user: UserProfile; usingMock: boolean; onBack: () => void; onSaved: (user: UserProfile) => void }) { const [nickname, setNickname] = useState(user.nickname); const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const trimmed = nickname.trim(); const unchanged = trimmed === user.nickname; const submit = async (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); setError(''); if (!trimmed) { setError('표시 이름을 입력해 주세요.'); return } if (unchanged) return; setSaving(true); if (usingMock) { onSaved({ ...user, nickname: trimmed }); return } try { const response = await updateMyProfile(trimmed); onSaved({ ...user, ...response, nickname: response.nickname ?? trimmed }) } catch (requestError) { console.error('Profile update failed', requestError); setError('프로필을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.'); setSaving(false) } }; return <><PageHeader title="계정 관리" onBack={onBack} className="account-header" /><form className="mypage-form account-form" onSubmit={submit}><div className="profile-edit-avatar"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0,1)}</div><span>프로필 이미지 변경은 준비 중입니다.</span></div><label>표시 이름<input value={nickname} onChange={(event) => { setNickname(event.target.value); setError('') }} /></label><label>이메일<input value={user.email} readOnly /></label>{error && <p className="profile-edit-error" role="alert">{error}</p>}{unchanged && <p className="profile-edit-hint">현재 표시 이름과 동일합니다.</p>}<button type="submit" disabled={!trimmed || unchanged || saving}>{saving ? '저장 중...' : '저장'}</button></form></> }
+
+type SettingsIconName = 'account' | 'privacy' | 'notification' | 'chevron'
+
+function SettingsIcon({ name }: { name: SettingsIconName }) {
+  const paths = {
+    account: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
+    privacy: <><path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6Z"/><path d="m9 12 2 2 4-4"/></>,
+    notification: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
+    chevron: <path d="m9 5 7 7-7 7"/>,
+  }
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
+}
 function Privacy({ onBack }: { onBack: () => void }) { const items = ['개인정보 처리방침','위치정보 이용 안내','데이터 및 개인정보 관리','회원 탈퇴 및 계정 보안 안내']; return <><PageHeader title="개인·보안" onBack={onBack} /><section className="privacy-list">{items.map((item) => <article key={item}><span>▣</span><div><strong>{item}</strong><small>읽기 전용 안내 · 준비 중</small></div></article>)}</section></> }
 function NotificationPreferences({ settings, usingMock, onBack, onChange }: { settings: NotificationSettingsData; usingMock: boolean; onBack: () => void; onChange: (settings: NotificationSettingsData) => void }) { const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const options: [keyof NotificationSettingsData,string,string][] = [['enabled','전체 알림','모든 앱 알림을 허용합니다.'],['reportEnabled','제보 관련 알림','접수와 처리 상태를 알려드려요.'],['safetyEnabled','안전 정보 알림','주변 위험과 혼잡 정보를 알려드려요.'],['systemEnabled','시스템 알림','공지와 점검 소식을 알려드려요.'],['savedLocationEnabled','즐겨찾기 위치 알림','저장한 지역의 변화를 알려드려요.']]; const toggle = async (key: keyof NotificationSettingsData) => { if (saving) return; const next = { ...settings, [key]: !settings[key] }; onChange(next); setError(''); if (usingMock) return; setSaving(true); try { const saved = await updateNotificationSettings(next); onChange(saved) } catch (requestError) { console.error('Notification settings update failed', requestError); onChange(settings); setError('알림 설정을 저장하지 못했습니다.') } finally { setSaving(false) } }; return <><PageHeader title="알림" onBack={onBack} /><aside className="settings-banner"><span>🔔</span><div><strong>중요 알림을 놓치지 마세요!</strong><p>필요한 알림을 켜두면 더 빠르게 정보를 받을 수 있어요.</p></div></aside>{error && <p className="profile-edit-error" role="alert">{error}</p>}<section className="notification-setting-list">{options.map(([key,label,description]) => <div key={key}><label htmlFor={`mypage-${key}`}><strong>{label}</strong><small>{description}</small></label><button id={`mypage-${key}`} type="button" role="switch" aria-checked={settings[key]} className={settings[key] ? 'setting-toggle on' : 'setting-toggle'} onClick={() => void toggle(key)} disabled={saving || (key !== 'enabled' && !settings.enabled)}><span /></button></div>)}</section></> }

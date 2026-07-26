@@ -28,7 +28,7 @@ export function SituationsPage() {
           onClear={situation.clearSelectedArea}
         />
         <button
-          className="filter-icon-button"
+          className={situation.selectedTypes.length ? 'filter-icon-button active' : 'filter-icon-button'}
           type="button"
           aria-label="필터 열기"
           onClick={() => situation.setIsFilterOpen(true)}
@@ -51,19 +51,22 @@ export function SituationsPage() {
 
       {situation.selectedArea ? (
         <>
-          <SelectedAreaHeader area={situation.selectedArea} onClear={situation.clearSelectedArea} />
-          <AreaMap
-            mapData={situation.mapData}
-            isLoading={situation.isMapLoading}
-            error={situation.mapError}
-          >
-            <AreaStatusSummary
-              status={situation.areaStatus}
-              isLoading={situation.isAreaStatusLoading}
-              error={situation.areaStatusError}
-              onRefresh={situation.refreshAreaStatus}
+          <SelectedAreaHeader area={situation.selectedArea} />
+          <section className="situation-content-section" aria-labelledby="risk-map-section-title">
+            <h2 id="risk-map-section-title" className="situation-section-title">위험 지역 지도</h2>
+            <AreaMap
+              mapData={situation.mapData}
+              isLoading={situation.isMapLoading}
+              error={situation.mapError}
+              locationName={situation.selectedArea.name}
             />
-          </AreaMap>
+          </section>
+          <AreaStatusSummary
+            status={situation.areaStatus}
+            isLoading={situation.isAreaStatusLoading}
+            error={situation.areaStatusError}
+            onRefresh={situation.refreshAreaStatus}
+          />
         </>
       ) : null}
 
@@ -75,7 +78,7 @@ export function SituationsPage() {
         error={situation.reportsError}
         listRef={situation.reportListRef}
         onRetry={() => void situation.retryReports()}
-        emptyMessage={situation.submittedQuery ? '검색 결과가 없습니다.' : undefined}
+        emptyMessage="현재 등록된 실시간 제보가 없습니다."
       />
 
       <ReportFilterSheet

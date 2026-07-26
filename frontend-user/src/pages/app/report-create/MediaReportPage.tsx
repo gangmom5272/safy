@@ -1,4 +1,6 @@
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { mockLocations } from '../../../mocks/locations'
+import { resolveLocation } from '../home/homeApi'
 import { ConfirmReportModal } from './ConfirmReportModal'
 import {
   DEFAULT_REPORT_CATEGORY,
@@ -46,10 +48,6 @@ const fallbackFormData: ReportFormData = {
   selectedTags: [],
   content: '',
   location: null,
-}
-
-function formatCoordinate(value: number): string {
-  return value.toFixed(5)
 }
 
 function formatFileSize(bytes: number): string {
@@ -160,6 +158,26 @@ export function MediaReportPage({
   const [errorMessage, setErrorMessage] = useState('')
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [locationName, setLocationName] = useState(formData.location ? '위치명을 확인하는 중입니다.' : '위치 정보 없음')
+
+  useEffect(() => {
+    if (!formData.location) return
+
+    let isCurrent = true
+    const { latitude, longitude } = formData.location
+    const fallbackLocationName = getNearestMockLocationName(latitude, longitude)
+    void resolveLocation(latitude, longitude)
+      .then((resolvedLocation) => {
+        if (isCurrent) setLocationName(resolvedLocation.areaName || fallbackLocationName)
+      })
+      .catch(() => {
+        if (isCurrent) setLocationName(fallbackLocationName)
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [formData.location])
 
   const revokePhotoUrl = useCallback((photo: { previewUrl: string } | null) => {
     if (photo) {
@@ -449,42 +467,36 @@ export function MediaReportPage({
     capturedPhotoRef.current = capturedPhoto
   }, [capturedPhoto])
 
-  const locationText = formData.location
-    ? `위도 ${formatCoordinate(formData.location.latitude)}, 경도 ${formatCoordinate(formData.location.longitude)}`
-    : '위치 정보 없음'
   const categoryLabel = formData.category ? REPORT_CATEGORY_LABELS[formData.category] : '선택 없음'
   const cameraMessage = getCameraMessage(cameraStatus)
 
   return (
-    <section className="report-create-page" aria-labelledby="media-report-title">
-      <header className="report-create-header">
-        <button type="button" className="report-ghost-button" onClick={handleBack}>
-          ← 제보 방식 선택
+    <section className="report-create-page report-media-page" aria-labelledby="media-report-title">
+      <header className="report-media-header">
+        <button type="button" onClick={handleBack} aria-label="제보 방식 선택으로 돌아가기">
+          <MediaIcon name="back" />
         </button>
         <h1 id="media-report-title">사진 제보</h1>
-        <p>카메라로 현장을 촬영하거나 갤러리에서 사진을 선택해주세요.</p>
+        <span aria-hidden="true" />
       </header>
+      <p className="report-media-intro">카메라로 현장을 촬영하거나 갤러리에서 사진을 선택해주세요.</p>
 
       <section className="report-create-card" aria-labelledby="media-summary-title">
         <h2 id="media-summary-title">제보 정보</h2>
-        <dl className="report-summary-list">
-          <div>
-            <dt>카테고리</dt>
-            <dd>{categoryLabel}</dd>
-          </div>
-          <div>
-            <dt>현재 위치</dt>
-            <dd>{locationText}</dd>
-          </div>
-          <div>
-            <dt>상황 태그</dt>
-            <dd>{formData.selectedTags.length > 0 ? formData.selectedTags.join(', ') : '선택 없음'}</dd>
-          </div>
-          <div>
-            <dt>제보 내용</dt>
-            <dd>{formData.content}</dd>
-          </div>
-        </dl>
+        <div className="report-media-summary-badges">
+          <span className="report-media-category-badge">{categoryLabel}</span>
+          <span className="report-media-situation-badge">
+            {formData.selectedTags.length > 0 ? formData.selectedTags.join(', ') : '선택 없음'}
+          </span>
+        </div>
+        <div className="report-media-location">
+          <span><MediaIcon name="location" />위치</span>
+          <strong>{locationName}</strong>
+        </div>
+        <div className="report-media-content">
+          <span><MediaIcon name="message" />제보 내용</span>
+          <p>{formData.content}</p>
+        </div>
       </section>
 
       <section className="report-create-card" aria-labelledby="photo-input-title">
@@ -506,10 +518,10 @@ export function MediaReportPage({
               disabled={cameraStatus === 'connecting'}
               onClick={startPhotoCamera}
             >
-              카메라로 촬영
+              <MediaIcon name="camera" />카메라로 촬영
             </button>
             <button type="button" className="report-photo-mode-button" onClick={switchToGallery}>
-              갤러리에서 선택
+              <MediaIcon name="gallery" />갤러리에서 선택
             </button>
           </div>
         ) : null}
@@ -576,25 +588,30 @@ export function MediaReportPage({
             <p>
               {selectedPhoto.file.name} · {formatFileSize(selectedPhoto.file.size)}
             </p>
-            <button type="button" className="report-secondary-button" onClick={resetPhotoState}>
-              다시 선택
-            </button>
+            <div className="report-media-preview-actions">
+              <button type="button" className="report-secondary-button" onClick={resetPhotoState}>
+                다시 선택
+              </button>
+              <button type="button" className="report-photo-delete-button" onClick={resetPhotoState}>
+                삭제
+              </button>
+            </div>
           </div>
         ) : (
           <p className="report-create-muted">10MB 이하의 이미지 파일을 선택하거나 카메라로 촬영해주세요.</p>
         )}
-      </section>
 
-      <div className="report-create-actions">
-        <button
-          type="button"
-          className="report-primary-button"
-          disabled={!selectedPhoto || isSubmitting}
-          onClick={requestPhotoSubmit}
-        >
-          사진 제출하기
-        </button>
-      </div>
+        <div className="report-create-actions">
+          <button
+            type="button"
+            className="report-primary-button"
+            disabled={!selectedPhoto || isSubmitting}
+            onClick={requestPhotoSubmit}
+          >
+            사진 제출하기
+          </button>
+        </div>
+      </section>
 
       {isConfirmOpen ? (
         <ConfirmReportModal
@@ -607,4 +624,25 @@ export function MediaReportPage({
       ) : null}
     </section>
   )
+}
+
+function MediaIcon({ name }: { name: 'back' | 'location' | 'message' | 'camera' | 'gallery' }) {
+  const paths = {
+    back: <path d="m15 18-6-6 6-6" />,
+    location: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
+    message: <><path d="M4 5h16v12H8l-4 3V5Z" /><path d="M8 9h8M8 13h5" /></>,
+    camera: <><path d="M8 6 9.5 4h5L16 6h3a2 2 0 0 1 2 2v10H3V8a2 2 0 0 1 2-2h3Z" /><circle cx="12" cy="12" r="3" /></>,
+    gallery: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9" r="1.5" /><path d="M21 15l-5-5L5 20" /></>,
+  }
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
+}
+
+function getNearestMockLocationName(latitude: number, longitude: number) {
+  const nearestLocation = mockLocations.reduce((nearest, candidate) => {
+    const nearestDistance = (nearest.latitude - latitude) ** 2 + (nearest.longitude - longitude) ** 2
+    const candidateDistance = (candidate.latitude - latitude) ** 2 + (candidate.longitude - longitude) ** 2
+    return candidateDistance < nearestDistance ? candidate : nearest
+  })
+  const distance = (nearestLocation.latitude - latitude) ** 2 + (nearestLocation.longitude - longitude) ** 2
+  return distance <= 0.0025 ? nearestLocation.areaName : '위치 정보를 확인할 수 없습니다.'
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate, useSearchParams } from 'react-router'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { queryKeys } from '../../../api/queryKeys'
 import {
   getArea,
@@ -18,6 +18,7 @@ const MIN_SEARCH_LENGTH = 2
 
 export function useSituationCheck() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const queryParam = searchParams.get('query') ?? ''
   const [searchKeyword, setSearchKeyword] = useState(() => queryParam.trim())
@@ -61,6 +62,9 @@ export function useSituationCheck() {
 
   const activeArea = submittedAreaQuery.data ?? areaQuery.data ?? selectedArea
   const areaKey = activeArea?.id ?? submittedQuery
+  const displayedSearchKeyword = activeArea && searchKeyword.trim() === submittedQuery
+    ? activeArea.name
+    : searchKeyword
 
   const areaMapQuery = useQuery({
     queryKey: queryKeys.areas.map(areaKey),
@@ -97,7 +101,7 @@ export function useSituationCheck() {
     setSelectedArea(area)
     setSearchKeyword(area.name)
     setDebouncedKeyword('')
-    navigate(`/app/situations?query=${encodeURIComponent(area.name)}`, { replace: false })
+    navigate(`/app/situations?query=${encodeURIComponent(area.name)}`, { replace: false, state: location.state })
   }
 
   const submitSearch = () => {
@@ -110,14 +114,14 @@ export function useSituationCheck() {
 
     setSelectedArea(null)
     setDebouncedKeyword('')
-    navigate(`/app/situations?query=${encodeURIComponent(trimmed)}`, { replace: false })
+    navigate(`/app/situations?query=${encodeURIComponent(trimmed)}`, { replace: false, state: location.state })
   }
 
   const clearSelectedArea = () => {
     setSelectedArea(null)
     setSearchKeyword('')
     setDebouncedKeyword('')
-    navigate('/app/situations', { replace: false })
+    navigate('/app/situations', { replace: false, state: location.state })
   }
 
   const refreshAreaStatus = async () => {
@@ -136,7 +140,7 @@ export function useSituationCheck() {
   }, [canSearch, searchQuery.data])
 
   return {
-    searchKeyword,
+    searchKeyword: displayedSearchKeyword,
     setSearchKeyword,
     searchSuggestions,
     isSearchLoading: searchQuery.isFetching,

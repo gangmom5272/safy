@@ -1,4 +1,7 @@
-import { type ChangeEvent, useState } from 'react'
+import { type ChangeEvent, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
+import { mockLocations } from '../../../mocks/locations'
+import { resolveLocation } from '../home/homeApi'
 import {
   DEFAULT_REPORT_METHOD,
   REPORT_CONTENT_MAX_LENGTH,
@@ -16,18 +19,38 @@ interface ReportTypePageProps {
   onStart?: (formData: ReportFormData) => void
 }
 
-function formatCoordinate(value: number): string {
-  return value.toFixed(5)
-}
-
 export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps) {
+  const navigate = useNavigate()
   const [method, setMethod] = useState<ReportMethod>(initialFormData?.method ?? DEFAULT_REPORT_METHOD)
   const [category, setCategory] = useState<ReportCategory | null>(initialFormData?.category ?? null)
   const [selectedTags, setSelectedTags] = useState<ReportTag[]>(
     initialFormData?.selectedTags ?? [],
   )
   const [content, setContent] = useState(initialFormData?.content ?? '')
+  const [contentTouched, setContentTouched] = useState(false)
+  const [resolvedLocation, setResolvedLocation] = useState<{ key: string; name: string } | null>(null)
   const { status, location, message, requestLocation } = useGeolocation()
+
+  useEffect(() => {
+    if (status !== 'success' || !location) {
+      return
+    }
+
+    let isCurrent = true
+    const locationKey = `${location.latitude}:${location.longitude}`
+    const mockLocationName = getNearestMockLocationName(location.latitude, location.longitude)
+    void resolveLocation(location.latitude, location.longitude)
+      .then((resolvedLocation) => {
+        if (isCurrent) setResolvedLocation({ key: locationKey, name: resolvedLocation.areaName || mockLocationName })
+      })
+      .catch(() => {
+        if (isCurrent) setResolvedLocation({ key: locationKey, name: mockLocationName })
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [location, status])
 
   const handleCategorySelect = (nextCategory: ReportCategory) => {
     setCategory(nextCategory)
@@ -43,6 +66,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   }
 
   const handleContentChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setContentTouched(true)
     setContent(event.target.value.slice(0, REPORT_CONTENT_MAX_LENGTH))
   }
 
@@ -60,8 +84,12 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
     })
   }
 
-  const ctaLabel = method === 'live' ? '실시간 영상 제보 시작하기' : '사진 제보 시작하기'
+  const ctaLabel = method === 'live' ? '실시간 영상 제보 시작하기' : '사진·영상 제보 등록하기'
   const hasLocation = status === 'success' && location
+  const locationKey = location ? `${location.latitude}:${location.longitude}` : ''
+  const locationName = resolvedLocation?.key === locationKey
+    ? resolvedLocation.name
+    : '위치명을 확인하는 중입니다.'
   const availableTags = category ? REPORT_TAG_LABELS[category] : []
   const trimmedContentLength = content.trim().length
   const isContentValid = trimmedContentLength >= REPORT_CONTENT_MIN_LENGTH
@@ -72,15 +100,23 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   const canStart = Boolean(method && category && hasLocation && isContentValid)
 
   return (
-    <section className="report-create-page" aria-labelledby="report-create-title">
-      <header className="report-create-header">
+    <section className="report-create-page report-type-page" aria-labelledby="report-create-title">
+      <header className="report-type-header">
+        <button type="button" aria-label="뒤로가기" onClick={() => navigate(-1)}>
+          <BackIcon />
+        </button>
         <h1 id="report-create-title">제보하기</h1>
-        <p>현장의 위험 상황을 실시간으로 공유해주세요.</p>
+        <span aria-hidden="true" />
       </header>
 
+      <p className="report-type-intro">현장의 위험 상황을 실시간으로 공유해주세요.</p>
+
       <div className="report-safety-box" role="note">
-        <strong>안전한 제보를 위해 꼭 확인해주세요!</strong>
-        <p>허위 제보는 제재 대상이 될 수 있습니다. 안전한 장소에서 현장 상황만 촬영해주세요.</p>
+        <SafetyIcon />
+        <div>
+          <strong>안전한 제보를 위해 꼭 확인해주세요!</strong>
+          <p>허위 제보는 제재 대상이 될 수 있습니다. 안전한 장소에서 현장 상황만 촬영해주세요.</p>
+        </div>
       </div>
 
       <section className="report-create-card" aria-labelledby="report-method-title">
@@ -94,11 +130,10 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
             onClick={() => setMethod('live')}
           >
             <span className="report-radio-dot" aria-hidden="true" />
-            <span>
+            <MethodIcon method="live" />
+            <span className="report-method-copy">
               <span className="report-method-title">실시간 영상 제보</span>
-              <span className="report-create-muted">WebRTC로 실시간 상황을 공유해요.</span>
             </span>
-            <span className="report-recommend-badge">추천</span>
           </button>
 
           <button
@@ -109,40 +144,44 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
             onClick={() => setMethod('photo')}
           >
             <span className="report-radio-dot" aria-hidden="true" />
-            <span>
-              <span className="report-method-title">사진 제보</span>
-              <span className="report-create-muted">현장 사진을 찍어 공유해요.</span>
+            <MethodIcon method="photo" />
+            <span className="report-method-copy">
+              <span className="report-method-title">사진·영상 제보</span>
             </span>
           </button>
         </div>
       </section>
 
-      <section className="report-create-card" aria-labelledby="report-location-title">
+      <section className="report-create-card report-location-card" aria-labelledby="report-location-title">
         <h2 id="report-location-title">현재 위치</h2>
         <div className="report-map-placeholder" aria-live="polite">
-          {hasLocation ? <span className="report-location-marker" aria-hidden="true" /> : null}
+          <div className="report-mini-map" aria-hidden="true">
+            <span className="report-map-park" />
+            <span className="report-map-building building-one" />
+            <span className="report-map-building building-two" />
+            {hasLocation ? <span className="report-location-marker" /> : null}
+          </div>
           <div className="report-location-status">
-            <strong>{message}</strong>
+            <strong className={hasLocation ? 'location-confirmed' : ''}>
+              {hasLocation ? <LocationIcon /> : null}
+              {message}
+            </strong>
             {status === 'idle' ? <p>위치 확인 전입니다.</p> : null}
             {status === 'checking' ? <p>브라우저 위치 권한을 확인하고 있습니다.</p> : null}
             {hasLocation ? (
-              <p>
-                위도 {formatCoordinate(location.latitude)}, 경도 {formatCoordinate(location.longitude)}
-              </p>
+              <p className="report-location-name">{locationName}</p>
             ) : null}
-            {status !== 'idle' && status !== 'checking' && status !== 'success' ? (
-              <>
-                <p className="report-error-text">{message}</p>
-                <button type="button" className="report-secondary-button" onClick={requestLocation}>
-                  위치 다시 확인
-                </button>
-              </>
+            {hasLocation ? <p className="report-location-guide">제보 위치는 현재 위치로 자동 설정됩니다.</p> : null}
+            {status !== 'checking' ? (
+              <button type="button" className="report-secondary-button" onClick={requestLocation}>
+                위치 다시 확인
+              </button>
             ) : null}
           </div>
         </div>
       </section>
 
-      <section className="report-create-card" aria-labelledby="report-classification-title">
+      <section className="report-create-card report-classification-card" aria-labelledby="report-classification-title">
         <h2 id="report-classification-title">제보 분류</h2>
         <div className="report-classification-group">
           <h3 className="report-section-label">제보 카테고리</h3>
@@ -156,7 +195,8 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
                 aria-checked={category === item}
                 onClick={() => handleCategorySelect(item)}
               >
-                {REPORT_CATEGORY_LABELS[item]}
+                <CategoryIcon category={item} />
+                <span>{REPORT_CATEGORY_LABELS[item]}</span>
               </button>
             ))}
           </div>
@@ -187,7 +227,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
         ) : null}
       </section>
 
-      <section className="report-create-card" aria-labelledby="report-content-title">
+      <section className="report-create-card report-content-card" aria-labelledby="report-content-title">
         <h2 id="report-content-title">제보 내용</h2>
         <p>현재 현장 상황을 구체적으로 작성해주세요.</p>
         <textarea
@@ -196,12 +236,12 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
           maxLength={REPORT_CONTENT_MAX_LENGTH}
           rows={5}
           aria-describedby="report-content-guide report-content-count"
-          aria-invalid={!isContentValid}
-          placeholder="예: 2번 출구 앞에 사람이 몰려 이동하기 어렵고, 인파가 계속 증가하고 있습니다."
+          aria-invalid={contentTouched && !isContentValid}
+          placeholder="예: 2번 출구 앞에 사람이 몰려 이동하기 어렵습니다."
           onChange={handleContentChange}
         />
         <div className="report-content-meta">
-          <p id="report-content-guide" className={!isContentValid ? 'report-error-text' : 'report-create-muted'}>
+          <p id="report-content-guide" className={contentTouched && !isContentValid ? 'report-error-text' : 'report-create-muted'}>
             {!isContentValid ? contentErrorMessage : '제보 내용이 입력되었습니다.'}
           </p>
           <span id="report-content-count" className="report-content-count">
@@ -217,4 +257,68 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
       </div>
     </section>
   )
+}
+
+function MethodIcon({ method }: { method: ReportMethod }) {
+  return method === 'live' ? (
+    <svg className="report-method-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M15 10l4.5-2.5v9L15 14" />
+      <rect x="3" y="6" width="12" height="12" rx="2" />
+    </svg>
+  ) : (
+    <svg className="report-method-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="8.5" cy="9" r="1.5" />
+      <path d="M21 15l-5-5L5 20" />
+    </svg>
+  )
+}
+
+function BackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  )
+}
+
+function LocationIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  )
+}
+
+function SafetyIcon() {
+  return (
+    <svg className="report-safety-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z" />
+      <path d="m8.5 12 2.2 2.2 4.8-5" />
+    </svg>
+  )
+}
+
+function CategoryIcon({ category }: { category: ReportCategory }) {
+  const paths: Record<ReportCategory, React.ReactNode> = {
+    crowd: <><circle cx="9" cy="8" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M3 19c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5M14 14.5c3.5-.8 7 1.2 7 4.5" /></>,
+    accident: <><path d="M12 3 2.8 20h18.4L12 3Z" /><path d="M12 9v4M12 17h.01" /></>,
+    weather: <><path d="M7 16a4 4 0 1 1 1.7-7.6A5.5 5.5 0 0 1 19 11a3 3 0 0 1-1 5H7Z" /><path d="m8 19-1 2M13 19l-1 2M18 19l-1 2" /></>,
+    facility: <><path d="M4 21v-8M20 21v-8M3 13h18L18 6H6l-3 7Z" /><path d="m8 7 3 6M15 7l3 6" /></>,
+    etc: <><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" /></>,
+  }
+
+  return <svg className="report-category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[category]}</svg>
+}
+
+function getNearestMockLocationName(latitude: number, longitude: number) {
+  const nearestLocation = mockLocations.reduce((nearest, candidate) => {
+    const nearestDistance = (nearest.latitude - latitude) ** 2 + (nearest.longitude - longitude) ** 2
+    const candidateDistance = (candidate.latitude - latitude) ** 2 + (candidate.longitude - longitude) ** 2
+    return candidateDistance < nearestDistance ? candidate : nearest
+  })
+  const distance = (nearestLocation.latitude - latitude) ** 2 + (nearestLocation.longitude - longitude) ** 2
+
+  return distance <= 0.0025 ? nearestLocation.areaName : '위치 정보를 확인할 수 없습니다.'
 }

@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router'
+import { formatRelativeTime } from '../../../utils/dateTime'
 import { reportTypeLabels, riskLevelLabels, type LiveReportSummary } from './types'
 
 type LiveReportCardProps = {
@@ -14,6 +15,7 @@ export function LiveReportCard({ report }: LiveReportCardProps) {
 
   const detailPath = `/app/situations/reports/${report.id}${location.search}`
   const detailUrl = `${window.location.origin}${detailPath}`
+  const displayTitle = getDisplayTitle(report)
 
   const openDetail = () => {
     navigate(detailPath)
@@ -72,7 +74,7 @@ export function LiveReportCard({ report }: LiveReportCardProps) {
             <span>MASKED</span>
           </div>
         )}
-        {report.isWebRtc ? <span className="webrtc-tag">WebRTC 제보</span> : null}
+        <span className="report-relative-time">{formatRelativeTime(report.reportedAt)} 제보</span>
       </div>
 
       <div className="report-card-content">
@@ -83,14 +85,13 @@ export function LiveReportCard({ report }: LiveReportCardProps) {
         </div>
 
         <p className="report-category">{reportTypeLabels[report.type]}</p>
-        <h3>{report.title}</h3>
-        <p className="report-meta">{report.locationName}</p>
-        <p className="report-time">{formatReportedAt(report.reportedAt)}</p>
-        {report.description ? <p className="report-description">{report.description}</p> : null}
+        <h3>{displayTitle}</h3>
+        <p className="report-meta"><MetaIcon name="location" />{report.locationName}</p>
+        <p className="report-time"><MetaIcon name="clock" />{formatRelativeTime(report.reportedAt)}</p>
 
         <div className="report-card-actions">
           <button type="button" aria-label={`${report.title} 공유하기`} onClick={shareReport}>
-            공유
+            <ShareIcon />
           </button>
         </div>
         {shareMessage ? <p className="share-feedback">{shareMessage}</p> : null}
@@ -99,15 +100,17 @@ export function LiveReportCard({ report }: LiveReportCardProps) {
   )
 }
 
-function formatReportedAt(value: string) {
-  const date = new Date(value)
+function getDisplayTitle(report: LiveReportSummary) {
+  const placeName = report.locationName.trim()
+  if (placeName) return placeName
 
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
+  const categoryLabel = reportTypeLabels[report.type]
+  const withoutCategory = report.title.replace(categoryLabel, '').replace(/\s{2,}/g, ' ').trim()
+  return withoutCategory || report.title
 }
+
+function MetaIcon({ name }: { name: 'location' | 'clock' }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{name === 'location' ? <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></> : <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>}</svg>
+}
+
+function ShareIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V3M8 7l4-4 4 4"/><path d="M5 11v9h14v-9"/></svg> }

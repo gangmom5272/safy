@@ -157,7 +157,7 @@ export function LocationSuggestionList({
   if (error) {
     return (
       <div className="location-suggestions" id={id} role="listbox">
-        <p className="suggestion-message">검색 결과를 불러오지 못했습니다.</p>
+        <p className="suggestion-message"><strong>검색 중 오류가 발생했습니다.</strong><span>잠시 후 다시 시도해주세요.</span></p>
       </div>
     )
   }
@@ -165,7 +165,7 @@ export function LocationSuggestionList({
   if (!suggestions.length) {
     return (
       <div className="location-suggestions" id={id} role="listbox">
-        <p className="suggestion-message">검색 결과가 없습니다. 다른 지역명이나 장소명을 입력해 주세요.</p>
+        <p className="suggestion-message"><strong>검색 결과가 없습니다.</strong><span>다른 지역명이나 장소명을 입력해주세요.</span></p>
       </div>
     )
   }

@@ -5,6 +5,8 @@ interface ConfirmReportModalProps {
   title: string
   description: string
   isSubmitting: boolean
+  cancelLabel?: string
+  confirmLabel?: string
   onCancel: () => void
   onConfirm: () => void
 }
@@ -13,6 +15,8 @@ export function ConfirmReportModal({
   title,
   description,
   isSubmitting,
+  cancelLabel = '아니요',
+  confirmLabel = '네, 제보할게요',
   onCancel,
   onConfirm,
 }: ConfirmReportModalProps) {
@@ -88,10 +92,10 @@ export function ConfirmReportModal({
         </p>
         <div className="report-modal-actions">
           <button type="button" className="report-ghost-button" disabled={isSubmitting} onClick={onCancel}>
-            아니요
+            {cancelLabel}
           </button>
           <button type="button" className="report-primary-button" disabled={isSubmitting} onClick={onConfirm}>
-            {isSubmitting ? '제출 중...' : '네, 제보할게요'}
+            {isSubmitting ? '제출 중...' : confirmLabel}
           </button>
         </div>
       </section>
