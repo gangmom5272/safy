@@ -9,9 +9,14 @@ import {
   REPORT_CATEGORY_LABELS,
 } from './reportConstants'
 import type { ReportFormData } from './reportTypes'
+import { createReport } from './reportApi'
+import { buildCreateReportRequest } from './reportMapper'
+import { uploadImage } from './mediaApi'
 import './report-create.css'
 
 type PhotoSource = 'camera' | 'gallery'
+
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 type PhotoCameraStatus =
   | 'idle'
@@ -151,6 +156,7 @@ export function MediaReportPage({
   const captureTokenRef = useRef(0)
   const mountedRef = useRef(false)
   const submitInProgressRef = useRef(false)
+  const createdReportIdRef = useRef<number | null>(formData.reportId ?? null)
   const selectedPhotoRef = useRef<SelectedPhoto | null>(null)
   const capturedPhotoRef = useRef<CapturedPhoto | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<SelectedPhoto | null>(null)
@@ -395,9 +401,9 @@ export function MediaReportPage({
       return
     }
 
-    if (!file.type.startsWith('image/')) {
+    if (!ALLOWED_IMAGE_TYPES.has(file.type.toLowerCase())) {
       clearSelectedPhoto()
-      setErrorMessage('이미지 파일만 선택할 수 있습니다.')
+      setErrorMessage('JPEG, PNG, WEBP 이미지만 선택할 수 있습니다.')
       return
     }
 
@@ -421,7 +427,7 @@ export function MediaReportPage({
     setIsConfirmOpen(true)
   }
 
-  const confirmPhotoSubmit = useCallback(() => {
+  const confirmPhotoSubmit = useCallback(async () => {
     if (!selectedPhoto || submitInProgressRef.current) {
       return
     }
@@ -429,7 +435,25 @@ export function MediaReportPage({
     submitInProgressRef.current = true
     setIsSubmitting(true)
     cleanupCamera()
-    onComplete?.({ ...formData, method: 'photo' })
+    setErrorMessage('')
+    try {
+      const reportId = createdReportIdRef.current ?? (await createReport(
+        buildCreateReportRequest({ ...formData, method: 'photo' }),
+      )).reportId
+      createdReportIdRef.current = reportId
+      await uploadImage(reportId, selectedPhoto.file)
+      onComplete?.({
+        ...formData,
+        method: 'photo',
+        reportId,
+        mediaFile: selectedPhoto.file,
+      })
+    } catch (error) {
+      submitInProgressRef.current = false
+      setIsSubmitting(false)
+      setIsConfirmOpen(false)
+      setErrorMessage(error instanceof Error ? error.message : '제보를 등록하지 못했습니다.')
+    }
   }, [cleanupCamera, formData, onComplete, selectedPhoto])
 
   const closeConfirmModal = useCallback(() => {
@@ -501,7 +525,7 @@ export function MediaReportPage({
           id="report-photo-input"
           className="report-file-input"
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           onChange={handleFileChange}
         />
 

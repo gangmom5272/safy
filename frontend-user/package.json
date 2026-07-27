@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "node --test src/api/accessToken.test.ts src/api/errors.test.ts src/api/refreshCoordinator.test.ts src/pages/auth/authSession.test.ts src/pages/app/report-create/reportApi.test.ts src/pages/app/report-create/mediaUploadFlow.test.ts",
     "preview": "vite preview",
     "capture:screens": "playwright test tests/capture-screens.spec.ts"
   },

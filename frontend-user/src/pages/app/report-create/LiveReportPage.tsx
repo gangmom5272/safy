@@ -6,6 +6,8 @@ import {
   REPORT_CATEGORY_LABELS,
 } from './reportConstants'
 import type { ReportFormData } from './reportTypes'
+import { createReport } from './reportApi'
+import { buildCreateReportRequest } from './reportMapper'
 import './report-create.css'
 
 type CameraStatus =
@@ -134,6 +136,7 @@ export function LiveReportPage({
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const stopTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -219,7 +222,7 @@ export function LiveReportPage({
     setIsConfirmOpen(true)
   }
 
-  const confirmFinishLiveReport = useCallback(() => {
+  const confirmFinishLiveReport = useCallback(async () => {
     if (submitInProgressRef.current) {
       return
     }
@@ -229,7 +232,16 @@ export function LiveReportPage({
     stopTimer()
     setIsReporting(false)
     cleanupCamera()
-    onComplete?.({ ...formData, method: 'live' })
+    setSubmitError('')
+    try {
+      const report = await createReport(buildCreateReportRequest({ ...formData, method: 'live' }))
+      onComplete?.({ ...formData, method: 'live', reportId: report.reportId })
+    } catch (error) {
+      submitInProgressRef.current = false
+      setIsSubmitting(false)
+      setIsConfirmOpen(false)
+      setSubmitError(error instanceof Error ? error.message : '제보를 등록하지 못했습니다.')
+    }
   }, [cleanupCamera, formData, onComplete, stopTimer])
 
   const closeConfirmModal = useCallback(() => {
@@ -307,6 +319,7 @@ export function LiveReportPage({
       </div>
 
       <div className="report-live-bottom">
+        {submitError ? <p className="report-error-text" role="alert">{submitError}</p> : null}
         <ul className="report-live-summary" aria-label="제보 정보">
           <li>
             <span><LiveInfoIcon name="location" />{locationText}</span>

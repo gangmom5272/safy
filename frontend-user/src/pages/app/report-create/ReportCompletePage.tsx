@@ -67,6 +67,7 @@ export function ReportCompletePage({ formData = fallbackFormData, onRestart }: R
           <p>관리자가 내용을 확인한 후<br />처리 결과를 알려드립니다.</p>
         </div>
         <dl className="report-summary-list">
+          {formData.reportId ? <div><dt>제보 번호</dt><dd>#{formData.reportId}</dd></div> : null}
           <div>
             <dt><SummaryIcon name="method" />제보 방식</dt>
             <dd>{methodLabel}</dd>

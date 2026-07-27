@@ -59,11 +59,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   }
 
   const handleTagToggle = (tag: ReportTag) => {
-    setSelectedTags((currentTags) =>
-      currentTags.includes(tag)
-        ? currentTags.filter((currentTag) => currentTag !== tag)
-        : [...currentTags, tag],
-    )
+    setSelectedTags((currentTags) => currentTags.includes(tag) ? [] : [tag])
   }
 
   const handleContentChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -98,7 +94,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
     trimmedContentLength === 0
       ? '제보 내용을 입력해주세요.'
       : `제보 내용은 공백 제외 ${REPORT_CONTENT_MIN_LENGTH}자 이상 입력해주세요.`
-  const canStart = Boolean(method && category && hasLocation && isContentValid)
+  const canStart = Boolean(method && category && selectedTags.length === 1 && hasLocation && isContentValid)
 
   return (
     <section className="report-create-page report-type-page" aria-labelledby="report-create-title">
@@ -202,7 +198,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
           {category ? (
             <div className="report-classification-group report-classification-group-separated">
             <h3 className="report-section-label">세부 상황</h3>
-            <p>현장 상황에 맞는 항목을 여러 개 선택해주세요.</p>
+            <p>현장 상황에 가장 가까운 항목 하나를 선택해주세요.</p>
             <div className="report-tag-grid" aria-label="세부 상황">
               {availableTags.map((tag) => {
                 const isSelected = selectedTags.includes(tag)

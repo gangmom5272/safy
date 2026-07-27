@@ -1,4 +1,4 @@
-export type ReportStatus = 'RECEIVED' | 'CHECKING' | 'COMPLETED' | 'REJECTED'
+export type ReportStatus = 'RECEIVED' | 'CHECKING' | 'COMPLETED' | 'REJECTED' | 'CANCELLED'
 export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 'FAVORITES' | 'SUPPORT' | 'FAQ' | 'NOTICES' | 'NOTICE_DETAIL' | 'INQUIRY_FORM' | 'INQUIRIES' | 'INQUIRY_DETAIL' | 'GUIDE' | 'SETTINGS' | 'PROFILE_EDIT' | 'ACCOUNT' | 'PRIVACY' | 'NOTIFICATION_SETTINGS'
 export interface UserProfile { id: number; nickname: string; email: string; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }
 export interface ReportSummary { totalCount: number; receivedCount: number; checkingCount: number; completedCount: number; rejectedCount: number }

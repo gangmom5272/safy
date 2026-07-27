@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
-import { getFavorites, getMe, getMyReports, getNotificationSettings, getReportSummary, logout, updateNotificationSettings } from './mypageApi'
+import { cancelMyReport, getFavorites, getMe, getMyReport, getMyReports, getNotificationSettings, getReportSummary, logout, updateNotificationSettings } from './mypageApi'
 import { mockFavorites, mockInquiries, mockNotificationSettings, mockReports, mockSummary, mockUser, USE_MYPAGE_MOCK_FALLBACK } from './mypageMock'
 import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, NotificationSettingsData, ReportSummary, UserProfile } from './mypageTypes'
 import { buildFavoriteSituationUrl } from './mypageUtils'
@@ -22,7 +22,7 @@ type ReportNavigationState = {
 export function MyPage() { return <MyPageApp /> }
 export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
   const navigate = useNavigate(); const location = useLocation(); const mounted = useRef(true)
-  const clearAuthentication = useAuthStore((state) => state.logout)
+  const clearAuthentication = useAuthStore((state) => state.clearAuthentication)
   const [view, setView] = useState<MyPageView>(initialView); const [history, setHistory] = useState<MyPageView[]>([])
   const [user, setUser] = useState<UserProfile>(mockUser); const [summary, setSummary] = useState<ReportSummary>(mockSummary)
   const [reports, setReports] = useState<MyReport[]>([]); const [favorites, setFavorites] = useState<FavoriteLocation[]>([]); const [inquiries, setInquiries] = useState<Inquiry[]>(mockInquiries)
@@ -34,6 +34,18 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
   const back = () => { const previous = history.at(-1) ?? 'MAIN'; setHistory((items) => items.slice(0, -1)); setView(previous); setMessage('') }
 
   useEffect(() => { mounted.current = true; const timer = window.setTimeout(async () => { const results = await Promise.allSettled([getMe(), getReportSummary(), getMyReports(), getFavorites(), getNotificationSettings()]); if (!mounted.current) return; const [u, s, r, f, n] = results; if (u.status === 'fulfilled') setUser(u.value); if (s.status === 'fulfilled') setSummary(s.value); if (r.status === 'fulfilled') setReports(r.value); if (f.status === 'fulfilled') setFavorites(f.value); if (n.status === 'fulfilled') setNotificationSettings(n.value); if (results.some((result) => result.status === 'rejected') && USE_MYPAGE_MOCK_FALLBACK) { console.error('Mypage API failed; using mock fallback', results); if (u.status === 'rejected') setUser(mockUser); if (s.status === 'rejected') setSummary(mockSummary); if (r.status === 'rejected') setReports(mockReports); if (f.status === 'rejected') setFavorites(mockFavorites); if (n.status === 'rejected') { setNotificationSettings(mockNotificationSettings); setNotificationUsingMock(true) } setUsingMock(true) } setLoading(false) }, 0); return () => { mounted.current = false; window.clearTimeout(timer) } }, [])
+
+  useEffect(() => {
+    if (!selectedReportId) return
+    let active = true
+    void getMyReport(selectedReportId).then((report) => {
+      if (!active) return
+      setReports((current) => [...current.filter((item) => item.id !== report.id), report])
+    }).catch((error: unknown) => {
+      if (active) setMessage(error instanceof Error ? error.message : '제보 상세를 불러오지 못했습니다.')
+    })
+    return () => { active = false }
+  }, [selectedReportId])
 
   const openReport = (id: number) => navigate(`/app/mypage/reports/${id}`, {
     state: { from: 'my-report-list', returnTo: '/app/mypage/reports' } satisfies ReportNavigationState,
@@ -66,7 +78,16 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
     {view === 'PRIVACY' && <Privacy onBack={back} />}
     {view === 'NOTIFICATION_SETTINGS' && <NotificationPreferences settings={notificationSettings} usingMock={notificationUsingMock} onBack={back} onChange={setNotificationSettings} />}
     {view === 'REPORTS' && <Reports reports={reports} onBack={() => navigate('/app/mypage', { replace: true })} onOpen={openReport} />}
-    {view === 'REPORT_DETAIL' && selectedReport && <ReportDetail report={selectedReport} onBack={handleReportDetailBack} />}
+    {view === 'REPORT_DETAIL' && selectedReport && <ReportDetail report={selectedReport} onBack={handleReportDetailBack} onCancel={async () => {
+      if (!window.confirm('이 제보를 취소할까요?')) return
+      try {
+        await cancelMyReport(selectedReport.id)
+        const report = await getMyReport(selectedReport.id)
+        setReports((current) => [...current.filter((item) => item.id !== report.id), report])
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : '제보를 취소하지 못했습니다.')
+      }
+    }} />}
     {view === 'FAVORITES' && <Favorites items={favorites} onBack={initialView === 'FAVORITES' ? () => navigate(-1) : back} onChange={setFavorites} onNavigate={(item) => navigate(buildFavoriteSituationUrl(item), { state: { from: 'favorites' } })} usingMock={usingMock} />}
     {view === 'SUPPORT' && <Support onBack={back} onGo={go} />}{view === 'FAQ' && <Faqs onBack={back} />}{view === 'NOTICES' && <Notices onBack={back} onOpen={(notice) => { setSelectedNotice(notice); go('NOTICE_DETAIL') }} />}{view === 'NOTICE_DETAIL' && selectedNotice && <NoticeDetail notice={selectedNotice} onBack={back} />}
     {view === 'INQUIRY_FORM' && <InquiryForm onBack={back} onSubmit={(item) => { setInquiries((items) => [item, ...items]); setMessage('문의가 등록되었습니다.'); setView('SUPPORT') }} />}{view === 'INQUIRIES' && <Inquiries items={inquiries} onBack={back} onOpen={(item) => { setSelectedInquiry(item); go('INQUIRY_DETAIL') }} />}{view === 'INQUIRY_DETAIL' && selectedInquiry && <InquiryDetail item={selectedInquiry} onBack={back} />}{view === 'GUIDE' && <Guide onBack={back} />}
