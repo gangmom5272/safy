@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 
+CONGESTION_RULE_VERSION = "yolo-grid-v0.2"
 GRID_SIZE = 8
 LOCAL_WINDOW_SIZE = 2
 CELL_SCORE_PER_PERSON = 30.0
@@ -25,10 +26,7 @@ class CongestionGrid:
 def build_congestion_grid(
     person_centers: list[tuple[float, float]],
 ) -> CongestionGrid:
-    cell_counts = [
-        [0 for _ in range(GRID_SIZE)]
-        for _ in range(GRID_SIZE)
-    ]
+    cell_counts = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
 
     for center_x, center_y in person_centers:
         bounded_center_x = min(
@@ -52,20 +50,22 @@ def build_congestion_grid(
         cell_counts[row][column] += 1
 
     cell_scores = [
-        [
-            min(count * CELL_SCORE_PER_PERSON, MAX_CELL_SCORE)
-            for count in row
-        ]
+        [min(count * CELL_SCORE_PER_PERSON, MAX_CELL_SCORE) for count in row]
         for row in cell_counts
     ]
 
     peak_window_score, peak_window_row, peak_window_column = max(
         (
-            sum(
-                cell_scores[row + row_offset][column + column_offset]
-                for row_offset in range(LOCAL_WINDOW_SIZE)
-                for column_offset in range(LOCAL_WINDOW_SIZE)
-            ) / (LOCAL_WINDOW_SIZE * LOCAL_WINDOW_SIZE),
+            min(
+                sum(
+                    cell_counts[row + row_offset][column + column_offset]
+                    for row_offset in range(LOCAL_WINDOW_SIZE)
+                    for column_offset in range(LOCAL_WINDOW_SIZE)
+                )
+                * CELL_SCORE_PER_PERSON
+                / (LOCAL_WINDOW_SIZE * LOCAL_WINDOW_SIZE),
+                MAX_CELL_SCORE,
+            ),
             row,
             column,
         )
@@ -87,9 +87,9 @@ def calculate_congestion(
 ) -> CongestionResult:
     grid = build_congestion_grid(person_centers)
 
-    visual_congestion_score = sum(
-        sum(row) for row in grid.cell_scores
-    ) / (GRID_SIZE * GRID_SIZE)
+    visual_congestion_score = sum(sum(row) for row in grid.cell_scores) / (
+        GRID_SIZE * GRID_SIZE
+    )
 
     return CongestionResult(
         visual_congestion_score=round(visual_congestion_score, 2),

@@ -98,8 +98,9 @@ python -m ruff check .
 - `COMPLETED`, `INVALID_FRAME`, `FAILED` 분석 상태 처리
 - GPU 추론 처리시간 측정
 
-C·L 계산은 SAFY MVP를 위한 임시 규칙입니다. 계산식과 한계는
-[C·L 임시 혼잡도 계산 규칙](docs/congestion-scoring.md)을 참고합니다.
+C·L 계산은 대표 표본 검증으로 보정한 `yolo-grid-v0.2` 규칙을 사용합니다.
+계산식, 보정 근거와 한계는
+[C·L 혼잡도 계산 규칙](docs/congestion-scoring.md)을 참고합니다.
 
 혼잡 지속성 P, 혼잡 증가 추세 G, 최종 위험도 계산과 개인정보 블러는 후속 구현 범위입니다.
 

@@ -48,18 +48,25 @@ def test_classify_person_count_returns_scenario(
 def test_select_representative_labels_limits_each_scenario(
     tmp_path: Path,
 ) -> None:
-    label_counts = {
-        "a-empty": 0,
-        "b-sparse": 1,
-        "c-sparse": 2,
-        "d-normal": 6,
-        "e-crowded": 16,
+    label_contents = {
+        "a-empty": "",
+        "b-sparse": ("0 0.5 0.5 0.1 0.2\n"),
+        "c-sparse": ("0 0.4 0.5 0.1 0.2\n0 0.6 0.5 0.1 0.2\n"),
+        "d-normal": (
+            "0 0.1 0.1 0.1 0.2\n"
+            "0 0.5 0.1 0.1 0.2\n"
+            "0 0.9 0.1 0.1 0.2\n"
+            "0 0.1 0.9 0.1 0.2\n"
+            "0 0.5 0.9 0.1 0.2\n"
+            "0 0.9 0.9 0.1 0.2\n"
+        ),
+        "e-crowded": ("0 0.5 0.5 0.1 0.2\n" * 16),
     }
 
-    for sample_id, person_count in label_counts.items():
+    for sample_id, label_content in label_contents.items():
         label_path = tmp_path / f"{sample_id}.txt"
         label_path.write_text(
-            "0 0.5 0.5 0.1 0.2\n" * person_count,
+            label_content,
             encoding="utf-8",
         )
 
