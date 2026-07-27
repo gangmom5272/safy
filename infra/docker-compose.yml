@@ -49,6 +49,23 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_UPLOAD_BUCKET=${MINIO_UPLOAD_BUCKET}
+      # 인증/OAuth/CORS — backend가 부팅·로그인에 요구하는 값. .env에 정의돼 있어도
+      # 여기 나열해야 컨테이너로 전달된다(.env는 ${} 치환용일 뿐 자동 주입 아님).
+      # JWT_SECRET 미전달 시 "JWT_SECRET must be at least 32 bytes"로 부팅 실패(2026-07-27 실측).
+      - JWT_SECRET=${JWT_SECRET}
+      - AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE}
+      - AUTH_COOKIE_SAME_SITE=${AUTH_COOKIE_SAME_SITE:-Lax}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - OAUTH2_SUCCESS_REDIRECT_URI=${OAUTH2_SUCCESS_REDIRECT_URI}
+      - OAUTH2_FAILURE_REDIRECT_URI=${OAUTH2_FAILURE_REDIRECT_URI}
+      # 구글/카카오 자격증명. .env에서 빈 값이면 not-configured로 대체해 backend가
+      # 부팅되게 한다(application.yml의 ${...:not-configured} 기본값과 동일 의도).
+      # 빈 문자열을 그대로 넘기면 "Client id must not be empty"로 부팅 실패하므로 :- 기본값 필수.
+      # 실제 소셜로그인은 팀이 자격증명 발급해 .env에 채우면 그대로 전달돼 동작한다.
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-not-configured}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-not-configured}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-not-configured}
+      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET:-not-configured}
     depends_on:
       - db
       - redis
