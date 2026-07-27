@@ -1,8 +1,19 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.schemas.analysis import FrameAnalysisResponse
-from app.services.congestion import calculate_congestion
-from app.services.frame_quality import inspect_frame_quality
+from app.services.congestion import (
+    CONGESTION_RULE_VERSION,
+    calculate_congestion,
+)
+from app.services.frame_quality import (
+    FRAME_QUALITY_RULE_VERSION,
+    inspect_frame_quality,
+)
+from app.services.model import (
+    MODEL_NAME,
+    MODEL_VERSION,
+    MODEL_WEIGHT_ID,
+)
 from app.services.person_detector import detect_people
 
 
@@ -44,8 +55,11 @@ async def analyze_frame(
             frame_height=quality_result.height,
             brightness_score=quality_result.brightness_score,
             blur_score=quality_result.blur_score,
-            model_name="YOLO",
-            model_version="yolo11n",
+            model_name=MODEL_NAME,
+            model_version=MODEL_VERSION,
+            model_weight_id=MODEL_WEIGHT_ID,
+            congestion_rule_version=CONGESTION_RULE_VERSION,
+            frame_quality_rule_version=FRAME_QUALITY_RULE_VERSION,
             processing_time_ms=0,
         )
 
@@ -71,8 +85,11 @@ async def analyze_frame(
             frame_height=quality_result.height,
             brightness_score=quality_result.brightness_score,
             blur_score=quality_result.blur_score,
-            model_name="YOLO",
-            model_version="yolo11n",
+            model_name=MODEL_NAME,
+            model_version=MODEL_VERSION,
+            model_weight_id=MODEL_WEIGHT_ID,
+            congestion_rule_version=CONGESTION_RULE_VERSION,
+            frame_quality_rule_version=FRAME_QUALITY_RULE_VERSION,
             processing_time_ms=0,
         )
 
@@ -80,12 +97,8 @@ async def analyze_frame(
         analysis_status="COMPLETED",
         person_count=detection_result.person_count,
         person_confidences=detection_result.confidences,
-        visual_congestion_score=(
-            congestion_result.visual_congestion_score
-        ),
-        local_peak_congestion_score=(
-            congestion_result.local_peak_congestion_score
-        ),
+        visual_congestion_score=(congestion_result.visual_congestion_score),
+        local_peak_congestion_score=(congestion_result.local_peak_congestion_score),
         density_level=None,
         risk_score=None,
         confidence=None,
@@ -94,7 +107,10 @@ async def analyze_frame(
         frame_height=quality_result.height,
         brightness_score=quality_result.brightness_score,
         blur_score=quality_result.blur_score,
-        model_name="YOLO",
-        model_version="yolo11n",
+        model_name=MODEL_NAME,
+        model_version=MODEL_VERSION,
+        model_weight_id=MODEL_WEIGHT_ID,
+        congestion_rule_version=CONGESTION_RULE_VERSION,
+        frame_quality_rule_version=FRAME_QUALITY_RULE_VERSION,
         processing_time_ms=detection_result.processing_time_ms,
     )

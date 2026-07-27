@@ -90,6 +90,9 @@ def test_analyze_frame(monkeypatch) -> None:
         "blurScore": 350.0,
         "modelName": "YOLO",
         "modelVersion": "yolo11n",
+        "modelWeightId": "yolo11n.pt",
+        "congestionRuleVersion": "yolo-grid-v0.2",
+        "frameQualityRuleVersion": "frame-quality-v0.2",
         "processingTimeMs": 10,
     }
 
@@ -101,11 +104,21 @@ def test_invalid_frame_skips_detection(monkeypatch) -> None:
         fake_invalid_quality,
         raising=False,
     )
-    monkeypatch.setattr(analysis, "detect_people", fail_if_detection_runs)
+    monkeypatch.setattr(
+        analysis,
+        "detect_people",
+        fail_if_detection_runs,
+    )
 
     response = client.post(
         "/api/v1/analyze/frame",
-        files={"image": ("dark.jpg", b"fake-image", "image/jpeg")},
+        files={
+            "image": (
+                "dark.jpg",
+                b"fake-image",
+                "image/jpeg",
+            )
+        },
     )
 
     assert response.status_code == 200
@@ -114,6 +127,15 @@ def test_invalid_frame_skips_detection(monkeypatch) -> None:
     assert response.json()["qualityIssues"] == ["TOO_DARK"]
     assert response.json()["visualCongestionScore"] is None
     assert response.json()["localPeakCongestionScore"] is None
+
+    response_body = response.json()
+
+    assert response_body["modelName"] == "YOLO"
+    assert response_body["modelVersion"] == "yolo11n"
+    assert response_body["modelWeightId"] == "yolo11n.pt"
+    assert response_body["congestionRuleVersion"] == "yolo-grid-v0.2"
+    assert response_body["frameQualityRuleVersion"] == "frame-quality-v0.2"
+    assert response_body["confidence"] is None
 
 
 def test_analysis_failure_returns_failed_status(monkeypatch) -> None:
@@ -140,6 +162,16 @@ def test_analysis_failure_returns_failed_status(monkeypatch) -> None:
     assert response.json()["qualityIssues"] == []
     assert response.json()["visualCongestionScore"] is None
     assert response.json()["localPeakCongestionScore"] is None
+
+    response_body = response.json()
+
+    assert response_body["confidence"] is None
+    assert response_body["modelName"] == "YOLO"
+    assert response_body["modelVersion"] == "yolo11n"
+    assert response_body["modelWeightId"] == "yolo11n.pt"
+    assert response_body["congestionRuleVersion"] == "yolo-grid-v0.2"
+    assert response_body["frameQualityRuleVersion"] == "frame-quality-v0.2"
+
 
 def test_no_people_returns_completed_with_zero_congestion(
     monkeypatch,
