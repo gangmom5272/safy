@@ -3,6 +3,7 @@ package com.ojimasam.safy.report.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +68,7 @@ class ReportOperatorAssignmentServiceTest {
 		verify(fixture.historyRepository).save(history.capture());
 		assertThat(history.getValue().getFromStatus()).isEqualTo(ReportStatus.RECEIVED);
 		assertThat(history.getValue().getToStatus()).isEqualTo(ReportStatus.ASSIGNED);
+		verify(fixture.realtimeNotifier).reportAssigned(result.orElseThrow());
 	}
 
 	@Test
@@ -96,6 +98,31 @@ class ReportOperatorAssignmentServiceTest {
 		verify(route).close(NOW);
 	}
 
+	@Test
+	void assignsFiveIndependentReportsToOnlyAvailableOperator() {
+		Fixture fixture = new Fixture();
+		ControlCenter center = center(20L);
+		ReportCenterRoute route = route(center);
+		User operator = operator(30L, "강남 담당자");
+		AdminCenterMembership membership = membership(operator);
+		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(
+				20L, MembershipStatus.ACTIVE, UserRole.OPERATOR, UserStatus.ACTIVE))
+				.thenReturn(List.of(membership));
+		when(fixture.assignmentRepository.countByOperator_IdAndStatusIn(any(), any())).thenReturn(0L);
+		when(fixture.assignmentRepository.findTopByOperator_IdOrderByAssignedAtDesc(any()))
+				.thenReturn(Optional.empty());
+		when(fixture.assignmentRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(fixture.historyRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+		for (long reportId = 1L; reportId <= 5L; reportId++) {
+			Optional<ReportOperatorAssignment> result = fixture.service.assignAutomatically(report(reportId), route);
+			assertThat(result).isPresent();
+			assertThat(result.orElseThrow().getOperator()).isSameAs(operator);
+		}
+
+		verify(fixture.realtimeNotifier, times(5)).reportAssigned(any(ReportOperatorAssignment.class));
+	}
+
 	private static final class Fixture {
 		private final ReportRepository reportRepository = mock(ReportRepository.class);
 		private final ReportCenterRouteRepository routeRepository = mock(ReportCenterRouteRepository.class);
@@ -104,19 +131,24 @@ class ReportOperatorAssignmentServiceTest {
 		private final ReportOperatorAssignmentRepository assignmentRepository =
 				mock(ReportOperatorAssignmentRepository.class);
 		private final ReportStatusHistoryRepository historyRepository = mock(ReportStatusHistoryRepository.class);
+		private final ReportRealtimeNotifier realtimeNotifier = mock(ReportRealtimeNotifier.class);
 		private final ReportOperatorAssignmentService service = new ReportOperatorAssignmentService(
 				reportRepository,
 				routeRepository,
 				membershipRepository,
 				assignmentRepository,
 				historyRepository,
+				realtimeNotifier,
 				Clock.fixed(NOW, ZoneOffset.UTC)
 		);
 	}
 
 	private Report report(Long id) {
-		Report report = Report.createText(
-				1L, "침수 제보", new BigDecimal("37.5"), new BigDecimal("127.0"), "서울"
+		Report report = Report.create(
+				1L, com.ojimasam.safy.report.domain.ReportType.IMAGE,
+				com.ojimasam.safy.report.domain.ReportCategory.FLOOD_WEATHER,
+				com.ojimasam.safy.report.domain.ReportSubcategory.ROAD_FLOODING, "침수 제보",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), "서울"
 		);
 		ReflectionTestUtils.setField(report, "id", id);
 		return report;

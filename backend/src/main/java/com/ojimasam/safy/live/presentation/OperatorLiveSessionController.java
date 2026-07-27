@@ -45,15 +45,19 @@ public class OperatorLiveSessionController {
 
 	@GetMapping
 	public ResponseEntity<ApiResponse<LiveSessionCursorView>> list(
+			@AuthenticationPrincipal Jwt jwt,
 			@RequestParam(required = false) LiveSessionStatus status,
 			@RequestParam(required = false) Instant cursor,
 			@RequestParam(defaultValue = "20") int size) {
 		int boundedSize = Math.max(1, Math.min(size, 100));
-		return ResponseEntity.ok(ApiResponse.success(service.getForOperator(status, cursor, boundedSize)));
+		return ResponseEntity.ok(ApiResponse.success(
+				service.getForOperator(CurrentUser.id(jwt), status, cursor, boundedSize)));
 	}
 
 	@GetMapping("/{streamRoomId}")
-	public ResponseEntity<ApiResponse<OperatorLiveSessionView>> detail(@PathVariable UUID streamRoomId) {
-		return ResponseEntity.ok(ApiResponse.success(service.getForOperator(streamRoomId)));
+	public ResponseEntity<ApiResponse<OperatorLiveSessionView>> detail(@AuthenticationPrincipal Jwt jwt,
+			@PathVariable UUID streamRoomId) {
+		return ResponseEntity.ok(ApiResponse.success(
+				service.getForOperator(CurrentUser.id(jwt), streamRoomId)));
 	}
 }

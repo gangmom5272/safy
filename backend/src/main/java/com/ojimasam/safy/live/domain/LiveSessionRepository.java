@@ -12,8 +12,17 @@ public interface LiveSessionRepository {
 	LiveSession save(LiveSession session);
 	Optional<LiveSession> findById(UUID id);
 	Optional<LiveSession> findByIdForUpdate(UUID id);
+	Optional<LiveSession> findByReportId(Long reportId);
+	List<LiveSession> findAllByReportIdIn(Collection<Long> reportIds);
 	List<LiveSession> findByStatusInAndCreatedAtBeforeOrderByCreatedAtDesc(
 			Collection<LiveSessionStatus> statuses, Instant cursor, Pageable pageable);
+	List<LiveSession> findAccessibleForOperator(
+			Long operatorId,
+			Collection<LiveSessionStatus> liveStatuses,
+			Collection<com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus> assignmentStatuses,
+			Instant cursor,
+			Pageable pageable
+	);
 	List<LiveSession> findTop100ByStatusInAndExpiresAtBeforeOrderByExpiresAtAsc(
 			Collection<LiveSessionStatus> statuses, Instant expiresAt);
 }

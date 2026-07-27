@@ -40,13 +40,10 @@ public interface ReportApiDocs {
 			description = "제보 유형에 맞는 요청 본문을 선택합니다.",
 			required = true,
 			content = @Content(
-					schema = @Schema(discriminatorProperty = "reportType", oneOf = {
-							CreateTextReportRequest.class,
-							CreateImageReportRequest.class
-					}),
+					schema = @Schema(implementation = CreateReportRequest.class),
 					examples = {
-						@ExampleObject(name = "TEXT", summary = "텍스트 제보", value = ReportExamples.CREATE_TEXT),
-						@ExampleObject(name = "IMAGE", summary = "이미지 제보", value = ReportExamples.CREATE_IMAGE)
+						@ExampleObject(name = "IMAGE", summary = "이미지 제보 접수", value = ReportExamples.CREATE_IMAGE),
+						@ExampleObject(name = "LIVE", summary = "라이브 제보 접수", value = ReportExamples.CREATE_LIVE)
 					}
 			)
 	)

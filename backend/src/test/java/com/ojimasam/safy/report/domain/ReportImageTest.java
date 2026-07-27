@@ -12,9 +12,11 @@ import com.ojimasam.safy.media.domain.MediaAsset;
 class ReportImageTest {
 	@Test
 	void connectsReportAndOriginalMediaAsset() {
-		Report report = Report.createImage(1L, "현장 이미지", new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+		Report report = Report.create(1L, ReportType.IMAGE,
+				ReportCategory.FACILITY_ROAD, ReportSubcategory.ROAD_DAMAGE, "현장 이미지",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
 		MediaAsset asset = MediaAsset.prepareOriginal(
-				1L, "safy", "reports/1/image.jpg", "현장.jpg", "image/jpeg",
+				1L, 1L, "safy", "reports/1/image.jpg", "현장.jpg", "image/jpeg",
 				Instant.now().plusSeconds(300)
 		);
 

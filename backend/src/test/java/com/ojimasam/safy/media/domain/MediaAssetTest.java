@@ -12,10 +12,10 @@ class MediaAssetTest {
 	void expiredVerificationDoesNotMutateStateBeforeCleanupTransaction() {
 		Instant expiresAt = Instant.parse("2026-07-21T04:00:00Z");
 		MediaAsset asset = MediaAsset.prepareOriginal(
-				1L, "bucket", "key", "image.jpg", "image/jpeg", expiresAt
+				1L, 10L, "bucket", "key", "image.jpg", "image/jpeg", expiresAt
 		);
 
-		assertThatThrownBy(() -> asset.verifyAttachable(1L, expiresAt.plusSeconds(1)))
+		assertThatThrownBy(() -> asset.verifyAttachable(1L, 10L, expiresAt.plusSeconds(1)))
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessageContaining("만료");
 		assertThat(asset.getStorageStatus()).isEqualTo(MediaStorageStatus.PENDING_UPLOAD);
@@ -24,7 +24,7 @@ class MediaAssetTest {
 	@Test
 	void rejectsFilenameLongerThanColumnLimit() {
 		assertThatThrownBy(() -> MediaAsset.prepareOriginal(
-				1L, "bucket", "key", "a".repeat(256), "image/jpeg", Instant.now().plusSeconds(60)
+				1L, 10L, "bucket", "key", "a".repeat(256), "image/jpeg", Instant.now().plusSeconds(60)
 		)).isInstanceOf(IllegalArgumentException.class)
 				.hasMessageContaining("255자");
 	}

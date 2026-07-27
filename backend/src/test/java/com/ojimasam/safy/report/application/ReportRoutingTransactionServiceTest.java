@@ -119,8 +119,11 @@ class ReportRoutingTransactionServiceTest {
 	}
 
 	private Report report(Long id) {
-		Report report = Report.createText(
+		Report report = Report.create(
 				1L,
+				com.ojimasam.safy.report.domain.ReportType.IMAGE,
+				com.ojimasam.safy.report.domain.ReportCategory.FLOOD_WEATHER,
+				com.ojimasam.safy.report.domain.ReportSubcategory.ROAD_FLOODING,
 				"침수 제보",
 				new BigDecimal("37.5"),
 				new BigDecimal("127.0"),

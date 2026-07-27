@@ -31,4 +31,15 @@ public interface ReportOperatorAssignmentRepository {
 			Collection<ReportOperatorAssignmentStatus> statuses,
 			Pageable pageable
 	);
+
+	Page<ReportOperatorAssignment> findAllByStatusIn(
+			Collection<ReportOperatorAssignmentStatus> statuses,
+			Pageable pageable
+	);
+
+	Page<ReportOperatorAssignment> findDashboardAssignmentsForOperator(
+			Long operatorId,
+			Collection<ReportOperatorAssignmentStatus> statuses,
+			Pageable pageable
+	);
 }

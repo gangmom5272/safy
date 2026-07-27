@@ -35,11 +35,10 @@ public class LiveSessionController {
 		this.service = service;
 	}
 
-	@PostMapping("/api/v1/reports/live")
+	@PostMapping("/api/v1/reports/{reportId}/live-session")
 	public ResponseEntity<ApiResponse<LiveSessionView>> create(@AuthenticationPrincipal Jwt jwt,
-			@Valid @RequestBody CreateLiveSessionRequest request) {
-		LiveSessionView result = service.create(new CreateLiveSessionCommand(
-				CurrentUser.id(jwt), request.description(), request.latitude(), request.longitude(), request.address()));
+			@PathVariable Long reportId) {
+		LiveSessionView result = service.create(new CreateLiveSessionCommand(CurrentUser.id(jwt), reportId));
 		return ResponseEntity.created(URI.create("/api/v1/stream-rooms/" + result.streamRoomId()))
 				.body(ApiResponse.success(result));
 	}

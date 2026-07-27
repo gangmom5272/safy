@@ -37,6 +37,9 @@ public class MediaAsset extends BaseEntity {
 	@Column(name = "owner_user_id", nullable = false)
 	private Long ownerUserId;
 
+	@Column(name = "report_id", nullable = false)
+	private Long reportId;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "source_media_asset_id")
 	private MediaAsset sourceMediaAsset;
@@ -70,9 +73,10 @@ public class MediaAsset extends BaseEntity {
 	protected MediaAsset() {
 	}
 
-	private MediaAsset(Long ownerUserId, String bucketName, String objectKey,
+	private MediaAsset(Long ownerUserId, Long reportId, String bucketName, String objectKey,
 			String originalFilename, String contentType, Instant uploadExpiresAt) {
 		this.ownerUserId = ownerUserId;
+		this.reportId = reportId;
 		this.bucketName = bucketName;
 		this.objectKey = objectKey;
 		this.originalFilename = originalFilename;
@@ -82,20 +86,22 @@ public class MediaAsset extends BaseEntity {
 		this.uploadExpiresAt = uploadExpiresAt;
 	}
 
-	public static MediaAsset prepareOriginal(Long ownerUserId, String bucketName, String objectKey,
+	public static MediaAsset prepareOriginal(Long ownerUserId, Long reportId, String bucketName, String objectKey,
 			String originalFilename, String contentType, Instant uploadExpiresAt) {
 		if (ownerUserId == null || ownerUserId <= 0) throw new IllegalArgumentException("사용자 ID는 필수입니다.");
+		if (reportId == null || reportId <= 0) throw new IllegalArgumentException("제보 ID는 필수입니다.");
 		if (bucketName == null || bucketName.isBlank()) throw new IllegalArgumentException("버킷 이름은 필수입니다.");
 		if (objectKey == null || objectKey.isBlank()) throw new IllegalArgumentException("객체 키는 필수입니다.");
 		if (originalFilename == null || originalFilename.isBlank()) throw new IllegalArgumentException("원본 파일명은 필수입니다.");
 		if (originalFilename.length() > 255) throw new IllegalArgumentException("원본 파일명은 255자 이하여야 합니다.");
 		if (contentType == null || !contentType.startsWith("image/")) throw new IllegalArgumentException("이미지 파일만 업로드할 수 있습니다.");
 		if (uploadExpiresAt == null) throw new IllegalArgumentException("업로드 만료 시각은 필수입니다.");
-		return new MediaAsset(ownerUserId, bucketName, objectKey, originalFilename, contentType, uploadExpiresAt);
+		return new MediaAsset(ownerUserId, reportId, bucketName, objectKey, originalFilename, contentType, uploadExpiresAt);
 	}
 
-	public void verifyAttachable(Long userId, Instant now) {
+	public void verifyAttachable(Long userId, Long targetReportId, Instant now) {
 		if (!ownerUserId.equals(userId)) throw new IllegalArgumentException("다른 사용자의 미디어입니다.");
+		if (!reportId.equals(targetReportId)) throw new IllegalArgumentException("다른 제보에 발급된 미디어입니다.");
 		if (storageStatus != MediaStorageStatus.PENDING_UPLOAD) throw new IllegalStateException("이미 사용되었거나 첨부할 수 없는 미디어입니다.");
 		if (uploadExpiresAt.isBefore(now)) throw new IllegalArgumentException("업로드가 만료되었습니다.");
 	}
@@ -114,6 +120,7 @@ public class MediaAsset extends BaseEntity {
 
 	public Long getId() { return id; }
 	public Long getOwnerUserId() { return ownerUserId; }
+	public Long getReportId() { return reportId; }
 	public String getBucketName() { return bucketName; }
 	public String getObjectKey() { return objectKey; }
 	public String getOriginalFilename() { return originalFilename; }

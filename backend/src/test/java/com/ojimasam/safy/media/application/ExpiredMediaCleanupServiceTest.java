@@ -26,7 +26,7 @@ class ExpiredMediaCleanupServiceTest {
 	void deletesExpiredPendingObjectAndDatabaseRecord() {
 		Instant now = Instant.parse("2026-07-21T04:10:00Z");
 		MediaAsset asset = MediaAsset.prepareOriginal(
-				1L, "bucket", "reports/1/image.jpg", "image.jpg", "image/jpeg", now.minusSeconds(1)
+				1L, 10L, "bucket", "reports/1/image.jpg", "image.jpg", "image/jpeg", now.minusSeconds(1)
 		);
 		when(repository.findTop100ByStorageStatusAndUploadExpiresAtBeforeOrderByUploadExpiresAtAsc(
 				MediaStorageStatus.PENDING_UPLOAD, now)).thenReturn(List.of(asset));

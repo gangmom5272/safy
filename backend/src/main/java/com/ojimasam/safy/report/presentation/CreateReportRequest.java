@@ -1,10 +1,11 @@
 package com.ojimasam.safy.report.presentation;
 
 import java.math.BigDecimal;
-import java.util.List;
-
 import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.ReportCategory;
+import com.ojimasam.safy.report.domain.ReportSubcategory;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -13,7 +14,14 @@ import jakarta.validation.constraints.Size;
 
 public record CreateReportRequest(
 		@NotNull(message = "제보 유형은 필수입니다.")
+		@Schema(allowableValues = {"IMAGE", "LIVE"})
 		ReportType reportType,
+
+		@NotNull(message = "제보 카테고리는 필수입니다.")
+		ReportCategory category,
+
+		@NotNull(message = "제보 세부 상황은 필수입니다.")
+		ReportSubcategory subcategory,
 
 		@NotBlank(message = "제보 내용은 필수입니다.")
 		@Size(max = 2000, message = "제보 내용은 2000자 이하여야 합니다.")
@@ -30,9 +38,6 @@ public record CreateReportRequest(
 		BigDecimal longitude,
 
 		@Size(max = 500, message = "주소는 500자 이하여야 합니다.")
-		String address,
-
-		@Size(max = 5, message = "이미지는 최대 5장까지 첨부할 수 있습니다.")
-		List<@NotNull Long> mediaAssetIds
+		String address
 ) {
 }

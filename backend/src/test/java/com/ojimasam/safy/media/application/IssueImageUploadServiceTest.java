@@ -8,6 +8,8 @@ import static org.mockito.Mockito.verify;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.math.BigDecimal;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,16 +21,24 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.ojimasam.safy.media.domain.MediaAsset;
 import com.ojimasam.safy.media.domain.MediaAssetRepository;
 import com.ojimasam.safy.media.domain.MediaStorageStatus;
+import com.ojimasam.safy.report.domain.Report;
+import com.ojimasam.safy.report.domain.ReportRepository;
+import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.ReportCategory;
+import com.ojimasam.safy.report.domain.ReportSubcategory;
 
 @ExtendWith(MockitoExtension.class)
 class IssueImageUploadServiceTest {
 	@Mock MediaAssetRepository repository;
+	@Mock ReportRepository reportRepository;
 	@Mock MediaObjectStorage storage;
 
 	@Test
 	void createsPendingAssetAndPresignedUrl() {
 		Clock clock = Clock.fixed(Instant.parse("2026-07-21T04:00:00Z"), ZoneOffset.UTC);
-		IssueImageUploadService service = new IssueImageUploadService(repository, storage, "safy-original", clock);
+		IssueImageUploadService service = new IssueImageUploadService(
+				repository, reportRepository, storage, "safy-original", clock);
+		when(reportRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(imageReport()));
 		when(repository.save(any(MediaAsset.class))).thenAnswer(invocation -> {
 			MediaAsset asset = invocation.getArgument(0);
 			ReflectionTestUtils.setField(asset, "id", 10L);
@@ -37,7 +47,7 @@ class IssueImageUploadServiceTest {
 		when(storage.createPresignedPutUrl(any(), any(), any()))
 				.thenReturn("http://localhost:9000/safy-original/reports/image.jpg?signature=test");
 
-		IssuedImageUpload result = service.issue(new IssueImageUploadCommand(1L, "현장.heic", "image/jpeg"));
+		IssuedImageUpload result = service.issue(new IssueImageUploadCommand(1L, 42L, "현장.heic", "image/jpeg"));
 
 		assertThat(result.mediaAssetId()).isEqualTo(10L);
 		assertThat(result.uploadUrl()).contains("signature=test");
@@ -55,10 +65,10 @@ class IssueImageUploadServiceTest {
 	@Test
 	void rejectsHeicUntilClientConvertsIt() {
 		IssueImageUploadService service = new IssueImageUploadService(
-				repository, storage, "safy-original", Clock.systemUTC());
+				repository, reportRepository, storage, "safy-original", Clock.systemUTC());
 
 		org.assertj.core.api.Assertions.assertThatThrownBy(
-				() -> service.issue(new IssueImageUploadCommand(1L, "현장.heic", "image/heic"))
+				() -> service.issue(new IssueImageUploadCommand(1L, 42L, "현장.heic", "image/heic"))
 		).isInstanceOf(IllegalArgumentException.class)
 				.hasMessageContaining("HEIC/HEIF");
 	}
@@ -66,13 +76,23 @@ class IssueImageUploadServiceTest {
 	@Test
 	void rejectsWhenActiveUploadQuotaIsExhausted() {
 		Clock clock = Clock.fixed(Instant.parse("2026-07-21T04:00:00Z"), ZoneOffset.UTC);
-		IssueImageUploadService service = new IssueImageUploadService(repository, storage, "safy-original", clock);
+		IssueImageUploadService service = new IssueImageUploadService(
+				repository, reportRepository, storage, "safy-original", clock);
+		when(reportRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(imageReport()));
 		when(repository.countByOwnerUserIdAndStorageStatusAndUploadExpiresAtAfter(any(), any(), any()))
 				.thenReturn(10L);
 
 		org.assertj.core.api.Assertions.assertThatThrownBy(
-				() -> service.issue(new IssueImageUploadCommand(1L, "현장.jpg", "image/jpeg"))
+				() -> service.issue(new IssueImageUploadCommand(1L, 42L, "현장.jpg", "image/jpeg"))
 		).isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("최대 10개");
+	}
+
+	private Report imageReport() {
+		Report report = Report.create(1L, ReportType.IMAGE,
+				ReportCategory.FLOOD_WEATHER, ReportSubcategory.ROAD_FLOODING, "침수 현장",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+		ReflectionTestUtils.setField(report, "id", 42L);
+		return report;
 	}
 }

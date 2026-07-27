@@ -47,8 +47,11 @@ class ReportRoutingTest {
 	}
 
 	private Report report() {
-		return Report.createText(
+		return Report.create(
 				1L,
+				ReportType.IMAGE,
+				ReportCategory.FLOOD_WEATHER,
+				ReportSubcategory.ROAD_FLOODING,
 				"침수 제보",
 				new BigDecimal("37.5"),
 				new BigDecimal("127.0"),
