@@ -1,59 +1,38 @@
-import { useMemo, useState } from 'react'
+import { type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
 import {
   adminReports,
-  connectionStatusLabels,
-  emergencyBanner,
   reportStatusLabels,
-  riskLevelLabels,
   riskMarkers,
   webrtcConnections,
 } from '../../mocks/adminMockData'
-import { ROUTE_PATHS, createReportDetailPath } from '../../router/paths'
+import type { WebRTCConnection } from '../../types/admin'
+import { ROUTE_PATHS, createMonitoringDetailPath, createReportDetailPath } from '../../router/paths'
+import { AdminSection } from '../../components/admin/AdminSection'
+import { RiskBadge } from '../../components/admin/RiskBadge'
+import { getRiskConfig, isHighRisk } from '../../utils/adminRisk'
+import { formatAdminTimestamp } from '../../utils/adminDate'
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const liveConnections = webrtcConnections.filter(
-    (connection) => connection.connectionStatus === 'live',
+  const activeConnections = webrtcConnections.filter(
+    (connection) => connection.connectionStatus !== 'ended',
   )
-  const waitingConnections = webrtcConnections.filter(
-    (connection) => connection.connectionStatus === 'waiting',
-  )
-  const recentDangerReports = adminReports.filter(
-    (report) => report.riskLevel === 'danger' || report.riskLevel === 'warning',
-  )
-  const [requestedConnectionIds, setRequestedConnectionIds] = useState<number[]>([])
+  const recentDangerReports = adminReports.filter((report) => isHighRisk(report.riskLevel))
 
-  const queueRows = useMemo(
-    () =>
-      waitingConnections.map((connection) => ({
-        ...connection,
-        isRequested: requestedConnectionIds.includes(connection.id),
-      })),
-    [requestedConnectionIds, waitingConnections],
-  )
-
-  const requestConnection = (connectionId: number) => {
-    setRequestedConnectionIds((currentIds) =>
-      currentIds.includes(connectionId) ? currentIds : [...currentIds, connectionId],
-    )
+  const openMonitoring = (connection: WebRTCConnection) => {
+    navigate(createMonitoringDetailPath(connection.id))
   }
 
   return (
     <section className="page-stack">
-      <div className="emergency-banner">{emergencyBanner}</div>
-
-      <div className="dashboard-grid">
-        <article className="admin-card dashboard-map-card">
-          <div className="card-heading">
-            <div>
-              <h2>실시간 위험도 지도</h2>
-              <p>주요 지역 위험도 마커</p>
-            </div>
-            <button type="button" className="text-button" onClick={() => navigate(ROUTE_PATHS.RISK_MAP)}>
-              전체 보기
-            </button>
-          </div>
+      <div className="home-content-grid">
+        <AdminSection
+          title="실시간 위험도 지도"
+          className="home-map-section"
+          cardClassName="dashboard-map-card"
+          action={<button type="button" className="text-button" onClick={() => navigate(ROUTE_PATHS.RISK_MAP)}>전체 보기 &gt;</button>}
+        >
           <button
             type="button"
             className="map-preview"
@@ -63,84 +42,18 @@ export function DashboardPage() {
             {riskMarkers.map((marker) => (
               <span
                 key={marker.id}
-                className={`map-marker risk-${marker.riskLevel}`}
-                style={{ top: `${marker.top}%`, left: `${marker.left}%` }}
+                className="map-marker"
+                style={{ top: `${marker.top}%`, left: `${marker.left}%`, backgroundColor: getRiskConfig(marker.riskLevel)?.markerColor ?? '#64748B', color: getRiskConfig(marker.riskLevel)?.markerTextColor ?? '#FFFFFF' }}
               >
                 {marker.location}
               </span>
             ))}
           </button>
-        </article>
+        </AdminSection>
 
-        <article className="admin-card">
-          <div className="card-heading">
-            <div>
-              <h2>실시간 연결 화면</h2>
-              <p>현재 연결된 현장 영상</p>
-            </div>
-          </div>
-          <div className="live-preview-grid">
-            {liveConnections.map((connection) => (
-              <button
-                key={connection.id}
-                type="button"
-                className="video-card"
-                onClick={() => navigate(ROUTE_PATHS.MONITORING)}
-              >
-                <span className="live-badge">LIVE</span>
-                <strong>{connection.location}</strong>
-                <span className={`risk-badge risk-${connection.riskLevel}`}>
-                  {riskLevelLabels[connection.riskLevel]}
-                </span>
-                <span>연결 시간 {connection.connectedAt}</span>
-                <span>AI 위험 감지 {connection.aiDetected ? '감지됨' : '없음'}</span>
-              </button>
-            ))}
-          </div>
-        </article>
-      </div>
-
-      <div className="dashboard-grid">
-        <article className="admin-card">
-          <div className="card-heading">
-            <div>
-              <h2>WebRTC 연결 대기열</h2>
-              <p>관리자가 연결 요청을 보낼 수 있습니다.</p>
-            </div>
-          </div>
-          <div className="queue-list">
-            {queueRows.map((connection, index) => (
-              <div key={connection.id} className="queue-row">
-                <span>{index + 1}</span>
-                <strong>{connection.location}</strong>
-                <span className={`risk-badge risk-${connection.riskLevel}`}>
-                  {riskLevelLabels[connection.riskLevel]}
-                </span>
-                <span>{connection.connectedAt}</span>
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={() => requestConnection(connection.id)}
-                  disabled={connection.isRequested}
-                >
-                  {connection.isRequested
-                    ? connectionStatusLabels.requested
-                    : '연결'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="admin-card">
-          <div className="card-heading">
-            <div>
-              <h2>최근 위험 제보</h2>
-              <p>위험도가 높은 제보 목록</p>
-            </div>
-          </div>
+        <AdminSection title="최근 위험 제보" className="home-recent-section">
           <div className="table-wrap">
-            <table className="admin-table">
+            <table className="admin-table recent-reports-table">
               <thead>
                 <tr>
                   <th>위치</th>
@@ -159,9 +72,7 @@ export function DashboardPage() {
                   >
                     <td>{report.location}</td>
                     <td>
-                      <span className={`risk-badge risk-${report.riskLevel}`}>
-                        {riskLevelLabels[report.riskLevel]}
-                      </span>
+                      <RiskBadge value={report.riskLevel} />
                     </td>
                     <td>{report.reportedAt}</td>
                     <td>{reportStatusLabels[report.status]}</td>
@@ -182,8 +93,73 @@ export function DashboardPage() {
               </tbody>
             </table>
           </div>
-        </article>
+        </AdminSection>
+
+        <AdminSection
+          title="실시간 연결"
+          className="home-live-section"
+          cardClassName="live-connection-panel"
+          action={<button type="button" className="text-button" onClick={() => navigate(ROUTE_PATHS.MONITORING)}>전체 보기 &gt;</button>}
+        >
+          {activeConnections.length > 0 ? (
+            <div className="live-connection-list">
+              {activeConnections.map((connection) => (
+                <LiveConnectionCard
+                  key={connection.id}
+                  connection={connection}
+                  uploadedAt={adminReports.find((report) => report.id === connection.reportId)?.reportedAt}
+                  onOpenMonitoring={() => openMonitoring(connection)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">현재 실시간 연결이 없습니다.</div>
+          )}
+        </AdminSection>
       </div>
+
     </section>
+  )
+}
+
+interface LiveConnectionCardProps {
+  connection: WebRTCConnection
+  uploadedAt?: string
+  onOpenMonitoring: () => void
+}
+
+function LiveConnectionCard({ connection, uploadedAt, onOpenMonitoring }: LiveConnectionCardProps) {
+  const isConnected = connection.connectionStatus === 'live'
+  const uploadTimestamp = formatAdminTimestamp(uploadedAt)
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onOpenMonitoring()
+    }
+  }
+
+  return (
+    <article
+      className="live-connection-item"
+      role="link"
+      data-report-id={connection.reportId}
+      tabIndex={0}
+      onClick={onOpenMonitoring}
+      onKeyDown={handleKeyDown}
+      aria-label={`${connection.location || `제보 #${connection.reportId}`} 실시간 모니터링 보기`}
+    >
+      <header className="live-connection-item__header">
+        <strong className="live-connection-item__location">{connection.location || `제보 #${connection.reportId}`}</strong>
+        <RiskBadge value={connection.riskLevel} />
+      </header>
+      <div className="live-connection-item__media" aria-hidden="true">
+        {isConnected && <span className="live-badge">LIVE</span>}
+        <span>WebRTC</span>
+      </div>
+      <footer className="live-connection-item__footer">
+        <time dateTime={uploadedAt}>{uploadTimestamp ? `업로드 ${uploadTimestamp}` : '업로드 시간 정보 없음'}</time>
+      </footer>
+    </article>
   )
 }

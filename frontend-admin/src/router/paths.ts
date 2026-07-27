@@ -4,9 +4,13 @@ export const ROUTE_PATHS = {
   REPORTS: '/reports',
   REPORT_DETAIL: '/reports/:reportId',
   MONITORING: '/monitoring',
+  MONITORING_DETAIL: '/monitoring/:connectionId',
   RISK_MAP: '/risk-map',
   SETTINGS: '/settings',
 } as const
 
 export const createReportDetailPath = (reportId: number | string) =>
   `/reports/${reportId}`
+
+export const createMonitoringDetailPath = (connectionId: number | string) =>
+  `/monitoring/${encodeURIComponent(String(connectionId))}`

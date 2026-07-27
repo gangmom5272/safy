@@ -5,20 +5,12 @@ import type {
   ReportStatus,
   ReportType,
   ReviewStatus,
-  RiskLevel,
   RiskMarker,
   DashboardStats,
   SystemStatus,
   WebRTCConnection,
   WebRTCConnectionStatus,
 } from '../types/admin'
-
-export const riskLevelLabels: Record<RiskLevel, string> = {
-  safe: '안전',
-  caution: '주의',
-  warning: '경고',
-  danger: '위험',
-}
 
 export const reportTypeLabels: Record<ReportType, string> = {
   crowd: '인파',

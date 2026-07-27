@@ -3,8 +3,8 @@ import { dashboardStats } from '../../mocks/adminMockData'
 import { ROUTE_PATHS } from '../../router/paths'
 
 const sidebarItems = [
-  { label: '대시보드', path: ROUTE_PATHS.DASHBOARD, end: true },
-  { label: '제보 관리', path: ROUTE_PATHS.REPORTS, end: false },
+  { label: '홈', path: ROUTE_PATHS.DASHBOARD, end: true },
+  { label: '제보 목록', path: ROUTE_PATHS.REPORTS, end: false },
   { label: '실시간 모니터링', path: ROUTE_PATHS.MONITORING, end: true },
   { label: '위험도 지도', path: ROUTE_PATHS.RISK_MAP, end: true },
   { label: '시스템 설정', path: ROUTE_PATHS.SETTINGS, end: true },

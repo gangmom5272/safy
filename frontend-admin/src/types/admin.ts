@@ -1,4 +1,8 @@
-export type RiskLevel = 'safe' | 'caution' | 'warning' | 'danger'
+export type RiskLevel = 'very_high' | 'high' | 'medium' | 'low' | 'very_low'
+
+export type LegacyRiskLevel = 'danger' | 'warning' | 'caution' | 'safe'
+
+export type RiskLevelValue = RiskLevel | LegacyRiskLevel
 
 export type ReportType =
   | 'crowd'
@@ -32,7 +36,7 @@ export interface AdminReport {
   id: number
   location: string
   type: ReportType
-  riskLevel: RiskLevel
+  riskLevel: RiskLevelValue
   riskScore: number
   reportedAt: string
   status: ReportStatus
@@ -42,13 +46,17 @@ export interface AdminReport {
   aiSummary: string
   riskTags: string[]
   history: AdminReportHistory[]
+  reporterName?: string
+  imageUrl?: string
+  aiIndicators?: string[]
+  aiCompletedAt?: string
 }
 
 export interface WebRTCConnection {
   id: number
   reportId: number
   location: string
-  riskLevel: RiskLevel
+  riskLevel: RiskLevelValue
   riskScore: number
   connectedAt: string
   connectionStatus: WebRTCConnectionStatus
@@ -61,7 +69,7 @@ export interface WebRTCConnection {
 export interface RiskMarker {
   id: number
   location: string
-  riskLevel: RiskLevel
+  riskLevel: RiskLevelValue
   riskScore: number
   top: number
   left: number
