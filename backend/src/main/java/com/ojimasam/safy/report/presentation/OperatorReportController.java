@@ -18,6 +18,8 @@ import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
 import com.ojimasam.safy.report.application.ReportQueryService;
 import com.ojimasam.safy.report.application.ReportDetailView;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -37,12 +39,17 @@ public class OperatorReportController {
 	}
 
 	@GetMapping("/{reportId}")
+	@Operation(summary = "담당자 제보 상세 조회", description = "담당자가 처리 대상 제보의 상세 정보를 조회합니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 상세 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	public ApiResponse<ReportDetailView> detail(@AuthenticationPrincipal Jwt jwt, @PathVariable Long reportId) {
 		return ApiResponse.success(reportQueryService.getForOperator(CurrentUser.id(jwt), reportId));
 	}
 
 	@GetMapping("/me")
 	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "내 배정 제보 목록 조회", description = "현재 담당자에게 배정되어 진행 중(ASSIGNED/ACCEPTED/IN_PROGRESS)인 제보를 조회합니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "배정 제보 목록 조회 성공")
 	public ApiResponse<PageResponse<OperatorAssignmentResponse>> listMine(
 			@AuthenticationPrincipal Jwt jwt,
 			Pageable pageable
@@ -54,6 +61,10 @@ public class OperatorReportController {
 
 	@PatchMapping("/{reportId}/accept")
 	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "제보 수락", description = "배정받은 담당자가 제보를 수락합니다. (ASSIGNED → ACCEPTED)")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 수락 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "수락할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
 	public ApiResponse<OperatorAssignmentResponse> accept(
 			@AuthenticationPrincipal Jwt jwt,
 			@PathVariable Long reportId
@@ -63,6 +74,10 @@ public class OperatorReportController {
 
 	@PatchMapping("/{reportId}/start")
 	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "업무 시작", description = "수락한 제보의 처리를 시작합니다. (ACCEPTED → IN_PROGRESS)")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "업무 시작 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "시작할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
 	public ApiResponse<OperatorAssignmentResponse> start(
 			@AuthenticationPrincipal Jwt jwt,
 			@PathVariable Long reportId
@@ -72,6 +87,10 @@ public class OperatorReportController {
 
 	@PatchMapping("/{reportId}/complete")
 	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "업무 종료", description = "진행 중인 제보를 종료합니다. 제보가 CLOSED 되고 관제센터 라우팅도 종료됩니다. (IN_PROGRESS → CLOSED)")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "업무 종료 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "종료할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
 	public ApiResponse<OperatorAssignmentResponse> complete(
 			@AuthenticationPrincipal Jwt jwt,
 			@PathVariable Long reportId
