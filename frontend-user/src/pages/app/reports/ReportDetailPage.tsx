@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
+import { PageHeader } from '../../../components/common/PageHeader'
 import { formatDateTime } from '../../../utils/dateTime'
 import { ErrorState, LoadingSkeleton } from '../situations/SituationStates'
 import { AreaMap } from '../situations/AreaMap'
@@ -75,15 +76,7 @@ export function ReportDetailPage() {
 
   return (
     <div className="situation-page report-detail-page">
-      <header className="report-detail-header">
-        <button type="button" aria-label="뒤로가기" onClick={() => navigate(-1)}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/><path d="M8 12h12"/></svg>
-        </button>
-        <h1>실시간 제보 상세</h1>
-        <button className="report-detail-share" type="button" aria-label="제보 공유하기" onClick={shareReport} disabled={!report}>
-          <ShareIcon />
-        </button>
-      </header>
+      <PageHeader title="실시간 제보 상세" onBack={() => navigate(-1)} action={<button className="report-detail-share" type="button" aria-label="제보 공유하기" onClick={shareReport} disabled={!report}><ShareIcon /></button>} />
 
       {isReportLoading && !report ? <LoadingSkeleton /> : null}
       {reportError && !report ? (
@@ -170,7 +163,7 @@ function ReportDetailSummary({ report, imageFailed, onImageError }: ReportDetail
   const mediaUrl = report.maskedMediaUrl ?? report.maskedThumbnailUrl
 
   return (
-    <section className="report-detail-card" aria-labelledby="report-detail-title">
+    <section className="report-detail-summary" aria-labelledby="report-detail-title">
       <div className="report-detail-media">
         {mediaUrl && !imageFailed ? (
           <img src={mediaUrl} alt={`${report.title} 마스킹 처리 미디어`} onError={onImageError} />
@@ -180,27 +173,29 @@ function ReportDetailSummary({ report, imageFailed, onImageError }: ReportDetail
           </div>
         )}
       </div>
-      <div className="report-detail-body">
-        <div className="report-card-badges">
-          <span className={`risk-badge risk-${report.riskLevel}`}>
-            {riskLevelLabels[report.riskLevel]}
-          </span>
+      <div className="report-detail-content-section">
+        <h2 id="report-detail-title" className="report-detail-section-title">{report.locationName || report.title}</h2>
+        <div className="report-detail-card report-detail-body">
+          <div className="report-card-badges">
+            <span className={`risk-badge risk-${report.riskLevel}`}>
+              {riskLevelLabels[report.riskLevel]}
+            </span>
+          </div>
+          <p className="report-category">{reportTypeLabels[report.type]}</p>
+          <dl className="report-detail-list">
+            <div>
+              <dt><DetailIcon name="address" />주소</dt>
+              <dd>{report.address || '주소 정보 없음'}</dd>
+            </div>
+            <div className="report-date-row">
+              <dt><DetailIcon name="time" />제보 시각</dt>
+              <dd>{formatDateTime(report.reportedAt)}</dd>
+            </div>
+          </dl>
+          <p className="report-description detail">
+            {report.description || '상세 설명이 없습니다.'}
+          </p>
         </div>
-        <p className="report-category">{reportTypeLabels[report.type]}</p>
-        <h2 id="report-detail-title">{report.locationName || report.title}</h2>
-        <dl className="report-detail-list">
-          <div>
-            <dt><DetailIcon name="address" />주소</dt>
-            <dd>{report.address || '주소 정보 없음'}</dd>
-          </div>
-          <div className="report-date-row">
-            <dt><DetailIcon name="time" />제보 시각</dt>
-            <dd>{formatDateTime(report.reportedAt)}</dd>
-          </div>
-        </dl>
-        <p className="report-description detail">
-          {report.description || '상세 설명이 없습니다.'}
-        </p>
       </div>
     </section>
   )

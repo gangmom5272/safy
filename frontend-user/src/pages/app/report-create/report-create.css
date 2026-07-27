@@ -51,6 +51,20 @@
   font-size: 18px;
 }
 
+.report-form-section {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.report-form-section-title {
+  margin: 0;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .report-safety-box {
   display: grid;
   gap: 6px;
@@ -1210,7 +1224,17 @@ button:focus-visible,
 .report-type-page .report-location-card,
 .report-type-page .report-classification-card,
 .report-type-page .report-content-card {
-  padding: 12px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.report-type-page .report-classification-card,
+.report-type-page .report-content-card {
+  display: grid;
+  gap: 10px;
 }
 
 .report-type-page .report-method-grid {

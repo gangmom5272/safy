@@ -1,5 +1,6 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useNavigate } from 'react-router'
+import { PageHeader } from '../../../components/common/PageHeader'
 import { useFavoritePlacesStore } from '../../../stores/favoritePlacesStore'
 import { formatDateTime, formatRelativeTime } from '../../../utils/dateTime'
 import { createFavorite, patchFavorite, removeFavorite } from './mypageApi'
@@ -9,7 +10,27 @@ import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, ReportSta
 import { APP_VERSION } from './mypageUtils'
 import './favoritePlaceForm.css'
 
-const statusLabel: Record<ReportStatus, string> = { RECEIVED: '검토 중', CHECKING: '확인 중', COMPLETED: '채택됨', REJECTED: '반려됨' }
+const statusLabel: Record<ReportStatus, string> = { RECEIVED: '검토중', CHECKING: '검토중', COMPLETED: '채택됨', REJECTED: '반려됨' }
+type ReportDisplayStatus = 'ALL' | 'REVIEW' | 'COMPLETED' | 'REJECTED'
+type ReportDateFilter = 'ALL' | '7_DAYS' | '1_MONTH' | '3_MONTHS' | 'CUSTOM'
+
+const reportStatusFilters: { value: ReportDisplayStatus; label: string }[] = [
+  { value: 'ALL', label: '전체' },
+  { value: 'REVIEW', label: '검토중' },
+  { value: 'COMPLETED', label: '채택됨' },
+  { value: 'REJECTED', label: '반려됨' },
+]
+const reportDateFilters: { value: ReportDateFilter; label: string }[] = [
+  { value: 'ALL', label: '전체 기간' },
+  { value: '7_DAYS', label: '최근 7일' },
+  { value: '1_MONTH', label: '최근 1개월' },
+  { value: '3_MONTHS', label: '최근 3개월' },
+  { value: 'CUSTOM', label: '직접 설정' },
+]
+
+function getDisplayStatus(status: ReportStatus): Exclude<ReportDisplayStatus, 'ALL'> {
+  return status === 'RECEIVED' || status === 'CHECKING' ? 'REVIEW' : status
+}
 const reportTypeRules = [
   { pattern: /인파|crowd/i, label: '인파 밀집', titleTerms: ['인파 과밀', '인파 밀집'] },
   { pattern: /교통|traffic/i, label: '교통 혼잡', titleTerms: ['교통 혼잡', '교통 체증'] },
@@ -18,10 +39,55 @@ const reportTypeRules = [
   { pattern: /침수|기상|weather/i, label: '침수·기상', titleTerms: ['침수·기상', '침수', '기상'] },
   { pattern: /시설|도로|facility/i, label: '시설물·도로', titleTerms: ['시설물·도로', '시설물 위험', '도로 위험'] },
 ]
-export function PageHeader({ title, onBack, action, className = '' }: { title: string; onBack?: () => void; action?: React.ReactNode; className?: string }) { return <header className={`mypage-header${onBack ? '' : ' main'}${className ? ` ${className}` : ''}`}>{onBack ? <button type="button" aria-label="뒤로가기" onClick={onBack}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/><path d="M8 12h12"/></svg></button> : <span />}<h1>{title}</h1>{action ?? <span />}</header> }
 export function SectionTitle({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) { return <div className="mypage-title"><h2>{title}</h2>{action && <button type="button" onClick={onAction}>{action} →</button>}</div> }
-export function Reports({ reports, onBack, onOpen }: { reports: MyReport[]; onBack: () => void; onOpen: (id: number) => void }) { const [filter, setFilter] = useState<'ALL' | ReportStatus>('ALL'); const filtered = filter === 'ALL' ? reports : reports.filter((item) => item.status === filter); return <><PageHeader title="내 제보 관리" onBack={onBack} /><div className="mypage-tabs" role="tablist">{(['ALL','RECEIVED','CHECKING','COMPLETED'] as const).map((item) => <button type="button" role="tab" aria-selected={filter === item} className={filter === item ? 'active' : ''} key={item} onClick={() => setFilter(item)}>{item === 'ALL' ? '전체' : statusLabel[item]}</button>)}</div>{filtered.length ? <div className="my-report-list">{filtered.map((report) => <button type="button" className="my-report-card" key={report.id} onClick={() => onOpen(report.id)}><span className="report-thumb">{report.maskedThumbnailUrl || report.thumbnailUrl ? <img src={(report.maskedThumbnailUrl || report.thumbnailUrl) ?? ''} alt="제보 현장" /> : '이미지 준비 중'}</span><span><small>{report.type} · {report.locationName}</small><strong>{report.title}</strong><time>{formatRelativeTime(report.createdAt)}</time></span><em className={`status-${report.status.toLowerCase()}`}>{statusLabel[report.status]}</em></button>)}</div> : <Empty text="해당 상태의 제보가 없습니다." />}</> }
-export function ReportDetail({ report, onBack }: { report: MyReport; onBack: () => void }) { return <div className="my-report-detail-page"><PageHeader title="내 제보 상세" onBack={onBack} /><section className="mypage-card report-detail-card"><span className="report-detail-media">{report.mediaUrls.length ? <img src={report.mediaUrls[0]} alt="첨부 이미지" /> : '첨부 이미지 없음'}</span><div className="report-detail-heading"><h2>{getReportDisplayTitle(report)}</h2><em className={`status-${report.status.toLowerCase()}`}>{statusLabel[report.status]}</em></div><p className="report-detail-description">{report.description}</p><dl className="report-detail-info"><dt>유형</dt><dd>{getReportTypeLabel(report)}</dd><dt>주소</dt><dd>{report.address}</dd><dt>등록 시간</dt><dd>{formatDateTime(report.createdAt)}</dd></dl></section><section className="mypage-card report-detail-section"><SectionTitle title="관리자 답변" /><p>{report.adminReply ?? '아직 관리자 답변이 등록되지 않았습니다.'}</p></section><section className="mypage-card report-detail-section"><SectionTitle title="처리 이력" /><ol className="report-history-list">{report.history.map((item) => <li key={`${item.status}-${item.changedAt}`}><b>{statusLabel[item.status]}</b><span>{item.description}</span><time>{formatDateTime(item.changedAt)}</time></li>)}</ol></section></div> }
+export function Reports({ reports, onBack, onOpen }: { reports: MyReport[]; onBack: () => void; onOpen: (id: number) => void }) {
+  const [statusFilter, setStatusFilter] = useState<ReportDisplayStatus>('ALL')
+  const [dateFilter, setDateFilter] = useState<ReportDateFilter>('ALL')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [dateMenuOpen, setDateMenuOpen] = useState(false)
+  const dateMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!dateMenuOpen) return
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!dateMenuRef.current?.contains(event.target as Node)) setDateMenuOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDateMenuOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [dateMenuOpen])
+
+  const filteredReports = useMemo(() => reports.filter((report) => {
+    if (statusFilter !== 'ALL' && getDisplayStatus(report.status) !== statusFilter) return false
+    if (dateFilter === 'ALL') return true
+
+    const createdAt = new Date(report.createdAt)
+    const now = new Date()
+    if (dateFilter === 'CUSTOM') {
+      const start = startDate ? new Date(`${startDate}T00:00:00`) : null
+      const end = endDate ? new Date(`${endDate}T23:59:59.999`) : null
+      return (!start || createdAt >= start) && (!end || createdAt <= end)
+    }
+
+    const cutoff = new Date(now)
+    if (dateFilter === '7_DAYS') cutoff.setDate(now.getDate() - 7)
+    if (dateFilter === '1_MONTH') cutoff.setMonth(now.getMonth() - 1)
+    if (dateFilter === '3_MONTHS') cutoff.setMonth(now.getMonth() - 3)
+    return createdAt >= cutoff && createdAt <= now
+  }), [dateFilter, endDate, reports, startDate, statusFilter])
+
+  const selectedDateLabel = reportDateFilters.find((item) => item.value === dateFilter)?.label ?? '전체 기간'
+
+  return <><PageHeader title="내 제보 관리" onBack={onBack} /><div className="report-filters"><div className="report-status-filters" role="tablist" aria-label="제보 상태">{reportStatusFilters.map((item) => <button type="button" role="tab" aria-selected={statusFilter === item.value} className={statusFilter === item.value ? 'active' : ''} key={item.value} onClick={() => setStatusFilter(item.value)}>{item.label}</button>)}</div><div className="report-filter-toolbar"><span>조회 기간</span><div className="report-date-filter" ref={dateMenuRef}><button type="button" className="report-date-filter__trigger" aria-haspopup="listbox" aria-expanded={dateMenuOpen} onClick={() => setDateMenuOpen((open) => !open)}><span>{selectedDateLabel}</span><span aria-hidden="true">⌄</span></button>{dateMenuOpen && <div className="report-date-filter__menu" role="listbox" aria-label="제보 기간">{reportDateFilters.map((item) => <button type="button" role="option" aria-selected={dateFilter === item.value} className={dateFilter === item.value ? 'active' : ''} key={item.value} onClick={() => { setDateFilter(item.value); setDateMenuOpen(false) }}>{item.label}</button>)}</div>}</div></div>{dateFilter === 'CUSTOM' && <div className="report-custom-dates"><label>시작일<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} /></label><span aria-hidden="true">~</span><label>종료일<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} /></label></div>}</div>{filteredReports.length ? <div className="my-report-list">{filteredReports.map((report) => { const displayStatus = getDisplayStatus(report.status); return <button type="button" className="my-report-card" key={report.id} onClick={() => onOpen(report.id)}><span className="report-thumb"><em className={`report-card-status report-card-status--${displayStatus.toLowerCase()}`}>{statusLabel[report.status]}</em><time className="report-card-relative-date" dateTime={report.createdAt}>{formatRelativeTime(report.createdAt)}</time>{report.maskedThumbnailUrl || report.thumbnailUrl ? <img src={(report.maskedThumbnailUrl || report.thumbnailUrl) ?? ''} alt="제보 현장" /> : <span className="report-image-placeholder">이미지 준비중</span>}</span><span className="report-card-body"><small>{report.type} · {report.locationName}</small><strong>{report.title}</strong><time dateTime={report.createdAt}>{formatDateTime(report.createdAt)}</time></span></button> })}</div> : <Empty text="선택한 조건에 해당하는 제보가 없습니다." />}</>
+}
+export function ReportDetail({ report, onBack }: { report: MyReport; onBack: () => void }) { return <div className="my-report-detail-page"><PageHeader title="내 제보 상세" onBack={onBack} /><span className="report-detail-media">{report.mediaUrls.length ? <img src={report.mediaUrls[0]} alt="첨부 이미지" /> : '첨부 이미지 없음'}</span><section className="report-detail-section"><div className="report-detail-heading"><h2 className="report-detail-section__title">{getReportDisplayTitle(report)}</h2><em className={`status-${report.status.toLowerCase()}`}>{statusLabel[report.status]}</em></div><div className="mypage-card report-detail-card"><p className="report-detail-description">{report.description}</p><dl className="report-detail-info"><dt>유형</dt><dd>{getReportTypeLabel(report)}</dd><dt>주소</dt><dd>{report.address}</dd><dt>등록 시간</dt><dd>{formatDateTime(report.createdAt)}</dd></dl></div></section><section className="report-detail-section"><h2 className="report-detail-section__title">관리자 답변</h2><div className="mypage-card report-detail-section__card"><p>{report.adminReply ?? '아직 관리자 답변이 등록되지 않았습니다.'}</p></div></section><section className="report-detail-section"><h2 className="report-detail-section__title">처리 이력</h2><div className="mypage-card report-detail-section__card">{report.history.length ? <ol className="report-history-list">{report.history.map((item) => <li key={`${item.status}-${item.changedAt}`}><b>{statusLabel[item.status]}</b><span>{item.description}</span><time>{formatDateTime(item.changedAt)}</time></li>)}</ol> : <p>등록된 처리 이력이 없습니다.</p>}</div></section></div> }
 export function Favorites({ items, onBack, onChange, onNavigate, usingMock }: { items: FavoriteLocation[]; onBack: () => void; onChange: Dispatch<SetStateAction<FavoriteLocation[]>>; onNavigate: (item: FavoriteLocation) => void; usingMock: boolean }) {
   const navigate = useNavigate()
   const { favoritePlaces, storageError, hydrate, removeFavoritePlace } = useFavoritePlacesStore()
@@ -51,7 +117,9 @@ export function Favorites({ items, onBack, onChange, onNavigate, usingMock }: { 
 
   const hasItems = favoritePlaces.length > 0 || items.length > 0
 
-  return <><PageHeader title="즐겨찾기" onBack={onBack} action={<button type="button" aria-label="위치 추가" onClick={() => { setEditingItem(null); setAdding(true) }}>＋</button>} />{storageError && <p className="mypage-message" role="status">{storageError}</p>}{adding && <FavoritePlaceForm submitLabel="추가" onSubmit={add} onCancel={() => setAdding(false)} />}{editingItem && <FavoritePlaceForm initialAlias={editingItem.alias} initialLocation={{ id: String(editingItem.areaId), name: editingItem.placeName, address: editingItem.address, latitude: editingItem.latitude, longitude: editingItem.longitude }} submitLabel="저장" onSubmit={edit} onCancel={() => setEditingItem(null)} />}<div className="favorite-list">{favoritePlaces.map((place) => <section className="favorite-card" key={place.id}><button type="button" className="favorite-main" onClick={() => navigate(`/app/situations?query=${encodeURIComponent(place.searchQuery)}`)}><span className="risk-dot risk-safe" /><span><small>{formatDate(place.savedAt)} 저장</small><strong>{place.name}</strong><em>{place.address}</em></span><b>›</b></button><div><button type="button" onClick={() => navigate(`/app/situations?query=${encodeURIComponent(place.searchQuery)}`)}>장소 상황 보기</button><button type="button" className="danger-text" onClick={() => removeFavoritePlace(place.id)}>해제</button></div></section>)}{items.map((item) => <section className="favorite-card" key={item.id}><button type="button" className="favorite-main" onClick={() => onNavigate(item)}><span className={`risk-dot risk-${item.riskLevel.toLowerCase()}`} /><span className="favorite-server-meta"><small>{item.isPrimary ? `대표 위치 · ${item.alias}` : item.alias}</small><strong>{item.placeName}</strong><em>{item.address}</em></span><b>›</b></button><div><button type="button" onClick={() => { setAdding(false); setEditingItem(item) }}>별칭·주소 수정</button><button type="button" onClick={() => { onChange((values) => values.map((value) => ({ ...value, isPrimary: value.id === item.id }))); if (!usingMock) void patchFavorite(item.id, { isPrimary: true }).catch(console.error) }}>대표 설정</button><button type="button" className="danger-text" onClick={() => { if (!window.confirm('즐겨찾기 위치를 삭제할까요?')) return; onChange((values) => values.filter((value) => value.id !== item.id)); if (!usingMock) void removeFavorite(item.id).catch(console.error) }}>삭제</button></div></section>)}</div>{!hasItems && <Empty text="아직 즐겨찾기한 장소가 없습니다." />}</>
+  const openStoredFavorite = (searchQuery: string) => navigate(`/app/situations?query=${encodeURIComponent(searchQuery)}`, { state: { from: 'favorites' } })
+
+  return <><PageHeader title="즐겨찾기" onBack={onBack} action={<button type="button" aria-label="위치 추가" onClick={() => { setEditingItem(null); setAdding(true) }}>＋</button>} />{storageError && <p className="mypage-message" role="status">{storageError}</p>}{adding && <FavoritePlaceForm submitLabel="추가" onSubmit={add} onCancel={() => setAdding(false)} />}{editingItem && <FavoritePlaceForm initialAlias={editingItem.alias} initialLocation={{ id: String(editingItem.areaId), name: editingItem.placeName, address: editingItem.address, latitude: editingItem.latitude, longitude: editingItem.longitude }} submitLabel="저장" onSubmit={edit} onCancel={() => setEditingItem(null)} />}<div className="favorite-list">{favoritePlaces.map((place) => <section className="favorite-card" key={place.id}><button type="button" className="favorite-main" onClick={() => openStoredFavorite(place.searchQuery)}><span className="risk-dot risk-safe" /><span><small>{formatDate(place.savedAt)} 저장</small><strong>{place.name}</strong><em>{place.address}</em></span><b>›</b></button><div><button type="button" onClick={() => openStoredFavorite(place.searchQuery)}>장소 상황 보기</button><button type="button" className="danger-text" onClick={() => removeFavoritePlace(place.id)}>해제</button></div></section>)}{items.map((item) => <section className="favorite-card" key={item.id}><button type="button" className="favorite-main" onClick={() => onNavigate(item)}><span className={`risk-dot risk-${item.riskLevel.toLowerCase()}`} /><span className="favorite-server-meta"><small>{item.isPrimary ? `대표 위치 · ${item.alias}` : item.alias}</small><strong>{item.placeName}</strong><em>{item.address}</em></span><b>›</b></button><div><button type="button" onClick={() => { setAdding(false); setEditingItem(item) }}>별칭·주소 수정</button><button type="button" onClick={() => { onChange((values) => values.map((value) => ({ ...value, isPrimary: value.id === item.id }))); if (!usingMock) void patchFavorite(item.id, { isPrimary: true }).catch(console.error) }}>대표 설정</button><button type="button" className="danger-text" onClick={() => { if (!window.confirm('즐겨찾기 위치를 삭제할까요?')) return; onChange((values) => values.filter((value) => value.id !== item.id)); if (!usingMock) void removeFavorite(item.id).catch(console.error) }}>삭제</button></div></section>)}</div>{!hasItems && <Empty text="아직 즐겨찾기한 장소가 없습니다." />}</>
 }
 export function Support({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageView) => void }) { const items: [SupportIconName, string, MyPageView][] = [['help','자주 묻는 질문','FAQ'],['notice','공지사항','NOTICES'],['inquiry','1:1 문의','INQUIRY_FORM'],['history','문의 내역','INQUIRIES']]; return <><PageHeader title="고객센터" onBack={onBack} className="support-header" /><section className="mypage-menu support-menu">{items.map(([icon,label,target]) => <button type="button" key={target} onClick={() => onGo(target)}><span><SupportIcon name={icon} /></span><b>{label}</b><em><ChevronRightIcon /></em></button>)}</section></> }
 

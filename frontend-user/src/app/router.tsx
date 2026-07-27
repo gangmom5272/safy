@@ -1,5 +1,4 @@
 import { createBrowserRouter, Navigate } from 'react-router'
-import { AppLayout } from '../layouts/AppLayout'
 import { NotFoundPage } from '../pages/common/NotFoundPage'
 import { GuidePage } from '../pages/app/guide/GuidePage'
 import { PrivacyPage } from '../pages/app/guide/PrivacyPage'
@@ -21,15 +20,20 @@ import { SituationsPage } from '../pages/app/situations/SituationsPage'
 import { InquiryDetailPage } from '../pages/app/support/InquiryDetailPage'
 import { NoticeDetailPage } from '../pages/app/support/NoticeDetailPage'
 import { SupportPage } from '../pages/app/support/SupportPage'
+import { LoginPage } from '../pages/auth/LoginPage'
+import { SignupPage } from '../pages/auth/SignupPage'
+import { ProtectedApp } from './ProtectedApp'
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Navigate to="/app" replace />,
+    element: <Navigate to="/login" replace />,
   },
+  { path: '/login', element: <LoginPage /> },
+  { path: '/signup', element: <SignupPage /> },
   {
     path: '/app',
-    element: <AppLayout />,
+    element: <ProtectedApp />,
     children: [
       { index: true, element: <HomePage /> },
       { path: 'situations', element: <SituationsPage /> },

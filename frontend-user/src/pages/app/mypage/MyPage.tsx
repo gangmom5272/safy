@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { getFavorites, getMe, getMyReports, getNotificationSettings, getReportSummary, logout, updateMyProfile, updateNotificationSettings } from './mypageApi'
+import { PageHeader } from '../../../components/common/PageHeader'
+import { getFavorites, getMe, getMyReports, getNotificationSettings, getReportSummary, logout, updateNotificationSettings } from './mypageApi'
 import { mockFavorites, mockInquiries, mockNotificationSettings, mockReports, mockSummary, mockUser, USE_MYPAGE_MOCK_FALLBACK } from './mypageMock'
-import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, NotificationSettingsData, ReportStatus, ReportSummary, UserProfile } from './mypageTypes'
+import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, NotificationSettingsData, ReportSummary, UserProfile } from './mypageTypes'
 import { buildFavoriteSituationUrl } from './mypageUtils'
-import { Faqs, Favorites, Guide, Inquiries, InquiryDetail, InquiryForm, NoticeDetail, Notices, PageHeader, ReportDetail, Reports, SectionTitle, Support } from './MyPageFeatures'
+import { useAuthStore } from '../../../stores/authStore'
+import { Faqs, Favorites, Guide, Inquiries, InquiryDetail, InquiryForm, NoticeDetail, Notices, ReportDetail, Reports, SectionTitle, Support } from './MyPageFeatures'
 import './mypage.css'
 import './mypageRestored.css'
 import './mypageMenuContrast.css'
 import './mypageMainRedesign.css'
 
-const statusLabel: Record<ReportStatus, string> = { RECEIVED: '검토 중', CHECKING: '확인 중', COMPLETED: '채택됨', REJECTED: '반려됨' }
 type Initial = { view?: MyPageView; reportId?: number }
 type ReportNavigationState = {
   from?: 'notifications' | 'my-report-list'
@@ -21,6 +22,7 @@ type ReportNavigationState = {
 export function MyPage() { return <MyPageApp /> }
 export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
   const navigate = useNavigate(); const location = useLocation(); const mounted = useRef(true)
+  const clearAuthentication = useAuthStore((state) => state.logout)
   const [view, setView] = useState<MyPageView>(initialView); const [history, setHistory] = useState<MyPageView[]>([])
   const [user, setUser] = useState<UserProfile>(mockUser); const [summary, setSummary] = useState<ReportSummary>(mockSummary)
   const [reports, setReports] = useState<MyReport[]>([]); const [favorites, setFavorites] = useState<FavoriteLocation[]>([]); const [inquiries, setInquiries] = useState<Inquiry[]>(mockInquiries)
@@ -46,17 +48,26 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
       : undefined
     navigate(returnTo, { replace: true, state })
   }
+  const handleLogout = () => {
+    if (!window.confirm('로그아웃할까요?')) return
+    clearAuthentication()
+    sessionStorage.removeItem('safy-home-intro-completed')
+    sessionStorage.removeItem('safy-mock-authenticated')
+    void logout().catch((error: unknown) => console.error('Logout failed', error))
+    navigate('/login', { replace: true })
+  }
   if (loading) return <div className="mypage-shell"><div className="mypage-loading">마이페이지를 불러오는 중...</div></div>
 
   return <div className="mypage-shell">{view === 'MAIN' && <PageHeader title="마이페이지" onBack={() => navigate('/app', { replace: true })} />}{message && <p className="mypage-message" role="status">{message}</p>}
-    {view === 'MAIN' && <Main user={user} summary={summary} reports={reports} onGo={(next) => { if (next === 'REPORTS') navigate('/app/mypage/reports'); else go(next) }} onLogout={() => { if (!window.confirm('로그아웃할까요?')) return; setMessage('로그아웃이 완료되었습니다.'); void logout().catch((error: unknown) => console.error('Logout failed', error)) }} />}
+    {view === 'MAIN' && <Main user={user} summary={summary} reports={reports} onGo={(next) => { if (next === 'REPORTS') navigate('/app/mypage/reports'); else if (next === 'FAVORITES') navigate('/app/mypage/favorites'); else go(next) }} onLogout={handleLogout} />}
     {view === 'SETTINGS' && <Settings onBack={back} onGo={go} />}
-    {view === 'ACCOUNT' && <Account user={user} usingMock={usingMock} onBack={back} onSaved={(nextUser) => { setUser(nextUser); setMessage('프로필이 수정되었습니다.'); setHistory([]); setView('MAIN') }} />}
+    {view === 'PROFILE_EDIT' && <ProfileEdit user={user} onBack={back} onSaved={(nextUser) => { setUser(nextUser); setMessage('프로필이 수정되었습니다.'); setHistory([]); setView('MAIN') }} />}
+    {view === 'ACCOUNT' && <Account user={user} onBack={back} onLogout={handleLogout} />}
     {view === 'PRIVACY' && <Privacy onBack={back} />}
     {view === 'NOTIFICATION_SETTINGS' && <NotificationPreferences settings={notificationSettings} usingMock={notificationUsingMock} onBack={back} onChange={setNotificationSettings} />}
     {view === 'REPORTS' && <Reports reports={reports} onBack={() => navigate('/app/mypage', { replace: true })} onOpen={openReport} />}
     {view === 'REPORT_DETAIL' && selectedReport && <ReportDetail report={selectedReport} onBack={handleReportDetailBack} />}
-    {view === 'FAVORITES' && <Favorites items={favorites} onBack={back} onChange={setFavorites} onNavigate={(item) => navigate(buildFavoriteSituationUrl(item))} usingMock={usingMock} />}
+    {view === 'FAVORITES' && <Favorites items={favorites} onBack={initialView === 'FAVORITES' ? () => navigate(-1) : back} onChange={setFavorites} onNavigate={(item) => navigate(buildFavoriteSituationUrl(item), { state: { from: 'favorites' } })} usingMock={usingMock} />}
     {view === 'SUPPORT' && <Support onBack={back} onGo={go} />}{view === 'FAQ' && <Faqs onBack={back} />}{view === 'NOTICES' && <Notices onBack={back} onOpen={(notice) => { setSelectedNotice(notice); go('NOTICE_DETAIL') }} />}{view === 'NOTICE_DETAIL' && selectedNotice && <NoticeDetail notice={selectedNotice} onBack={back} />}
     {view === 'INQUIRY_FORM' && <InquiryForm onBack={back} onSubmit={(item) => { setInquiries((items) => [item, ...items]); setMessage('문의가 등록되었습니다.'); setView('SUPPORT') }} />}{view === 'INQUIRIES' && <Inquiries items={inquiries} onBack={back} onOpen={(item) => { setSelectedInquiry(item); go('INQUIRY_DETAIL') }} />}{view === 'INQUIRY_DETAIL' && selectedInquiry && <InquiryDetail item={selectedInquiry} onBack={back} />}{view === 'GUIDE' && <Guide onBack={back} />}
   </div>
@@ -64,7 +75,8 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
 
 function Main({ user, summary, reports, onGo, onLogout }: { user: UserProfile; summary: ReportSummary; reports: MyReport[]; onGo: (view: MyPageView) => void; onLogout: () => void }) {
   const menus: [MenuIconName, string, MyPageView][] = [['favorite','즐겨찾기','FAVORITES'],['settings','설정','SETTINGS'],['support','고객센터','SUPPORT'],['guide','이용안내','GUIDE']]
-  return <><section className="profile-card"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0, 1)}</div><div className="profile-details"><h2>{user.nickname}</h2><p>{user.email}</p><span>{user.grade ?? 'SAFY 사용자'}</span></div><span className="profile-intro">함께 만드는 안전한 일상</span></section><section className="mypage-card my-report-summary"><SectionTitle title="내 제보 관리" action="전체 보기" onAction={() => onGo('REPORTS')} /><div className="report-status-grid">{(['RECEIVED','CHECKING','COMPLETED','REJECTED'] as ReportStatus[]).map((status) => <span key={status}><b>{reports.filter((item) => item.status === status).length || summary[status === 'RECEIVED' ? 'receivedCount' : status === 'CHECKING' ? 'checkingCount' : status === 'COMPLETED' ? 'completedCount' : 'rejectedCount']}</b>{statusLabel[status]}</span>)}</div></section><section className="mypage-menu">{menus.map(([icon,label,target]) => <button key={target} type="button" onClick={() => onGo(target)}><span className="mypage-menu-icon"><MenuIcon name={icon} /></span><b>{label}</b><em aria-hidden="true"><MenuIcon name="chevron" /></em></button>)}</section><button type="button" className="logout-button" onClick={onLogout}>로그아웃</button></>
+  const reportCounts = reports.length ? { review: reports.filter((item) => item.status === 'RECEIVED' || item.status === 'CHECKING').length, completed: reports.filter((item) => item.status === 'COMPLETED').length, rejected: reports.filter((item) => item.status === 'REJECTED').length } : { review: summary.receivedCount + summary.checkingCount, completed: summary.completedCount, rejected: summary.rejectedCount }
+  return <><section className="profile-card"><div className="profile-avatar-wrap"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0, 1)}</div><button type="button" className="profile-edit-button" aria-label="프로필 수정" onClick={() => onGo('PROFILE_EDIT')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10Z"/><path d="m14 7 3 3"/></svg></button></div><div className="profile-details"><h2>{user.nickname}</h2><p>{user.email}</p></div></section><section className="mypage-card my-report-summary"><SectionTitle title="내 제보 관리" action="전체 보기" onAction={() => onGo('REPORTS')} /><div className="report-status-grid"><span><b>{reportCounts.review}</b>검토중</span><span><b>{reportCounts.completed}</b>채택됨</span><span><b>{reportCounts.rejected}</b>반려됨</span></div></section><section className="mypage-menu">{menus.map(([icon,label,target]) => <button key={target} type="button" onClick={() => onGo(target)}><span className="mypage-menu-icon"><MenuIcon name={icon} /></span><b>{label}</b><em aria-hidden="true"><MenuIcon name="chevron" /></em></button>)}</section><button type="button" className="logout-button" onClick={onLogout}>로그아웃</button></>
 }
 
 type MenuIconName = 'favorite' | 'settings' | 'support' | 'guide'
@@ -80,8 +92,55 @@ function MenuIcon({ name }: { name: MenuIconName | 'chevron' }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-function Settings({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageView) => void }) { const items: [SettingsIconName,string,string,MyPageView][] = [['account','계정 관리','표시 이름과 회원 정보를 관리해요.','ACCOUNT'],['privacy','개인·보안','개인정보와 계정 보안 안내를 확인해요.','PRIVACY'],['notification','알림','유형별 알림 수신 여부를 설정해요.','NOTIFICATION_SETTINGS']]; return <><PageHeader title="설정" onBack={onBack} className="settings-header" /><section className="settings-cards">{items.map(([icon,title,description,target]) => <button type="button" key={target} onClick={() => onGo(target)}><span><SettingsIcon name={icon} /></span><span><strong>{title}</strong><small>{description}</small></span><b><SettingsIcon name="chevron" /></b></button>)}</section></> }
-function Account({ user, usingMock, onBack, onSaved }: { user: UserProfile; usingMock: boolean; onBack: () => void; onSaved: (user: UserProfile) => void }) { const [nickname, setNickname] = useState(user.nickname); const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const trimmed = nickname.trim(); const unchanged = trimmed === user.nickname; const submit = async (event: React.FormEvent<HTMLFormElement>) => { event.preventDefault(); setError(''); if (!trimmed) { setError('표시 이름을 입력해 주세요.'); return } if (unchanged) return; setSaving(true); if (usingMock) { onSaved({ ...user, nickname: trimmed }); return } try { const response = await updateMyProfile(trimmed); onSaved({ ...user, ...response, nickname: response.nickname ?? trimmed }) } catch (requestError) { console.error('Profile update failed', requestError); setError('프로필을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.'); setSaving(false) } }; return <><PageHeader title="계정 관리" onBack={onBack} className="account-header" /><form className="mypage-form account-form" onSubmit={submit}><div className="profile-edit-avatar"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0,1)}</div><span>프로필 이미지 변경은 준비 중입니다.</span></div><label>표시 이름<input value={nickname} onChange={(event) => { setNickname(event.target.value); setError('') }} /></label><label>이메일<input value={user.email} readOnly /></label>{error && <p className="profile-edit-error" role="alert">{error}</p>}{unchanged && <p className="profile-edit-hint">현재 표시 이름과 동일합니다.</p>}<button type="submit" disabled={!trimmed || unchanged || saving}>{saving ? '저장 중...' : '저장'}</button></form></> }
+function Settings({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageView) => void }) { const items: [SettingsIconName,string,string,MyPageView][] = [['account','계정 관리','계정 정보와 보안을 관리해요.','ACCOUNT'],['privacy','개인·보안','개인정보와 계정 보안 안내를 확인해요.','PRIVACY'],['notification','알림','유형별 알림 수신 여부를 설정해요.','NOTIFICATION_SETTINGS']]; return <><PageHeader title="설정" onBack={onBack} className="settings-header" /><section className="settings-cards">{items.map(([icon,title,description,target]) => <button type="button" key={target} onClick={() => onGo(target)}><span><SettingsIcon name={icon} /></span><span><strong>{title}</strong><small>{description}</small></span><b><SettingsIcon name="chevron" /></b></button>)}</section></> }
+const PROFILE_EMAIL_CODE = '123456'
+const profileEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function ProfileEdit({ user, onBack, onSaved }: { user: UserProfile; onBack: () => void; onSaved: (user: UserProfile) => void }) {
+  const [previewUrl, setPreviewUrl] = useState(user.profileImageUrl ?? '')
+  const [imageChanged, setImageChanged] = useState(false)
+  const [imageError, setImageError] = useState('')
+  const [email, setEmail] = useState(user.email)
+  const [emailTouched, setEmailTouched] = useState(false)
+  const [verificationRequested, setVerificationRequested] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [emailVerified, setEmailVerified] = useState(false)
+  const [verificationError, setVerificationError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const trimmedEmail = email.trim()
+  const validEmail = profileEmailPattern.test(trimmedEmail)
+  const emailChanged = trimmedEmail !== user.email
+  const emailReady = emailChanged && validEmail && emailVerified
+  const canSave = !saving && (imageChanged || emailReady)
+
+  const selectImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setImageError('jpg, jpeg, png, webp 파일만 선택할 수 있습니다.'); return }
+    const reader = new FileReader()
+    reader.onload = () => { if (typeof reader.result === 'string') { setPreviewUrl(reader.result); setImageChanged(true); setImageError('') } }
+    reader.readAsDataURL(file)
+  }
+
+  const changeEmail = (value: string) => {
+    setEmail(value)
+    setEmailTouched(true)
+    setVerificationRequested(false)
+    setVerificationCode('')
+    setEmailVerified(false)
+    setVerificationError('')
+  }
+
+  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!canSave) return
+    setSaving(true)
+    onSaved({ ...user, profileImageUrl: imageChanged ? previewUrl : user.profileImageUrl, email: emailReady ? trimmedEmail : user.email })
+  }
+
+  return <><PageHeader title="프로필 수정" onBack={onBack} className="profile-edit-header" /><form className="mypage-form account-form profile-edit-form" onSubmit={submit}><div className="profile-edit-avatar"><div className="avatar">{previewUrl ? <img src={previewUrl} alt={`${user.nickname} 프로필 미리보기`} /> : user.nickname.slice(0, 1)}</div><label className="profile-photo-button">사진 변경<input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={selectImage} /></label>{imageError && <small className="profile-field-error">{imageError}</small>}</div><div className="profile-readonly-field"><label htmlFor="profile-real-name">이름</label><div><input id="profile-real-name" value={user.nickname} readOnly /><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span></div><small>실명 정보는 변경할 수 없습니다.</small></div><div className="profile-email-field"><label htmlFor="profile-email">이메일</label><div><input id="profile-email" type="email" value={email} placeholder="이메일을 입력해주세요." onBlur={() => setEmailTouched(true)} onChange={(event) => changeEmail(event.target.value)} /><button type="button" disabled={!emailChanged || !validEmail} onClick={() => { setVerificationRequested(true); setVerificationCode(''); setEmailVerified(false); setVerificationError('') }}>인증 요청</button></div>{emailTouched && !validEmail && <small className="profile-field-error">올바른 이메일 형식이 아닙니다.</small>}</div>{verificationRequested && <div className="profile-email-field"><label htmlFor="profile-email-code">인증번호</label><div><input id="profile-email-code" inputMode="numeric" maxLength={6} value={verificationCode} placeholder="인증번호 입력" disabled={emailVerified} onChange={(event) => { setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6)); setVerificationError('') }} /><button type="button" disabled={verificationCode.length !== 6 || emailVerified} onClick={() => { if (verificationCode === PROFILE_EMAIL_CODE) { setEmailVerified(true); setVerificationError('') } else setVerificationError('인증번호가 일치하지 않습니다.') }}>확인</button></div>{emailVerified && <p>이메일 인증이 완료되었습니다.</p>}{verificationError && <small className="profile-field-error">{verificationError}</small>}</div>}<button type="submit" disabled={!canSave}>{saving ? '저장 중...' : '저장'}</button></form></>
+}
+function Account({ user, onBack, onLogout }: { user: UserProfile; onBack: () => void; onLogout: () => void }) { const [showWithdrawal, setShowWithdrawal] = useState(false); return <><PageHeader title="계정 관리" onBack={onBack} className="account-header" /><section className="account-menu"><button type="button"><span>계정 정보</span><small>{user.email}</small><b aria-hidden="true">›</b></button><button type="button" onClick={onLogout}><span>로그아웃</span><b aria-hidden="true">›</b></button></section><button type="button" className="account-withdrawal" onClick={() => setShowWithdrawal(true)}>회원 탈퇴</button>{showWithdrawal && <div className="account-modal-backdrop" role="presentation"><section className="account-modal" role="dialog" aria-modal="true" aria-labelledby="withdrawal-title"><h2 id="withdrawal-title">회원 탈퇴</h2><p>회원 탈퇴 시 계정 정보가 삭제될 수 있습니다. 계속하시겠어요?</p><div><button type="button" onClick={() => setShowWithdrawal(false)}>취소</button><button type="button" className="danger" onClick={() => setShowWithdrawal(false)}>탈퇴하기</button></div></section></div>}</> }
 
 type SettingsIconName = 'account' | 'privacy' | 'notification' | 'chevron'
 

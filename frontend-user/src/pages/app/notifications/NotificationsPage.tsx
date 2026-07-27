@@ -1,19 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
+import { PageHeader } from '../../../components/common/PageHeader'
 import { formatDateGroupLabel, formatRelativeTime } from '../../../utils/dateTime'
 import { getNotifications, getNotificationSettings, readAllNotifications, readNotification, updateNotificationSettings } from './notificationsApi'
 import { mockNotifications, mockNotificationSettings, USE_NOTIFICATIONS_MOCK_FALLBACK } from './notificationsMock'
-import type { AppNotification, NotificationFilter, NotificationSettingsData, NotificationType } from './notificationsTypes'
+import type { AppNotification, NotificationFilter, NotificationSettingsData } from './notificationsTypes'
 import { getNotificationTargetUrl } from './notificationsUtils'
 import './notifications.css'
 
 const tabs: { value: NotificationFilter; label: string }[] = [
   { value: 'ALL', label: '전체' }, { value: 'REPORT', label: '제보 관련' }, { value: 'SAFETY', label: '안전 정보' }, { value: 'SYSTEM', label: '기타' },
 ]
-const typeMeta: Record<NotificationType, { label: string }> = {
-  REPORT: { label: '제보 관련' }, SAFETY: { label: '안전 정보' }, SYSTEM: { label: '시스템' },
-}
-
 export function NotificationsPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -77,7 +74,7 @@ export function NotificationsPage() {
   }
 
   return <div className="notifications-page">
-    <header className="notifications-header"><button type="button" className="notifications-back" aria-label="뒤로가기" onClick={() => navigate(-1)}><UiIcon name="back" /></button><h1>알림</h1><span className="notifications-header-spacer" aria-hidden="true" /></header>
+    <PageHeader title="알림" onBack={() => navigate(-1)} />
     <NotificationTabs selected={filter} counts={counts} onSelect={setFilter} />
     <div className="notification-list-toolbar"><span>{unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}개` : '모든 알림을 확인했어요'}</span><button type="button" onClick={handleReadAll} disabled={unreadCount === 0}>모두 읽음</button></div>
     {loading ? <NotificationLoading /> : groups.length ? <div className="notification-groups">{groups.map(([label, items]) => <NotificationSection key={label} label={label} items={items} onSelect={handleNotification} />)}</div> : <div className="notifications-empty"><span><UiIcon name="check" /></span><strong>새로운 알림이 없어요</strong><p>필요한 소식이 생기면 바로 알려드릴게요.</p></div>}
@@ -94,13 +91,12 @@ function NotificationSection({ label, items, onSelect }: { label: string; items:
 }
 
 function NotificationCard({ notification, onSelect }: { notification: AppNotification; onSelect: (item: AppNotification) => void }) {
-  const meta = typeMeta[notification.type]
-  return <button type="button" className={`notification-card type-${notification.type.toLowerCase()}${notification.isRead ? ' read' : ' unread'}`} onClick={() => onSelect(notification)}><span className="notification-accent" aria-hidden="true"/><span className="notification-type-icon" aria-hidden="true"><UiIcon name={notification.type.toLowerCase() as 'report' | 'safety' | 'system'} /></span><span className="notification-body"><span className="notification-meta"><span>{meta.label}{notification.areaName ? ` · ${notification.areaName}` : ''}</span><time dateTime={notification.createdAt}>{formatRelativeTime(notification.createdAt)}</time></span><strong>{notification.title}</strong><span className="notification-content">{notification.content}</span><span className="notification-badges">{!notification.isRead && <em>NEW</em>}{notification.isImportant && <em className="important">중요</em>}</span></span></button>
+  const readClass = notification.isRead ? 'notification-card--read' : 'notification-card--unread'
+  return <button type="button" className={`notification-card ${readClass} type-${notification.type.toLowerCase()}`} onClick={() => onSelect(notification)}><span className="notification-card-header"><span className="notification-type-icon" aria-hidden="true"><UiIcon name={notification.type.toLowerCase() as 'report' | 'safety' | 'system'} /></span><strong className="notification-title">{notification.title}</strong><time className="notification-time" dateTime={notification.createdAt}>{formatRelativeTime(notification.createdAt)}</time></span><span className="notification-content">{notification.content}</span></button>
 }
 
-function UiIcon({ name }: { name: 'back' | 'check' | 'report' | 'safety' | 'system' }) {
+function UiIcon({ name }: { name: 'check' | 'report' | 'safety' | 'system' }) {
   const paths = {
-    back: <><path d="m15 5-7 7 7 7"/><path d="M8 12h12"/></>,
     check: <path d="m5 12 4 4 10-10"/>,
     report: <><path d="M5 3h14v18l-7-4-7 4Z"/><path d="M9 8h6M9 12h4"/></>,
     safety: <><path d="M12 3 3 20h18Z"/><path d="M12 9v4M12 17h.01"/></>,
