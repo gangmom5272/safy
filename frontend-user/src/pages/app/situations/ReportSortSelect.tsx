@@ -37,7 +37,7 @@ export function ReportSortSelect({ value, onChange }: ReportSortSelectProps) {
   return (
     <div className="report-sort-select" ref={containerRef}>
       <button
-        className="sort-icon-button"
+        className={isOpen ? 'sort-icon-button active' : 'sort-icon-button'}
         type="button"
         aria-label={`정렬 기준 선택: ${label}`}
         title={label}

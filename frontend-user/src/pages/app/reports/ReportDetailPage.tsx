@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
+import { formatDateTime } from '../../../utils/dateTime'
 import { ErrorState, LoadingSkeleton } from '../situations/SituationStates'
 import { AreaMap } from '../situations/AreaMap'
 import {
@@ -11,6 +12,7 @@ import {
 } from '../situations/types'
 import { useReportDetail } from '../situations/useReportDetail'
 import '../situations/SituationsPage.css'
+import './ReportDetailPage.css'
 
 export function ReportDetailPage() {
   const { reportId } = useParams()
@@ -74,12 +76,12 @@ export function ReportDetailPage() {
   return (
     <div className="situation-page report-detail-page">
       <header className="report-detail-header">
-        <button type="button" onClick={() => navigate(-1)}>
-          뒤로
+        <button type="button" aria-label="뒤로가기" onClick={() => navigate(-1)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/><path d="M8 12h12"/></svg>
         </button>
         <h1>실시간 제보 상세</h1>
-        <button type="button" onClick={shareReport} disabled={!report}>
-          공유
+        <button className="report-detail-share" type="button" aria-label="제보 공유하기" onClick={shareReport} disabled={!report}>
+          <ShareIcon />
         </button>
       </header>
 
@@ -104,12 +106,15 @@ export function ReportDetailPage() {
             onImageError={() => setImageFailed(true)}
           />
           {shareMessage ? <p className="share-feedback">{shareMessage}</p> : null}
-          <ReportAnalysisPanel
-            analysis={analysis}
-            isLoading={isAnalysisLoading}
-            error={analysisError}
-            onRetry={() => void retryAnalysis()}
-          />
+          <section className="report-detail-content-section" aria-labelledby="analysis-title">
+            <h2 id="analysis-title" className="report-detail-section-title">현장 상황 분석</h2>
+            <ReportAnalysisPanel
+              analysis={analysis}
+              isLoading={isAnalysisLoading}
+              error={analysisError}
+              onRetry={() => void retryAnalysis()}
+            />
+          </section>
           <ReportLocationMap report={report} />
         </>
       ) : null}
@@ -122,10 +127,15 @@ function ReportLocationMap({ report }: { report: ReportDetail }) {
   const longitude = report.longitude ?? 127.0276
 
   return (
-    <AreaMap
-      isLoading={false}
-      error={null}
-      mapData={{
+    <section className="report-detail-content-section" aria-labelledby="report-map-title">
+      <h2 id="report-map-title" className="report-detail-section-title">주변 위험 지도</h2>
+      <AreaMap
+        variant="report-detail"
+        showTitle={false}
+        locationName={report.locationName}
+        isLoading={false}
+        error={null}
+        mapData={{
         center: { latitude, longitude },
         zones: [
           {
@@ -144,8 +154,9 @@ function ReportLocationMap({ report }: { report: ReportDetail }) {
             riskLevel: report.riskLevel,
           },
         ],
-      }}
-    />
+        }}
+      />
+    </section>
   )
 }
 
@@ -174,21 +185,16 @@ function ReportDetailSummary({ report, imageFailed, onImageError }: ReportDetail
           <span className={`risk-badge risk-${report.riskLevel}`}>
             {riskLevelLabels[report.riskLevel]}
           </span>
-          {report.isWebRtc ? <span className="webrtc-tag static">WebRTC 제보</span> : null}
         </div>
         <p className="report-category">{reportTypeLabels[report.type]}</p>
-        <h2 id="report-detail-title">{report.title}</h2>
+        <h2 id="report-detail-title">{report.locationName || report.title}</h2>
         <dl className="report-detail-list">
           <div>
-            <dt>위치</dt>
-            <dd>{report.locationName}</dd>
-          </div>
-          <div>
-            <dt>주소</dt>
+            <dt><DetailIcon name="address" />주소</dt>
             <dd>{report.address || '주소 정보 없음'}</dd>
           </div>
-          <div>
-            <dt>제보 시각</dt>
+          <div className="report-date-row">
+            <dt><DetailIcon name="time" />제보 시각</dt>
             <dd>{formatDateTime(report.reportedAt)}</dd>
           </div>
         </dl>
@@ -209,47 +215,43 @@ type ReportAnalysisPanelProps = {
 
 function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnalysisPanelProps) {
   if (isLoading && !analysis) {
-    return <LoadingSkeleton />
+    return <section className="report-detail-card"><LoadingSkeleton /></section>
   }
 
   if (error) {
     return (
-      <ErrorState
+      <section className="report-detail-card"><ErrorState
         message="현장 분석 결과를 불러오지 못했습니다."
         actionLabel="다시 시도"
         onAction={onRetry}
-      />
+      /></section>
     )
   }
 
   if (!analysis) {
     return (
       <section className="report-detail-card">
-        <h2>현장 상황 분석</h2>
         <p className="muted-text">아직 현장 분석 결과가 없습니다.</p>
       </section>
     )
   }
 
   return (
-    <section className="report-detail-card" aria-labelledby="analysis-title">
-      <h2 id="analysis-title">현장 상황 분석</h2>
+    <section className="report-detail-card">
       <div className="analysis-status-row">
-        <span className={`risk-badge risk-${analysis.congestionLevel ?? 'low'}`}>
-          {analysisStatusLabels[analysis.status]}
-        </span>
-        {analysis.analyzedAt ? <span>{formatDateTime(analysis.analyzedAt)}</span> : null}
+        {analysis.status === 'completed' ? <span className="analysis-complete-badge">{analysisStatusLabels[analysis.status]}</span> : <span />}
+        {analysis.analyzedAt ? <span className="analysis-time">{formatDateTime(analysis.analyzedAt)}</span> : null}
       </div>
       {analysis.status === 'completed' ? (
-        <dl className="report-detail-list">
+        <dl className="report-detail-list analysis-detail-list">
           <div>
-            <dt>혼잡도</dt>
+            <dt><DetailIcon name="congestion" />혼잡도</dt>
             <dd>
               {analysis.congestionLevel ? riskLevelLabels[analysis.congestionLevel] : '정보 없음'}
             </dd>
           </div>
           <div>
-            <dt>인원 추정치</dt>
+            <dt><DetailIcon name="people" />인원 추정치</dt>
             <dd>
               {typeof analysis.estimatedPeopleCount === 'number'
                 ? `${analysis.estimatedPeopleCount.toLocaleString()}명`
@@ -257,7 +259,7 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
             </dd>
           </div>
           <div>
-            <dt>AI 요약</dt>
+            <dt><DetailIcon name="ai" />AI 요약</dt>
             <dd>{analysis.aiSummary || '요약 정보 없음'}</dd>
           </div>
         </dl>
@@ -271,18 +273,17 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
   )
 }
 
-function formatDateTime(value: string) {
-  const date = new Date(value)
+type DetailIconName = 'address' | 'time' | 'congestion' | 'people' | 'ai'
 
-  if (Number.isNaN(date.getTime())) {
-    return value || '정보 없음'
+function DetailIcon({ name }: { name: DetailIconName }) {
+  const paths = {
+    address: <><path d="m4 6 5-2 6 2 5-2v14l-5 2-6-2-5 2Z"/><path d="M9 4v14M15 6v14"/></>,
+    time: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
+    congestion: <><path d="M12 3 3 20h18Z"/><path d="M12 9v4M12 17h.01"/></>,
+    people: <><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 4 4v2"/></>,
+    ai: <><rect x="3" y="5" width="18" height="14" rx="4"/><path d="M8 15V9l2 6V9M14 9v6M17 9v6M12 2v3"/></>,
   }
-
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
+
+function ShareIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V3M8 7l4-4 4 4"/><path d="M5 11v9h14v-9"/></svg> }

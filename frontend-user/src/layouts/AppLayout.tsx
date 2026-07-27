@@ -9,10 +9,13 @@ export function AppLayout() {
   const isHome = pathname === '/app' || pathname === '/app/'
   const isNotifications = pathname === '/app/notifications'
   const isMyPage = pathname.startsWith('/app/mypage')
+  const isSituationsMain = pathname === '/app/situations'
+  const isReportDetail = pathname.startsWith('/app/situations/reports/') || pathname.startsWith('/app/reports/')
+  const isReportCreate = pathname === '/app/report'
 
   return (
     <div className={`app-shell ${isHome ? 'app-shell--landing' : ''}`}>
-      {!isHome && !isNotifications && !isMyPage && <header className="app-header">
+      {!isHome && !isNotifications && !isMyPage && !isSituationsMain && !isReportDetail && !isReportCreate && <header className="app-header">
         <div className="app-brand"><strong>SAFY</strong><span>Safe Area For You</span></div>
         <NavLink className="app-header__notification" to="/app/notifications" aria-label="알림"><NotificationIcon /></NavLink>
       </header>}

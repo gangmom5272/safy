@@ -35,10 +35,6 @@ const fallbackFormData: ReportFormData = {
   location: null,
 }
 
-function formatCoordinate(value: number): string {
-  return value.toFixed(5)
-}
-
 function formatElapsedTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = seconds % 60
@@ -273,9 +269,7 @@ export function LiveReportPage({
     }
   }, [cleanupCamera, startCamera, stopTimer])
 
-  const locationText = formData.location
-    ? `위도 ${formatCoordinate(formData.location.latitude)}, 경도 ${formatCoordinate(formData.location.longitude)}`
-    : '위치 정보 없음'
+  const locationText = formData.location ? '현재 위치' : '위치 정보 없음'
   const categoryLabel = formData.category ? REPORT_CATEGORY_LABELS[formData.category] : '선택 없음'
   const cameraMessage = getCameraMessage(cameraStatus)
   const canStart = cameraStatus === 'ready' && !isReporting
@@ -284,11 +278,11 @@ export function LiveReportPage({
     <section className="report-live-overlay" aria-label="실시간 영상 제보">
       <div className="report-live-topbar">
         <button type="button" className="report-live-back" onClick={handleBack} aria-label="제보 방식 선택으로 돌아가기">
-          ←
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/><path d="M8 12h12"/></svg>
         </button>
         <div className="report-live-status" aria-live="polite">
           {isReporting ? <span className="report-live-badge">제보 중 {formatElapsedTime(elapsedSeconds)}</span> : null}
-          <span className="report-info-badge">{categoryLabel}</span>
+          <span className={`report-info-badge report-info-badge-${formData.category ?? 'none'}`}>{categoryLabel}</span>
         </div>
       </div>
 
@@ -315,16 +309,16 @@ export function LiveReportPage({
       <div className="report-live-bottom">
         <ul className="report-live-summary" aria-label="제보 정보">
           <li>
-            <span>{locationText}</span>
+            <span><LiveInfoIcon name="location" />{locationText}</span>
           </li>
           <li>
-            <span>{categoryLabel}</span>
+            <span><LiveInfoIcon name="warning" />{categoryLabel}</span>
           </li>
         </ul>
         <ul className="report-live-safety" aria-label="안전 안내">
-          <li>현장 상황만 촬영해주세요.</li>
-          <li>타인의 얼굴이 노출되지 않도록 주의해주세요.</li>
-          <li>안전한 장소에서 제보해주세요.</li>
+          <li><LiveInfoIcon name="camera" />현장 상황만 촬영해주세요.</li>
+          <li><LiveInfoIcon name="camera" />타인의 얼굴이 노출되지 않도록 주의해주세요.</li>
+          <li><LiveInfoIcon name="shield" />안전한 장소에서 제보해주세요.</li>
         </ul>
         <button
           type="button"
@@ -332,7 +326,7 @@ export function LiveReportPage({
           disabled={cameraStatus !== 'ready' || isSubmitting}
           onClick={isReporting ? requestFinishLiveReport : startLiveReport}
         >
-          {isReporting ? '실시간 제보 종료' : '실시간 제보 시작'}
+          {isReporting ? '제보 종료' : '실시간 제보 시작'}
         </button>
       </div>
 
@@ -341,10 +335,23 @@ export function LiveReportPage({
           title="정말 이 영상으로 제보하시겠습니까?"
           description="현재 실시간 영상 제보를 종료하고 제출합니다. 허위 또는 장난 제보는 제재 대상이 될 수 있습니다."
           isSubmitting={isSubmitting}
+          cancelLabel="취소"
+          confirmLabel="제보하기"
           onCancel={closeConfirmModal}
           onConfirm={confirmFinishLiveReport}
         />
       ) : null}
     </section>
   )
+}
+
+function LiveInfoIcon({ name }: { name: 'location' | 'warning' | 'camera' | 'shield' }) {
+  const paths = {
+    location: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
+    warning: <><path d="M12 3 2.8 20h18.4L12 3Z" /><path d="M12 9v4M12 17h.01" /></>,
+    camera: <><path d="M8 6 9.5 4h5L16 6h3a2 2 0 0 1 2 2v10H3V8a2 2 0 0 1 2-2h3Z" /><circle cx="12" cy="12" r="3" /></>,
+    shield: <><path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z" /><path d="m8.5 12 2.2 2.2 4.8-5" /></>,
+  }
+
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }

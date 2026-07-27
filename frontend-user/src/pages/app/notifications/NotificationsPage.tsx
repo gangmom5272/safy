@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
+import { formatDateGroupLabel, formatRelativeTime } from '../../../utils/dateTime'
 import { getNotifications, getNotificationSettings, readAllNotifications, readNotification, updateNotificationSettings } from './notificationsApi'
 import { mockNotifications, mockNotificationSettings, USE_NOTIFICATIONS_MOCK_FALLBACK } from './notificationsMock'
 import type { AppNotification, NotificationFilter, NotificationSettingsData, NotificationType } from './notificationsTypes'
@@ -15,10 +16,14 @@ const typeMeta: Record<NotificationType, { label: string }> = {
 
 export function NotificationsPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const mounted = useRef(true)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const [settings, setSettings] = useState<NotificationSettingsData>(mockNotificationSettings)
-  const [filter, setFilter] = useState<NotificationFilter>('ALL')
+  const [filter, setFilter] = useState<NotificationFilter>(() => {
+    const restoredFilter = (location.state as { notificationFilter?: NotificationFilter } | null)?.notificationFilter
+    return restoredFilter && ['ALL', 'REPORT', 'SAFETY', 'SYSTEM'].includes(restoredFilter) ? restoredFilter : 'ALL'
+  })
   const [loading, setLoading] = useState(true)
   const [usingMock, setUsingMock] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -48,7 +53,16 @@ export function NotificationsPage() {
       if (!usingMock) void readNotification(notification.id).catch((error: unknown) => console.error('Notification read update failed', error))
     }
     const targetUrl = getNotificationTargetUrl(notification)
-    if (targetUrl) navigate(targetUrl)
+    if (targetUrl) {
+      const navigationState = notification.type === 'REPORT' || notification.type === 'SAFETY'
+        ? {
+            from: 'notifications',
+            returnTo: '/app/notifications',
+            notificationFilter: filter,
+          }
+        : undefined
+      navigate(targetUrl, { state: navigationState })
+    }
   }
 
   const handleReadAll = () => {
@@ -65,8 +79,6 @@ export function NotificationsPage() {
   return <div className="notifications-page">
     <header className="notifications-header"><button type="button" className="notifications-back" aria-label="뒤로가기" onClick={() => navigate(-1)}><UiIcon name="back" /></button><h1>알림</h1><span className="notifications-header-spacer" aria-hidden="true" /></header>
     <NotificationTabs selected={filter} counts={counts} onSelect={setFilter} />
-    <NotificationBanner onOpenSettings={() => setShowSettings(true)} />
-    {usingMock && <p className="mock-notice">연결 전 예시 알림을 표시하고 있어요.</p>}
     <div className="notification-list-toolbar"><span>{unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}개` : '모든 알림을 확인했어요'}</span><button type="button" onClick={handleReadAll} disabled={unreadCount === 0}>모두 읽음</button></div>
     {loading ? <NotificationLoading /> : groups.length ? <div className="notification-groups">{groups.map(([label, items]) => <NotificationSection key={label} label={label} items={items} onSelect={handleNotification} />)}</div> : <div className="notifications-empty"><span><UiIcon name="check" /></span><strong>새로운 알림이 없어요</strong><p>필요한 소식이 생기면 바로 알려드릴게요.</p></div>}
     {showSettings && <NotificationSettings settings={settings} onToggle={handleSetting} onClose={() => setShowSettings(false)} />}
@@ -77,23 +89,18 @@ function NotificationTabs({ selected, counts, onSelect }: { selected: Notificati
   return <div className="notification-tabs" role="tablist" aria-label="알림 유형">{tabs.map((tab) => <button key={tab.value} type="button" role="tab" aria-selected={selected === tab.value} className={selected === tab.value ? 'active' : ''} onClick={() => onSelect(tab.value)}>{tab.label}<span>{counts[tab.value]}</span></button>)}</div>
 }
 
-function NotificationBanner({ onOpenSettings }: { onOpenSettings: () => void }) {
-  return <aside className="notification-banner"><span className="notification-banner-icon"><UiIcon name="bell" /></span><div><strong>중요 알림을 놓치지 마세요!</strong><p>알림을 켜두면 더 빠르게 정보를 받아볼 수 있어요.</p></div><button type="button" onClick={onOpenSettings}>설정</button></aside>
-}
-
 function NotificationSection({ label, items, onSelect }: { label: string; items: AppNotification[]; onSelect: (item: AppNotification) => void }) {
   return <section className="notification-section"><h2>{label}</h2><div>{items.map((item) => <NotificationCard key={item.id} notification={item} onSelect={onSelect} />)}</div></section>
 }
 
 function NotificationCard({ notification, onSelect }: { notification: AppNotification; onSelect: (item: AppNotification) => void }) {
   const meta = typeMeta[notification.type]
-  return <button type="button" className={`notification-card type-${notification.type.toLowerCase()}${notification.isRead ? ' read' : ' unread'}`} onClick={() => onSelect(notification)}><span className="notification-accent" aria-hidden="true"/><span className="notification-type-icon" aria-hidden="true"><UiIcon name={notification.type.toLowerCase() as 'report' | 'safety' | 'system'} /></span><span className="notification-body"><span className="notification-meta"><span>{meta.label}{notification.areaName ? ` · ${notification.areaName}` : ''}</span><time dateTime={notification.createdAt}>{formatNotificationTime(notification.createdAt)}</time></span><strong>{notification.title}</strong><span className="notification-content">{notification.content}</span><span className="notification-badges">{!notification.isRead && <em>NEW</em>}{notification.isImportant && <em className="important">중요</em>}</span></span></button>
+  return <button type="button" className={`notification-card type-${notification.type.toLowerCase()}${notification.isRead ? ' read' : ' unread'}`} onClick={() => onSelect(notification)}><span className="notification-accent" aria-hidden="true"/><span className="notification-type-icon" aria-hidden="true"><UiIcon name={notification.type.toLowerCase() as 'report' | 'safety' | 'system'} /></span><span className="notification-body"><span className="notification-meta"><span>{meta.label}{notification.areaName ? ` · ${notification.areaName}` : ''}</span><time dateTime={notification.createdAt}>{formatRelativeTime(notification.createdAt)}</time></span><strong>{notification.title}</strong><span className="notification-content">{notification.content}</span><span className="notification-badges">{!notification.isRead && <em>NEW</em>}{notification.isImportant && <em className="important">중요</em>}</span></span></button>
 }
 
-function UiIcon({ name }: { name: 'back' | 'bell' | 'check' | 'report' | 'safety' | 'system' }) {
+function UiIcon({ name }: { name: 'back' | 'check' | 'report' | 'safety' | 'system' }) {
   const paths = {
     back: <><path d="m15 5-7 7 7 7"/><path d="M8 12h12"/></>,
-    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></>,
     check: <path d="m5 12 4 4 10-10"/>,
     report: <><path d="M5 3h14v18l-7-4-7 4Z"/><path d="M9 8h6M9 12h4"/></>,
     safety: <><path d="M12 3 3 20h18Z"/><path d="M12 9v4M12 17h.01"/></>,
@@ -118,11 +125,5 @@ function groupNotifications(items: AppNotification[]) {
 }
 
 function getDateLabel(value: string) {
-  const date = new Date(value); const today = new Date(); const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
-  const key = date.toDateString()
-  if (key === today.toDateString()) return '오늘'
-  if (key === yesterday.toDateString()) return '어제'
-  return date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+  return formatDateGroupLabel(value)
 }
-
-function formatNotificationTime(value: string) { return new Date(value).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) }

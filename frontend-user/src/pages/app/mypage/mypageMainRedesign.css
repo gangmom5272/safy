@@ -29,7 +29,7 @@
   place-items: center;
   border: 0;
   border-radius: 14px;
-  color: #111827;
+  color: #000000;
   background: transparent;
   cursor: pointer;
 }
@@ -37,29 +37,6 @@
 .mypage-header > button svg {
   width: 24px;
   height: 24px;
-}
-
-.mypage-mock {
-  position: relative;
-  margin: 0;
-  padding: 10px 12px 10px 30px;
-  border: 1px solid #fde7b2;
-  border-radius: 12px;
-  color: #92600a;
-  background: #fffae9;
-  font-size: 11px;
-}
-
-.mypage-mock::before {
-  position: absolute;
-  top: 50%;
-  left: 13px;
-  width: 7px;
-  height: 7px;
-  transform: translateY(-50%);
-  border-radius: 50%;
-  background: #f59e0b;
-  content: '';
 }
 
 .mypage-message {
@@ -323,6 +300,78 @@
 
 .setting-toggle.on {
   background: #004aad;
+}
+
+.support-header h1,
+.account-header h1,
+.settings-header h1 {
+  color: #000000;
+}
+
+.mypage-shell .support-menu button > span,
+.settings-cards button > span:first-child {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: #004aad;
+  background: rgba(0, 74, 173, .08);
+}
+
+.mypage-shell .support-menu button > span svg,
+.settings-cards button > span:first-child svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mypage-shell .support-menu button > b {
+  color: #004aad;
+}
+
+.support-menu button > em,
+.settings-cards button > b {
+  display: grid;
+  place-items: center;
+  color: #004aad;
+}
+
+.support-menu button > em svg,
+.settings-cards button > b svg {
+  width: 20px;
+  height: 20px;
+}
+
+.support-menu button:focus-visible,
+.settings-cards button:focus-visible,
+.account-form > button:focus-visible {
+  outline: 3px solid rgba(0, 74, 173, .25);
+  outline-offset: 2px;
+}
+
+.account-form .profile-edit-avatar .avatar {
+  color: #ffffff;
+  background: #004aad;
+}
+
+.account-form .profile-edit-avatar > span {
+  color: #004aad;
+}
+
+.account-form input:focus {
+  border-color: #004aad;
+  box-shadow: 0 0 0 3px rgba(0, 74, 173, .12);
+}
+
+.account-form > button {
+  color: #ffffff;
+  background: #004aad;
+}
+
+.account-form > button:disabled {
+  color: #ffffff;
+  background: rgba(0, 74, 173, .25);
+  cursor: not-allowed;
 }
 
 @media (max-width: 360px) {

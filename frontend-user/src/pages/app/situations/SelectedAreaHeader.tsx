@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useFavoritePlacesStore } from '../../../stores/favoritePlacesStore'
+import { formatDateTime } from '../../../utils/dateTime'
 import type { LocationSearchResult } from './types'
 
 type SelectedAreaHeaderProps = {
   area: LocationSearchResult
-  onClear: () => void
 }
-
-export function SelectedAreaHeader({ area, onClear }: SelectedAreaHeaderProps) {
+export function SelectedAreaHeader({ area }: SelectedAreaHeaderProps) {
   const {
     favoritePlaces,
     storageError,
@@ -56,10 +55,9 @@ export function SelectedAreaHeader({ area, onClear }: SelectedAreaHeaderProps) {
   return (
     <section className="selected-area-header" aria-label="선택된 지역">
       <div>
-        <p>선택 지역</p>
         <h2>{area.name} 주변</h2>
-        <span>{area.address}</span>
-        <span>검색 시간 {formatSearchTime()} 기준</span>
+        <span className="selected-area-address">{area.address}</span>
+        <span className="selected-area-time">{formatDateTime(new Date())} 기준</span>
       </div>
       <div className="selected-area-actions">
         <button
@@ -69,10 +67,7 @@ export function SelectedAreaHeader({ area, onClear }: SelectedAreaHeaderProps) {
           aria-pressed={isFavorite}
           onClick={toggleFavorite}
         >
-          {isFavorite ? '★' : '☆'}
-        </button>
-        <button type="button" onClick={onClear}>
-          뒤로 가기
+          <FavoriteStarIcon filled={isFavorite} />
         </button>
       </div>
       {message || storageError ? (
@@ -84,9 +79,6 @@ export function SelectedAreaHeader({ area, onClear }: SelectedAreaHeaderProps) {
   )
 }
 
-function formatSearchTime() {
-  return new Intl.DateTimeFormat('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date())
+function FavoriteStarIcon({ filled }: { filled: boolean }) {
+  return <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z" /></svg>
 }
