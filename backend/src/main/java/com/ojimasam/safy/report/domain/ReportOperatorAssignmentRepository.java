@@ -1,6 +1,7 @@
 package com.ojimasam.safy.report.domain;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -8,6 +9,8 @@ import org.springframework.data.domain.Pageable;
 
 public interface ReportOperatorAssignmentRepository {
 	ReportOperatorAssignment save(ReportOperatorAssignment assignment);
+
+	List<ReportOperatorAssignment> findAllByReport_IdAndStatus(Long reportId, ReportOperatorAssignmentStatus status);
 
 	Optional<ReportOperatorAssignment> findByReport_IdAndStatusIn(
 			Long reportId,

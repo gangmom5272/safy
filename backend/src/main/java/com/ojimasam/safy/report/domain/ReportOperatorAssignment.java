@@ -91,25 +91,29 @@ public class ReportOperatorAssignment extends BaseEntity {
 		return new ReportOperatorAssignment(report, route, operator, null, assignedAt);
 	}
 
-	public void accept(Long operatorId, Instant acceptedAt) {
+	/**
+	 * 담당자가 제보를 확인한 시점의 자동 전이(수락+착수 통합). 멱등.
+	 */
+	public void beginHandling(Long operatorId, Instant now) {
 		requireOperator(operatorId);
+		if (status == ReportOperatorAssignmentStatus.IN_PROGRESS) return;
 		requireStatus(ReportOperatorAssignmentStatus.ASSIGNED);
-		this.status = ReportOperatorAssignmentStatus.ACCEPTED;
-		this.acceptedAt = requireTime(acceptedAt);
-	}
-
-	public void start(Long operatorId, Instant startedAt) {
-		requireOperator(operatorId);
-		requireStatus(ReportOperatorAssignmentStatus.ACCEPTED);
+		Instant time = requireTime(now);
 		this.status = ReportOperatorAssignmentStatus.IN_PROGRESS;
-		this.startedAt = requireTime(startedAt);
+		this.acceptedAt = time;
+		this.startedAt = time;
 	}
 
 	public void complete(Long operatorId, Instant completedAt) {
 		requireOperator(operatorId);
-		requireStatus(ReportOperatorAssignmentStatus.IN_PROGRESS);
+		if (status != ReportOperatorAssignmentStatus.ASSIGNED
+				&& status != ReportOperatorAssignmentStatus.IN_PROGRESS) {
+			throw new IllegalStateException("현재 배정 상태에서는 요청을 처리할 수 없습니다.");
+		}
+		Instant time = requireTime(completedAt);
+		if (this.startedAt == null) this.startedAt = time;
 		this.status = ReportOperatorAssignmentStatus.COMPLETED;
-		this.completedAt = requireTime(completedAt);
+		this.completedAt = time;
 	}
 
 	public void cancel(Instant cancelledAt) {

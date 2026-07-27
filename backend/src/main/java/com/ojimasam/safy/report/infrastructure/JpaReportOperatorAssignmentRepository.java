@@ -22,6 +22,13 @@ public interface JpaReportOperatorAssignmentRepository
 	java.util.Optional<ReportOperatorAssignment> findTopByOperator_IdOrderByAssignedAtDesc(Long operatorId);
 
 	@Override
+	@EntityGraph(attributePaths = "operator")
+	java.util.List<ReportOperatorAssignment> findAllByReport_IdAndStatus(
+			Long reportId,
+			com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus status
+	);
+
+	@Override
 	@EntityGraph(attributePaths = {"report", "report.administrativeArea", "route", "route.controlCenter", "operator"})
 	org.springframework.data.domain.Page<ReportOperatorAssignment> findAllByOperator_IdAndStatusIn(
 			Long operatorId,

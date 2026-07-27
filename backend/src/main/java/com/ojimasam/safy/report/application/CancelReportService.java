@@ -1,9 +1,10 @@
 package com.ojimasam.safy.report.application;
 
 import java.time.Clock;
-import java.util.Set;
+import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +15,6 @@ import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
-import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.ReportStatus;
 import com.ojimasam.safy.report.domain.ReportStatusHistory;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
@@ -25,6 +25,8 @@ public class CancelReportService {
 	private final ReportCenterRouteRepository routeRepository;
 	private final ReportOperatorAssignmentRepository assignmentRepository;
 	private final ReportStatusHistoryRepository historyRepository;
+	private final ReportRealtimeNotifier realtimeNotifier;
+	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
 
 	@Autowired
@@ -32,9 +34,12 @@ public class CancelReportService {
 			ReportRepository reportRepository,
 			ReportCenterRouteRepository routeRepository,
 			ReportOperatorAssignmentRepository assignmentRepository,
-			ReportStatusHistoryRepository historyRepository
+			ReportStatusHistoryRepository historyRepository,
+			ReportRealtimeNotifier realtimeNotifier,
+			ApplicationEventPublisher eventPublisher
 	) {
-		this(reportRepository, routeRepository, assignmentRepository, historyRepository, Clock.systemUTC());
+		this(reportRepository, routeRepository, assignmentRepository, historyRepository, realtimeNotifier,
+				eventPublisher, Clock.systemUTC());
 	}
 
 	CancelReportService(
@@ -42,12 +47,16 @@ public class CancelReportService {
 			ReportCenterRouteRepository routeRepository,
 			ReportOperatorAssignmentRepository assignmentRepository,
 			ReportStatusHistoryRepository historyRepository,
+			ReportRealtimeNotifier realtimeNotifier,
+			ApplicationEventPublisher eventPublisher,
 			Clock clock
 	) {
 		this.reportRepository = reportRepository;
 		this.routeRepository = routeRepository;
 		this.assignmentRepository = assignmentRepository;
 		this.historyRepository = historyRepository;
+		this.realtimeNotifier = realtimeNotifier;
+		this.eventPublisher = eventPublisher;
 		this.clock = clock;
 	}
 
@@ -56,20 +65,30 @@ public class CancelReportService {
 		Report report = reportRepository.findByIdAndReporterId(reportId, reporterId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
 		ReportStatus previous = report.getStatus();
+		Instant now = clock.instant();
 		try {
 			report.cancel();
 		} catch (IllegalStateException exception) {
 			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
 		}
-		assignmentRepository.findByReport_IdAndStatusIn(reportId, Set.of(
-				ReportOperatorAssignmentStatus.ASSIGNED,
-				ReportOperatorAssignmentStatus.ACCEPTED,
-				ReportOperatorAssignmentStatus.IN_PROGRESS
-		)).ifPresent(assignment -> assignment.cancel(clock.instant()));
+		// 배정 담당자에게 회수 알림을 보내려면 배정을 취소하기 전에 담당자 ID를 확보해야 한다.
+		Long assignedOperatorId = assignmentRepository
+				.findByReport_IdAndStatusIn(reportId, OperatorReportAccessService.ACTIVE_ASSIGNMENT_STATUSES)
+				.map(assignment -> {
+					Long operatorId = assignment.getOperator().getId();
+					assignment.cancel(now);
+					return operatorId;
+				})
+				.orElse(null);
 		routeRepository.findByReport_IdAndStatus(reportId, ReportCenterRouteStatus.ACTIVE)
-				.ifPresent(route -> route.close(clock.instant()));
+				.ifPresent(route -> route.close(now));
 		historyRepository.save(ReportStatusHistory.record(
-				report, previous, report.getStatus(), null, "REPORTER_CANCELLED", clock.instant()
+				report, previous, report.getStatus(), null, "REPORTER_CANCELLED", now
 		));
+		if (assignedOperatorId != null) {
+			realtimeNotifier.reportCancelledToOperator(reportId, assignedOperatorId);
+		}
+		// 진행 중인 라이브 세션이 있으면 종료 이벤트로 닫는다(담당자 종료와 동일 경로).
+		eventPublisher.publishEvent(new ReportTerminatedEvent(reportId, report.getReporterId(), report.getStatus()));
 	}
 }

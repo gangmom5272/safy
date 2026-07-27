@@ -47,6 +47,7 @@ public class SecurityConfig {
 								"/api/v1/auth/admin/login",
 								"/api/v1/auth/token/refresh",
 								"/api/v1/auth/logout").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/v1/live/webhooks/**").permitAll()
 						.requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(oauth -> oauth
@@ -66,8 +67,13 @@ public class SecurityConfig {
 	@Bean
 	BearerTokenResolver bearerTokenResolver() {
 		DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
-		return request -> "/api/v1/auth/logout".equals(request.getServletPath())
-				? null : delegate.resolve(request);
+		// 웹훅은 미디어 서버가 서명한 JWT를 Authorization 헤더로 보낸다.
+		// 리소스 서버가 이를 사용자 액세스 토큰으로 해석해 401을 내지 않도록 제외한다.
+		return request -> {
+			String path = request.getServletPath();
+			return "/api/v1/auth/logout".equals(path) || path.startsWith("/api/v1/live/webhooks/")
+					? null : delegate.resolve(request);
+		};
 	}
 
 	@Bean

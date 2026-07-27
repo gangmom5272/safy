@@ -39,6 +39,9 @@ public class LiveSession extends BaseEntity {
 	@Column(name = "ended_at")
 	private Instant endedAt;
 
+	@Column(name = "disconnected_at")
+	private Instant disconnectedAt;
+
 	@Column(name = "expires_at", nullable = false)
 	private Instant expiresAt;
 
@@ -79,7 +82,36 @@ public class LiveSession extends BaseEntity {
 		if (status == LiveSessionStatus.CREATED) {
 			status = LiveSessionStatus.ACTIVE;
 			startedAt = now;
+		} else if (status == LiveSessionStatus.DISCONNECTED) {
+			status = LiveSessionStatus.ACTIVE;
+			disconnectedAt = null;
 		}
+	}
+
+	/**
+	 * 미디어 서버가 제보자 이탈을 통지했을 때, 즉시 종료하지 않고 재접속 유예 상태로 전환한다.
+	 * 일시적인 네트워크 단절로 세션이 죽는 것을 막는다.
+	 *
+	 * @return 이번 호출로 상태가 바뀌었으면 true
+	 */
+	public boolean markDisconnected(Instant now) {
+		if (status != LiveSessionStatus.ACTIVE) return false;
+		status = LiveSessionStatus.DISCONNECTED;
+		disconnectedAt = now;
+		return true;
+	}
+
+	/**
+	 * 제보자가 유예 시간 안에 재접속했다.
+	 *
+	 * @return 이번 호출로 다시 송출 상태가 됐으면 true
+	 */
+	public boolean markReconnected(Instant now) {
+		if (status != LiveSessionStatus.DISCONNECTED) return false;
+		status = LiveSessionStatus.ACTIVE;
+		disconnectedAt = null;
+		if (startedAt == null) startedAt = now;
+		return true;
 	}
 
 	public void requireJoinable(Instant now) {
@@ -123,6 +155,7 @@ public class LiveSession extends BaseEntity {
 	public LiveSessionStatus getStatus() { return status; }
 	public Instant getStartedAt() { return startedAt; }
 	public Instant getEndedAt() { return endedAt; }
+	public Instant getDisconnectedAt() { return disconnectedAt; }
 	public Instant getExpiresAt() { return expiresAt; }
 	public String getFailureReason() { return failureReason; }
 }

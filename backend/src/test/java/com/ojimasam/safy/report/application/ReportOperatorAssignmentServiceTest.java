@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
@@ -72,7 +73,7 @@ class ReportOperatorAssignmentServiceTest {
 	}
 
 	@Test
-	void assignedOperatorAcceptsStartsAndCompletesWork() {
+	void assignedOperatorCompletesWork() {
 		Fixture fixture = new Fixture();
 		Report report = report(10L);
 		ReflectionTestUtils.setField(report, "reportedAt", NOW.minusSeconds(60));
@@ -89,13 +90,37 @@ class ReportOperatorAssignmentServiceTest {
 				.thenReturn(Optional.of(membership));
 		when(fixture.historyRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-		fixture.service.accept(30L, 10L);
-		fixture.service.start(30L, 10L);
 		fixture.service.complete(30L, 10L);
 
 		assertThat(assignment.getStatus()).isEqualTo(ReportOperatorAssignmentStatus.COMPLETED);
 		assertThat(report.getStatus()).isEqualTo(ReportStatus.CLOSED);
 		verify(route).close(NOW);
+		verify(fixture.realtimeNotifier).reportClosed(10L, report.getReporterId());
+		verify(fixture.eventPublisher).publishEvent(any(ReportTerminatedEvent.class));
+	}
+
+	@Test
+	void reassignReleasesReportAndExcludesRequestingOperator() {
+		Fixture fixture = new Fixture();
+		Report report = report(10L);
+		ControlCenter center = center(20L);
+		ReportCenterRoute route = route(center);
+		User operator = operator(30L, "담당자");
+		ReportOperatorAssignment assignment = ReportOperatorAssignment.automatic(report, route, operator, NOW);
+		AdminCenterMembership membership = activeMembership(operator, center);
+		report.assign();
+		when(fixture.reportRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(report));
+		when(fixture.assignmentRepository.findByReport_IdAndStatusIn(any(), any()))
+				.thenReturn(Optional.of(assignment));
+		when(fixture.membershipRepository.findByUserIdAndIsPrimaryTrue(30L))
+				.thenReturn(Optional.of(membership));
+		when(fixture.historyRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(fixture.routeRepository.findByReport_IdAndStatus(any(), any())).thenReturn(Optional.empty());
+
+		fixture.service.reassign(30L, 10L, "관할 구역 오배정");
+
+		assertThat(assignment.getStatus()).isEqualTo(ReportOperatorAssignmentStatus.CANCELLED);
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.RECEIVED);
 	}
 
 	@Test
@@ -132,6 +157,7 @@ class ReportOperatorAssignmentServiceTest {
 				mock(ReportOperatorAssignmentRepository.class);
 		private final ReportStatusHistoryRepository historyRepository = mock(ReportStatusHistoryRepository.class);
 		private final ReportRealtimeNotifier realtimeNotifier = mock(ReportRealtimeNotifier.class);
+		private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 		private final ReportOperatorAssignmentService service = new ReportOperatorAssignmentService(
 				reportRepository,
 				routeRepository,
@@ -139,6 +165,7 @@ class ReportOperatorAssignmentServiceTest {
 				assignmentRepository,
 				historyRepository,
 				realtimeNotifier,
+				eventPublisher,
 				Clock.fixed(NOW, ZoneOffset.UTC)
 		);
 	}

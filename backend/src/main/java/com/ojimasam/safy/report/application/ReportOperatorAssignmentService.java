@@ -3,15 +3,18 @@ package com.ojimasam.safy.report.application;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
@@ -48,6 +51,7 @@ public class ReportOperatorAssignmentService {
 	private final ReportOperatorAssignmentRepository assignmentRepository;
 	private final ReportStatusHistoryRepository historyRepository;
 	private final ReportRealtimeNotifier realtimeNotifier;
+	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
 
 	@Autowired
@@ -57,11 +61,11 @@ public class ReportOperatorAssignmentService {
 			AdminCenterMembershipRepository membershipRepository,
 			ReportOperatorAssignmentRepository assignmentRepository,
 			ReportStatusHistoryRepository historyRepository,
-			ReportRealtimeNotifier realtimeNotifier
+			ReportRealtimeNotifier realtimeNotifier,
+			ApplicationEventPublisher eventPublisher
 	) {
 		this(reportRepository, routeRepository, membershipRepository, assignmentRepository, historyRepository,
-				realtimeNotifier,
-				Clock.systemUTC());
+				realtimeNotifier, eventPublisher, Clock.systemUTC());
 	}
 
 	ReportOperatorAssignmentService(
@@ -71,6 +75,7 @@ public class ReportOperatorAssignmentService {
 			ReportOperatorAssignmentRepository assignmentRepository,
 			ReportStatusHistoryRepository historyRepository,
 			ReportRealtimeNotifier realtimeNotifier,
+			ApplicationEventPublisher eventPublisher,
 			Clock clock
 	) {
 		this.reportRepository = reportRepository;
@@ -79,14 +84,26 @@ public class ReportOperatorAssignmentService {
 		this.assignmentRepository = assignmentRepository;
 		this.historyRepository = historyRepository;
 		this.realtimeNotifier = realtimeNotifier;
+		this.eventPublisher = eventPublisher;
 		this.clock = clock;
 	}
 
 	public Optional<ReportOperatorAssignment> assignAutomatically(Report report, ReportCenterRoute route) {
+		return assignAutomatically(report, route, null);
+	}
+
+	public Optional<ReportOperatorAssignment> assignAutomatically(Report report, ReportCenterRoute route,
+			Long excludeOperatorId) {
 		if (report.getStatus() != ReportStatus.RECEIVED) return Optional.empty();
 		if (assignmentRepository.existsByReport_IdAndStatusIn(report.getId(), ACTIVE_STATUSES)) {
 			return Optional.empty();
 		}
+		// 이 제보를 이미 놓아준(재배정으로 CANCELLED된) 담당자는 즉시·스케줄러 경로 모두에서 제외해 되돌아옴 방지
+		Set<Long> excludedOperatorIds = new HashSet<>();
+		if (excludeOperatorId != null) excludedOperatorIds.add(excludeOperatorId);
+		assignmentRepository.findAllByReport_IdAndStatus(report.getId(), ReportOperatorAssignmentStatus.CANCELLED)
+				.forEach(cancelled -> excludedOperatorIds.add(cancelled.getOperator().getId()));
+
 		List<AdminCenterMembership> memberships = membershipRepository.findEligibleOperatorsForAssignment(
 				route.getControlCenter().getId(),
 				MembershipStatus.ACTIVE,
@@ -95,6 +112,7 @@ public class ReportOperatorAssignmentService {
 		);
 		Optional<User> selected = memberships.stream()
 				.map(AdminCenterMembership::getUser)
+				.filter(operator -> !excludedOperatorIds.contains(operator.getId()))
 				.map(this::candidate)
 				.min(Comparator.comparingLong(OperatorCandidate::activeWorkload)
 						.thenComparing(OperatorCandidate::lastAssignedAt,
@@ -142,57 +160,114 @@ public class ReportOperatorAssignmentService {
 				.map(OperatorAssignmentResponse::from);
 	}
 
-	@Transactional
-	public OperatorAssignmentResponse accept(Long operatorId, Long reportId) {
-		return transition(operatorId, reportId, Action.ACCEPT);
-	}
+	/**
+	 * 담당자가 제보를 확인(타일 열람·라이브 시청)한 시점의 자동 확인.
+	 * 별도 트랜잭션에서 멱등하게 ASSIGNED → IN_PROGRESS로 전이한다. 조건 불충족 시 조용히 무시.
+	 */
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void markHandling(Long operatorId, Long reportId) {
+		Report report = reportRepository.findByIdForUpdate(reportId).orElse(null);
+		if (report == null || report.getStatus() != ReportStatus.ASSIGNED) return;
+		ReportOperatorAssignment assignment = assignmentRepository
+				.findByReport_IdAndStatusIn(reportId, ACTIVE_STATUSES).orElse(null);
+		if (assignment == null || !assignment.getOperator().getId().equals(operatorId)) return;
 
-	@Transactional
-	public OperatorAssignmentResponse start(Long operatorId, Long reportId) {
-		return transition(operatorId, reportId, Action.START);
+		Instant now = clock.instant();
+		ReportStatus previous = report.getStatus();
+		report.beginHandling();
+		assignment.beginHandling(operatorId, now);
+		historyRepository.save(ReportStatusHistory.record(
+				report, previous, report.getStatus(), assignment.getOperator(), "OPERATOR_VIEWING", now
+		));
 	}
 
 	@Transactional
 	public OperatorAssignmentResponse complete(Long operatorId, Long reportId) {
-		return transition(operatorId, reportId, Action.COMPLETE);
+		Report report = reportForUpdate(reportId);
+		ReportOperatorAssignment assignment = requireOwnedActiveAssignment(operatorId, reportId);
+		validateActiveMembership(operatorId, assignment.getRoute().getControlCenter().getId());
+
+		Instant now = clock.instant();
+		ReportStatus previous = report.getStatus();
+		try {
+			report.completeWork(now);
+			assignment.complete(operatorId, now);
+			assignment.getRoute().close(now);
+		} catch (IllegalArgumentException | IllegalStateException exception) {
+			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
+		}
+		historyRepository.save(ReportStatusHistory.record(
+				report, previous, report.getStatus(), assignment.getOperator(), "WORK_COMPLETED", now
+		));
+		realtimeNotifier.reportClosed(report.getId(), report.getReporterId());
+		eventPublisher.publishEvent(new ReportTerminatedEvent(report.getId(), report.getReporterId(), report.getStatus()));
+		return OperatorAssignmentResponse.from(assignment);
 	}
 
-	private OperatorAssignmentResponse transition(Long operatorId, Long reportId, Action action) {
-		Report report = reportRepository.findByIdForUpdate(reportId)
+	/** 무효 제보 반려(종결). 라이브가 있으면 종료 이벤트로 세션을 닫고 제보자에게 통지한다. */
+	@Transactional
+	public OperatorAssignmentResponse reject(Long operatorId, Long reportId, String reason) {
+		Report report = reportForUpdate(reportId);
+		ReportOperatorAssignment assignment = requireOwnedActiveAssignment(operatorId, reportId);
+		validateActiveMembership(operatorId, assignment.getRoute().getControlCenter().getId());
+
+		Instant now = clock.instant();
+		ReportStatus previous = report.getStatus();
+		try {
+			assignment.cancel(now);
+			report.reject(now);
+			assignment.getRoute().close(now);
+		} catch (IllegalArgumentException | IllegalStateException exception) {
+			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
+		}
+		historyRepository.save(ReportStatusHistory.record(
+				report, previous, report.getStatus(), assignment.getOperator(), reason, now
+		));
+		realtimeNotifier.reportRejected(report.getId(), report.getReporterId());
+		eventPublisher.publishEvent(new ReportTerminatedEvent(report.getId(), report.getReporterId(), report.getStatus()));
+		return OperatorAssignmentResponse.from(assignment);
+	}
+
+	/**
+	 * 담당자가 처리를 놓고 다른 담당자에게 재배정을 요청(제보는 살아있음).
+	 * 현재 배정을 취소하고 접수 상태로 되돌린 뒤, 같은 관제센터에서 요청자를 제외하고 즉시 재배정을 시도한다.
+	 * 후보가 없으면 미배정 재시도 스케줄러가 이후 다시 배정한다. 라이브 송출은 유지된다.
+	 */
+	@Transactional
+	public OperatorAssignmentResponse reassign(Long operatorId, Long reportId, String reason) {
+		Report report = reportForUpdate(reportId);
+		ReportOperatorAssignment assignment = requireOwnedActiveAssignment(operatorId, reportId);
+		validateActiveMembership(operatorId, assignment.getRoute().getControlCenter().getId());
+
+		Instant now = clock.instant();
+		ReportStatus previous = report.getStatus();
+		try {
+			assignment.cancel(now);
+			report.releaseForReassignment();
+		} catch (IllegalArgumentException | IllegalStateException exception) {
+			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
+		}
+		historyRepository.save(ReportStatusHistory.record(
+				report, previous, report.getStatus(), assignment.getOperator(), reason, now
+		));
+		routeRepository.findByReport_IdAndStatus(reportId, ReportCenterRouteStatus.ACTIVE)
+				.ifPresent(route -> assignAutomatically(report, route, operatorId));
+		return OperatorAssignmentResponse.from(assignment);
+	}
+
+	private Report reportForUpdate(Long reportId) {
+		return reportRepository.findByIdForUpdate(reportId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+	}
+
+	private ReportOperatorAssignment requireOwnedActiveAssignment(Long operatorId, Long reportId) {
 		ReportOperatorAssignment assignment = assignmentRepository
 				.findByReport_IdAndStatusIn(reportId, ACTIVE_STATUSES)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
 		if (!assignment.getOperator().getId().equals(operatorId)) {
 			throw new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND);
 		}
-		validateActiveMembership(operatorId, assignment.getRoute().getControlCenter().getId());
-
-		Instant now = clock.instant();
-		ReportStatus previous = report.getStatus();
-		try {
-			switch (action) {
-				case ACCEPT -> {
-					assignment.accept(operatorId, now);
-					report.accept();
-				}
-				case START -> {
-					assignment.start(operatorId, now);
-					report.startWork();
-				}
-				case COMPLETE -> {
-					assignment.complete(operatorId, now);
-					report.completeWork(now);
-					assignment.getRoute().close(now);
-				}
-			}
-		} catch (IllegalArgumentException | IllegalStateException exception) {
-			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
-		}
-		historyRepository.save(ReportStatusHistory.record(
-				report, previous, report.getStatus(), assignment.getOperator(), action.reason, now
-		));
-		return OperatorAssignmentResponse.from(assignment);
+		return assignment;
 	}
 
 	private void validateActiveMembership(Long operatorId, Long centerId) {
@@ -212,17 +287,5 @@ public class ReportOperatorAssignmentService {
 	}
 
 	private record OperatorCandidate(User operator, long activeWorkload, Instant lastAssignedAt) {
-	}
-
-	private enum Action {
-		ACCEPT("OPERATOR_ACCEPTED"),
-		START("WORK_STARTED"),
-		COMPLETE("WORK_COMPLETED");
-
-		private final String reason;
-
-		Action(String reason) {
-			this.reason = reason;
-		}
 	}
 }

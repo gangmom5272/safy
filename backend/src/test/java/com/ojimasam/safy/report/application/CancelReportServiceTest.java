@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ojimasam.safy.common.exception.BusinessException;
@@ -33,6 +34,8 @@ class CancelReportServiceTest {
 	@Mock ReportCenterRouteRepository routeRepository;
 	@Mock ReportOperatorAssignmentRepository assignmentRepository;
 	@Mock ReportStatusHistoryRepository historyRepository;
+	@Mock ReportRealtimeNotifier realtimeNotifier;
+	@Mock ApplicationEventPublisher eventPublisher;
 
 	@Test
 	void cancelsOwnedReceivedReport() {
@@ -47,11 +50,14 @@ class CancelReportServiceTest {
 				routeRepository,
 				assignmentRepository,
 				historyRepository,
+				realtimeNotifier,
+				eventPublisher,
 				Clock.fixed(Instant.parse("2026-07-23T00:00:00Z"), ZoneOffset.UTC)
 		).cancel(1L, 42L);
 
 		assertThat(report.getStatus()).isEqualTo(ReportStatus.CANCELLED);
 		verify(route).close(Instant.parse("2026-07-23T00:00:00Z"));
+		verify(eventPublisher).publishEvent(org.mockito.ArgumentMatchers.any(ReportTerminatedEvent.class));
 	}
 
 	@Test
@@ -63,6 +69,8 @@ class CancelReportServiceTest {
 				routeRepository,
 				assignmentRepository,
 				historyRepository,
+				realtimeNotifier,
+				eventPublisher,
 				Clock.systemUTC()
 		).cancel(1L, 42L))
 				.isInstanceOf(BusinessException.class);

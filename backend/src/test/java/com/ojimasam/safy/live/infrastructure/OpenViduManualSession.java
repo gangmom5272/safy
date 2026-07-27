@@ -19,8 +19,11 @@ public final class OpenViduManualSession {
 		String apiSecret = required("OPENVIDU_API_SECRET");
 		Duration manualSessionTtl = Duration.ofHours(2);
 		OpenViduProperties properties = new OpenViduProperties(
-				url, apiKey, apiSecret, manualSessionTtl, manualSessionTtl, Duration.ofMinutes(1));
-		LiveKitMediaGateway gateway = new LiveKitMediaGateway(properties);
+				url, apiKey, apiSecret, manualSessionTtl, manualSessionTtl, Duration.ofMinutes(1),
+				Duration.ofSeconds(60));
+		LiveKitMediaGateway gateway = new LiveKitMediaGateway(properties,
+				new com.ojimasam.safy.live.application.LiveRecordingProperties(
+						false, "safy", "http://localhost:9000", "key", "secret", null, null, 0, 0));
 		String roomName = "safy-manual-" + UUID.randomUUID();
 		gateway.createRoom(roomName);
 

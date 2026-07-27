@@ -24,8 +24,11 @@ class OpenViduSmokeTest {
 				"OPENVIDU_API_KEY and OPENVIDU_API_SECRET must be configured");
 
 		OpenViduProperties properties = new OpenViduProperties(
-				url, apiKey, apiSecret, Duration.ofMinutes(2), Duration.ofMinutes(5), Duration.ofMinutes(1));
-		LiveKitMediaGateway gateway = new LiveKitMediaGateway(properties);
+				url, apiKey, apiSecret, Duration.ofMinutes(2), Duration.ofMinutes(5), Duration.ofMinutes(1),
+				Duration.ofSeconds(60));
+		LiveKitMediaGateway gateway = new LiveKitMediaGateway(properties,
+				new com.ojimasam.safy.live.application.LiveRecordingProperties(
+						false, "safy", "http://localhost:9000", "key", "secret", null, null, 0, 0));
 		String roomName = "safy-smoke-" + UUID.randomUUID();
 
 		gateway.createRoom(roomName);

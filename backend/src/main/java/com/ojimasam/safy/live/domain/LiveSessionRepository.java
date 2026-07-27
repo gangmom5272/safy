@@ -13,6 +13,9 @@ public interface LiveSessionRepository {
 	Optional<LiveSession> findById(UUID id);
 	Optional<LiveSession> findByIdForUpdate(UUID id);
 	Optional<LiveSession> findByReportId(Long reportId);
+	Optional<LiveSession> findByRoomName(String roomName);
+	List<LiveSession> findTop100ByStatusAndDisconnectedAtBeforeOrderByDisconnectedAtAsc(
+			LiveSessionStatus status, Instant threshold);
 	List<LiveSession> findAllByReportIdIn(Collection<Long> reportIds);
 	List<LiveSession> findByStatusInAndCreatedAtBeforeOrderByCreatedAtDesc(
 			Collection<LiveSessionStatus> statuses, Instant cursor, Pageable pageable);
