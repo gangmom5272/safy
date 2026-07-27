@@ -138,3 +138,171 @@
 - 2주차 항목 중 BE 의존 없는 것(Nginx 골격, 메모리 모니터링 루틴화) 조기 착수 검토
 - 2주차 항목 중 "동시 다중 연결 부하 테스트"를 앞당겨 3주차 리스크 사전 검증 권장
 - Redis 용도, 녹화 블러 처리, AI 서버 fps, Python 실행환경 — 팀 미결 항목 계속 확인 필요
+
+---
+
+# 2026-07-22 (수) — CI 파이프라인 초안 구축 + 실패 케이스 검증
+
+**오늘의 원칙**: BE 의존 없는 2주차 인프라 항목을 조기 착수 — 서버를 건드리기 전에 CI(빌드/테스트 자동화) 골격부터 세운다.
+
+## 1. GitLab CI 빌드/테스트 파이프라인 초안 (`2aa60dd`)
+- `.gitlab-ci.yml` 신규 작성 — `test` 스테이지에 FE/BE/AI job 구성
+  - `frontend-user`/`frontend-admin`: `node:22`, `npm ci → lint → build`, `rules: changes:`로 해당 서브트리 변경 시에만 실행
+  - `backend`: `eclipse-temurin:21-jdk`, `./gradlew test build --no-daemon`
+  - `ai`: `python:3.12-slim`, `pytest`
+- **AI job은 CPU torch 휠(`ai/requirements-ci.txt`)로 분리** — CI 러너가 GPU가 아닐 가능성에 대비. prod용 `requirements.txt`(CUDA 휠)와 분리 유지.
+
+## 2. CI 실패 케이스 의도적 검증 (`eec628c` → revert `32a3fbd`)
+- 파이프라인이 "정상일 때 통과"만 보면 안 되고 "깨질 때 실제로 빨간불이 뜨는지"를 확인해야 신뢰 가능
+- `frontend/src/api/client.ts`에 lint 에러를 **의도적으로 추가**해 CI가 실패로 잡는지 확인 → 확인 후 즉시 revert
+- develop 병합(`c5331db`)으로 초안 확정
+
+## 3. 오후 — 프론트 분리에 따른 CI job 분리 (`9fb7bde`)
+- 프론트가 user/admin 두 프로젝트로 나뉨에 따라, 단일 frontend job을 `frontend-user`/`frontend-admin` 두 job으로 분리
+- 각 job이 자기 서브트리 변경 시에만 도는 구조 유지(불필요한 빌드 방지)
+
+## 4. 오늘 배운 점
+- CI는 "성공 케이스"만 보면 반쪽짜리 — 실패를 일부러 만들어 빨간불을 확인해야 파이프라인을 신뢰할 수 있다
+- GPU 유무가 불확실한 러너 환경에서는 무거운 의존성(torch)을 CI 전용 경량 휠로 분리해두는 게 안전
+
+## 5. 내일(7/23) 방향 메모
+- 백엔드 이니셜 커밋이 올라오면 Dockerfile + compose 실제 값 채우고 배포 스테이지 착수
+
+---
+
+# 2026-07-23 (목) — 백엔드 컨테이너화 + 배포 스테이지 + 실전 배포 트러블슈팅
+
+**오늘의 원칙**: 빌드 자동화(CI)에서 배포 자동화(CD)로 확장 — 실제 서버에 붙이면서 나오는 문제는 로컬 재현으로 원인을 좁힌 뒤 고친다.
+
+## 1. 오전 — 백엔드 컨테이너화 & compose 실측 교정
+- **백엔드 Dockerfile (`f110d54`)**: 멀티스테이지 — build 스테이지(`eclipse-temurin:21-jdk`, `./gradlew bootJar -x test`) → run 스테이지(`21-jre-alpine`, 비root `spring` 유저, `java -jar app.jar`)
+- **compose 경로/포트 교정 + nginx 스켈레톤 (`76e57e5`)**:
+  - `build: ./backend`, `./ai` → **`../backend`, `../ai`로 수정** (compose는 파일 자기 위치 기준으로 상대경로를 풀기 때문에 `infra/backend`를 가리키던 오류)
+  - MinIO 호스트 포트를 실서버 실측값 **9200/9201로 동기화** (7/21 OpenVidu 내장 MinIO 충돌로 재배정한 값)
+  - 백엔드 호스트 매핑 8080 제거 → **8090(디버깅용)으로 변경** (8080은 OpenVidu ingress가 점유, `ss -tulnp` 확인). 컨테이너 내부는 8080 유지, 정식 진입점은 nginx(8091)
+  - nginx 서비스 추가: frontend-user/admin dist 정적 서빙 + `/api/` 백엔드 프록시, 호스트 8091 노출(80/443은 Caddy 점유)
+  - 구식 top-level `version` 키 제거
+
+## 2. 낮 — 배포(CD) 스테이지 + SHA 태깅 + 롤백
+- **deploy 스테이지 (`f0bacb3`)**: `develop` 브랜치 푸시에서만 트리거. `backend`+`infra` rsync 후 서버에서 `docker compose up -d --build backend db redis minio nginx`. 프론트 dist는 해당 test job이 실제 산출물을 냈을 때만 rsync(백엔드 단독 배포가 프론트를 안 건드리게). ai-server는 배포 대상에서 의도적 제외(배포 대상 미정)
+- **SHA 태깅 + 롤백 스크립트 (`1d821d7`)**:
+  - 백엔드 이미지를 `safy-backend:${DEPLOY_TAG:-latest}`로 빌드 → 과거 배포 이미지가 덮이지 않고 남음
+  - deploy job이 `DEPLOY_TAG=$CI_COMMIT_SHORT_SHA` 지정 + 성공 시 `.deployed_tags`에 `<태그> <타임스탬프>` 기록
+  - `scripts/rollback.sh`: 서버에서 실행, **재빌드 없이(`up -d`, `--build` 없음)** 이전 태그로 즉시 복귀
+  - `.gitattributes`: `*.sh`를 LF로 강제(Windows 체크아웃 → Linux 실행 시 개행 깨짐 방지)
+  - **미해결(오늘 못 푼 것)**: 오래된 태그 이미지가 정리되지 않아 Lightsail 디스크가 점점 참 → 추후 prune 정책 필요
+- 로컬 배포키 스크래치 폴더 gitignore 처리(`293c418`)
+
+## 3. 오후 — 실전 배포 트러블슈팅
+
+| 시각 | 증상 | 원인 | 해결 | 배운 점 |
+|---|---|---|---|---|
+| 오후 | 병합 직후 실배포가 `no configuration file provided: not found`로 실패 (`af6d017`) | `--project-directory` 값이 `build: ../backend`의 `..`를 이중 적용 → 컨텍스트가 `Desktop/backend`로 잘못 풀림(로컬 재현) | `--project-directory` 제거, compose 기본값(파일 자기 위치 = `infra/`) 사용. 서버 `.env`를 `~/S15P11A503/.env` → `infra/.env`로 이동, rsync에 `--exclude=.env` 추가(`--delete`로 지워지지 않게), 미배포지만 compose 검증 대상인 `AI_SERVER_PORT`도 서버 .env에 추가 | compose의 상대경로/.env 탐색 기준은 "파일 위치"임을 명확히 인지. 옵션으로 기준을 흔들지 말 것 |
+| 오후 | frontend dist 디렉토리에 rsync 시 `Permission denied`로 배포 job 중단(admin sync·compose up·태그 기록이 그 회차에 안 돎) (`130411c`) | nginx volume mount 대상 경로가 호스트에 없을 때 Docker가 **root 소유로 먼저 생성** → ubuntu 유저 rsync가 거부됨 | 즉시 조치: 서버에서 `sudo chown -R ubuntu:ubuntu ...frontend-user ...frontend-admin`. 재발 방지: rsync 전에 ubuntu 유저가 dist **하위 디렉토리까지** `mkdir -p` | 볼륨 마운트 경로는 Docker가 root로 선점할 수 있으니, 배포 유저가 먼저 만들어 소유권을 확보해야 함 |
+
+## 4. 오늘 배운 점
+- 배포 자동화의 버그는 대부분 "경로/소유권/기준 디렉토리" 문제 — 로컬에서 컨텍스트를 재현하면 원인이 빨리 좁혀진다
+- 이미지 태깅을 커밋 SHA로 남겨두면 "재빌드 없는 즉시 롤백"이 가능해진다(단 디스크 정리 정책은 별도 숙제)
+
+## 5. 내일(7/24) 방향 메모
+- 배포 스택 가동 상태를 한 곳에서 보는 모니터링/알림 구성 착수
+
+---
+
+# 2026-07-24 (금) — 서비스 헬스체크 · 로그 · 장애 알림 구성 (S15P11A503-48)
+
+**오늘의 원칙**: 배포가 돌기 시작했으니, "죽었는지 사람이 눈으로 확인"에서 "죽으면 자동으로 알림"으로 관측 수준을 올린다.
+
+## 1. 모니터링/알림 스택 구성 (`88eda1e`)
+- 대상: 우리 `docker-compose.yml` 스택(backend/db/redis/minio/nginx). OpenVidu는 자체 관측 스택(grafana/prometheus/loki/alloy)을 이미 가져서 대상 외. AI는 미배포라 모니터만 등록 후 일시정지.
+- 추가한 것:
+  - `x-logging` 앵커 → 전 서비스에 json-file 로그 로테이션(서비스당 10MB×3=30MB 상한, 디스크 보호)
+  - 컨테이너 헬스체크: `db`(`pg_isready`), `redis`(`redis-cli ping`), `nginx`(`wget /healthz`)
+  - nginx `/healthz` 전용 엔드포인트(항상 200)
+  - **Uptime Kuma** 서비스(`127.0.0.1:3001` 바인딩 → SSH 터널로만 접근, 비공개 유지) + `uptime_kuma_data` 볼륨
+  - `backend`/`minio`는 이미지에 curl/mc가 없어 컨테이너 헬스체크 대신 **Kuma가 TCP/HTTP로 감시**하도록 역할 분담
+- 안티노이즈 설계: Heartbeat 60s / Retries 3 / Resend off → 배포 재시작(1분 이내)은 걸러지고 **3분 이상 실장애만 1회 알림**
+- Mattermost Incoming Webhook으로 알림 연결(웹훅 URL은 비밀값 → Kuma 볼륨에만, 저장소 커밋 금지)
+- 상세 설계·모니터 목록·장애 대응 흐름은 `MONITORING.md`로 분리 문서화
+
+> 관측: CI deploy의 `up` 대상 목록에 `uptime-kuma`가 빠져 있었다(당시 `backend db redis minio nginx`만) → 파이프라인만으로는 Kuma가 뜨지 않음. **2026-07-27에 목록에 `uptime-kuma`를 추가해 해소**(해당 날짜 기록 참고).
+
+## 2. 오늘 배운 점
+- 이미지마다 들어있는 도구(curl/mc)가 달라 컨테이너 자체 헬스체크가 불가능한 경우가 있음 → 외부 감시자(Kuma)가 TCP/HTTP로 보는 방식으로 우회
+- 알림은 상태 전이 시에만 발생하므로, 배포 재시작을 장애로 오인하지 않게 임계값(Retries/Interval)으로 노이즈를 걸러야 실제로 쓸 수 있는 알림이 됨
+
+## 3. 다음 방향 메모
+- 2주차 남은 인프라 작업: nginx WebSocket 프록시 + 도메인 루트(Caddy) → 앱 연결로 end-to-end 배포 성립
+
+---
+
+> ℹ️ 위 7/22~7/24 항목은 커밋 이력(`2aa60dd`, `eec628c`, `9fb7bde`, `f110d54`, `76e57e5`, `f0bacb3`, `1d821d7`, `af6d017`, `130411c`, `88eda1e`) 기반으로 재구성한 기록이다. 7/22~7/24의 메모리 실측(`free -h`/`docker stats`)은 커밋에 없어 생략했다.
+
+---
+
+# 2026-07-27 (월) — 모니터링 라이브 검증 + backend 기동 실패 3층 규명
+
+**오늘의 원칙**: 배포 스택이 "실제로 기동되고, 중단되면 알림이 오는지"를 라이브로 검증한다.
+검증 중 발견한 실제 장애는 원인을 층별로 좁혀 인프라 범위에서 해결하고, 팀 경계를 넘는
+부분(스키마 전략·실 OAuth 자격 증명)은 명확히 넘긴다.
+
+## 1. CI 배포 목록에 uptime-kuma 추가 (7/24 관측 후속)
+- 7/24에 남긴 "CI `up` 목록에 uptime-kuma 누락" 관측을 실제로 확인 → `.gitlab-ci.yml` deploy의
+  `docker compose up` 대상에 `uptime-kuma` 추가(커밋 후 머지·배포).
+- 결과: 서버에 Kuma 컨테이너가 처음으로 기동됨. 그전까지는 compose에 정의만 있고 서버 스택에는
+  올라온 적이 없어 SSH 터널(`-L 3001`)이 `Connection refused`로 실패하던 상태였음.
+
+## 2. Uptime Kuma 라이브 검증 (알림 3구간)
+- 모니터 6종 등록: backend(TCP 8080), nginx(HTTP `/healthz`), minio(HTTP `/minio/health/live`),
+  db(TCP 5432), redis(TCP 6379), ai-server(HTTP `/health`, 일시정지).
+- Mattermost Incoming Webhook 생성 후 Kuma 알림에 연결. 세 구간을 순서대로 검증:
+  1. 웹훅 → 채널: `curl`로 200 응답 + 채널에 메시지 도달
+  2. Kuma Test 버튼 → 채널
+  3. 실제 지속 다운 알림: minio를 통제 다운시켜 `[Down]`/`[Up]` 자동 발사 확인
+- 함정: 알림을 만들어도 각 모니터에 **연결(enable)** 해야 발사된다. Test는 되는데 실제 다운
+  알림이 안 와서 확인해보니 모니터에 알림이 연결되지 않은 상태였음.
+
+## 3. backend 기동 실패 — 3층 규명 (핵심)
+`docker compose ps`에 backend가 보이지 않아 규명 착수. `ps -a`로 `Exited (1)` 확인,
+`logs`로 원인을 층별로 확인. 한 층을 고치면 다음 층이 드러나는 구조였다.
+
+| 층 | 증상 | 원인 | 해결 |
+|---|---|---|---|
+| 1 스키마 | `Schema validation: missing table [admin_center_memberships]` → Exited | prod 프로필 `ddl-auto: validate` + 빈 DB + 마이그레이션 도구 부재 → 검증할 표가 존재하지 않음 | 서버 `.env`의 `SPRING_PROFILES_ACTIVE`를 dev(`ddl-auto: update`)로 변경 → 기동 시 표 17개 자동 생성. dev/prod 차이가 ddl-auto뿐이라 다른 부작용 없음을 확인 |
+| 2 JWT | `JWT_SECRET must be at least 32 bytes` → Exited | `.env`에는 JWT_SECRET(64자)이 있으나 compose backend `environment:`에 없어 컨테이너로 전달되지 않음 | compose에 JWT_SECRET·AUTH_COOKIE·CORS·OAUTH2 redirect 명시 추가 |
+| 3 OAuth | `Client id of registration 'google' must not be empty` → Exited | 2층 수정 때 GOOGLE/KAKAO를 빈 값으로 전달 → application.yml의 `${...:not-configured}` 기본값을 빈 문자열이 덮어씀 | compose에서 `${GOOGLE_CLIENT_ID:-not-configured}` 형태로 지정 → 값이 비면 대체값 사용 |
+
+- 배운 점 요약: `validate`는 표를 만들지 않는다(빈 DB엔 생성 수단이 별도 필요) · `.env`는
+  `${}` 치환용일 뿐 컨테이너엔 `environment:`에 나열한 변수만 주입된다 · 빈 문자열을 "설정된 값"
+  으로 넘기면 yaml 기본값을 덮으므로 `:-` 기본값으로 방어한다.
+- compose 수정을 별도 브랜치 `fix/backend-env-passthrough`(커밋 `ab4cc63`)로 올려 develop
+  머지(머지 커밋 `fe329b5`) → CI 배포. `Started SafyApplication in 12.9s`, backend `Up`,
+  Kuma `backend service went up!` 알림 수신. 이후 다른 배포(`aae79459`)에도 계속 정상 기동 —
+  수정이 git에 있어 배포마다 자동 반영됨을 실증(durability 확인).
+
+## 4. 안티노이즈 (Retries=3)
+- 배포 재시작 시 1분 남짓의 블립에도 알림이 발생하는 노이즈 발견(재시도 값이 0이었음).
+- 모니터 재시도를 3으로 상향(MONITORING.md §5.1 설계값과 일치). `docker compose restart backend`
+  로 검증한 결과, 재시작 블립은 DOWN으로 확정되지 않고 PENDING으로 걸러져 알림이 발생하지 않음.
+
+## 5. Kuma 이벤트 이력이 남긴 인시던트 타임라인 (증거)
+- 13:16 오프라인 `getaddrinfo ENOTFOUND backend`(컨테이너 부재) → 15:58 온라인(기동 성공)
+  → 16:23 약 1분 블립 `connect ECONNREFUSED`(배포 재시작, JVM 기동 중).
+- 메시지 구분: `ENOTFOUND`(이름 해석 실패 = 컨테이너가 없음) vs `ECONNREFUSED`(IP는 있으나
+  포트 미개방 = 기동 중). 에러 문구만으로 "컨테이너 부재"와 "기동 중"을 판별 가능.
+
+## 6. 오늘 배운 점
+- 기동 실패는 층으로 쌓일 수 있고 각 층은 앞을 고쳐야 다음이 보인다. 로그의 최하단 `Caused by`가
+  실제 원인이다.
+- 인프라가 풀 수 있는 층(스키마 프로필·env 배선)과 팀이 풀어야 할 층(실 OAuth 자격 증명·Flyway)을
+  구분해야 헛돌지 않는다.
+- 서버 수동 수정은 rsync 배포(`--delete`)에 덮여 원복되므로, git 커밋 → 배포로 굳혀야 유지된다.
+  배포 이미지 SHA가 바뀌어도 계속 기동되는 것으로 이를 실증했다.
+
+## 7. 후속 / 미결
+- **Flyway/Liquibase 도입(백엔드)**: 현재 dev/`update`는 스톱갭. 정식 스키마 관리 수단 필요.
+- **구글/카카오 실 OAuth 자격 증명(팀)**: 현재 `not-configured`라 소셜 로그인 미동작.
+- **seed 데이터 적재**: `backend/src/main/resources/db/seed/*.sql`(행정구역·관제센터·라우팅
+  제약) — 제보 라우팅 기능 검증에 필요.
+- **2주차 잔여 인프라**: nginx WebSocket 프록시 + 도메인 루트(Caddy) 연결로 end-to-end 성립.
+- FE–BE–AI–인프라 통합 인테그레이션 착수 시 위 항목들이 선행 조건이다.
