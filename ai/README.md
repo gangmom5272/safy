@@ -114,3 +114,17 @@ SAFY의 기본 사람 탐지 모델과 고밀도 군중 보완 후보를 비교�
 
 상세한 실행 결과와 적용 판단은
 [후보 군중 계수 모델 적용 가능성 검증](docs/candidate-model-validation.md)에서 확인할 수 있다.
+
+## YOLO와 후보 모델 계수 성능 비교
+
+동일한 평가 표본과 GPU 환경에서 YOLO11n과 P2PNet의 계수 정확도,
+초기화 시간, 추론 시간 및 GPU 메모리 사용량을 비교했습니다.
+
+- 일반적인 SAFY 장면의 MVP 기본 모델: YOLO11n
+- 고밀도 장면의 보완 후보: P2PNet
+- ShanghaiTech Part A 고밀도 표본: P2PNet의 계수 정확도가 우수
+- 일반·야간·저화질 대표 표본: YOLO의 정확도와 운영 효율이 우수
+- 현재 결정: YOLO11n을 기본 모델로 유지하고 P2PNet은 보완 후보로 유지
+
+상세한 평가 조건, 재현 방법, 장면별 결과와 모델 선택 근거는
+[YOLO와 후보 모델 계수 성능 비교](docs/model-count-benchmark.md)에서 확인할 수 있습니다.
