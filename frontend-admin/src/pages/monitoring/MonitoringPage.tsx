@@ -1,74 +1,100 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   connectionQualityLabels,
   connectionStatusLabels,
-  riskLevelLabels,
   webrtcConnections,
 } from '../../mocks/adminMockData'
 import type { RiskLevel, WebRTCConnection, WebRTCConnectionStatus } from '../../types/admin'
+import { AdminSection } from '../../components/admin/AdminSection'
+import { RiskBadge } from '../../components/admin/RiskBadge'
+import { getRiskLabel, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
+import { ROUTE_PATHS, createMonitoringDetailPath } from '../../router/paths'
+import { useAuth } from '../../auth/useAuth'
+import { sendAdminLiveMessage } from '../../services/adminLiveMessage'
 
 const allValue = 'all'
 const gridOptions = [2, 3, 5] as const
 
 interface MonitoringFilters {
-  region: string
   riskLevel: RiskLevel | typeof allValue
   connectionStatus: WebRTCConnectionStatus | typeof allValue
 }
 
 const initialFilters: MonitoringFilters = {
-  region: '',
   riskLevel: allValue,
   connectionStatus: allValue,
 }
 
 export function MonitoringPage() {
+  const navigate = useNavigate()
+  const { connectionId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const keywordFromUrl = searchParams.get('keyword')?.trim() ?? ''
   const [filters, setFilters] = useState<MonitoringFilters>(initialFilters)
   const [columns, setColumns] = useState<(typeof gridOptions)[number]>(2)
-  const [selectedConnection, setSelectedConnection] = useState<WebRTCConnection | null>(null)
+  const selectedConnection = connectionId
+    ? webrtcConnections.find((connection) => String(connection.id) === connectionId)
+    : undefined
+
+  const updateRegion = (region: string) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      const keyword = region.trim()
+      if (keyword) next.set('keyword', keyword)
+      else next.delete('keyword')
+      return next
+    }, { replace: true })
+  }
+
+  const resetFilters = () => {
+    setFilters(initialFilters)
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      next.delete('keyword')
+      return next
+    }, { replace: true })
+  }
 
   const filteredConnections = useMemo(
     () =>
       webrtcConnections.filter((connection) => {
         const matchesRegion =
-          filters.region.trim().length === 0 ||
-          connection.location.toLowerCase().includes(filters.region.trim().toLowerCase())
+          keywordFromUrl.length === 0 ||
+          connection.location.toLowerCase().includes(keywordFromUrl.toLowerCase())
         const matchesRisk =
-          filters.riskLevel === allValue || connection.riskLevel === filters.riskLevel
+          filters.riskLevel === allValue || matchesRiskLevel(connection.riskLevel, filters.riskLevel)
         const matchesStatus =
           filters.connectionStatus === allValue ||
           connection.connectionStatus === filters.connectionStatus
 
         return matchesRegion && matchesRisk && matchesStatus
       }),
-    [filters],
+    [filters, keywordFromUrl],
   )
 
   return (
     <section className="page-stack">
-      {selectedConnection ? (
+      {connectionId && selectedConnection ? (
         <MonitoringDetailView
           connection={selectedConnection}
-          onBack={() => setSelectedConnection(null)}
+          onBack={() => navigate(ROUTE_PATHS.MONITORING)}
         />
+      ) : connectionId ? (
+        <section className="admin-card empty-state">
+          <strong>해당 실시간 영상을 찾을 수 없습니다.</strong>
+          <button type="button" className="primary-button" onClick={() => navigate(ROUTE_PATHS.MONITORING)}>전체 영상 보기</button>
+        </section>
       ) : (
         <>
-          <article className="admin-card">
-            <div className="card-heading">
-              <div>
-                <h2>실시간 모니터링</h2>
-                <p>Mock WebRTC 연결 화면을 확인합니다.</p>
-              </div>
-            </div>
+          <AdminSection title="실시간 모니터링">
             <div className="filter-grid">
               <label>
                 지역
                 <input
                   type="search"
-                  value={filters.region}
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, region: event.target.value }))
-                  }
+                  value={keywordFromUrl}
+                  onChange={(event) => updateRegion(event.target.value)}
                   placeholder="지역 검색"
                 />
               </label>
@@ -84,7 +110,7 @@ export function MonitoringPage() {
                   }
                 >
                   <option value={allValue}>전체</option>
-                  {Object.entries(riskLevelLabels).map(([value, label]) => (
+                  {RISK_LEVEL_OPTIONS.map(({ value, label }) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
@@ -113,7 +139,7 @@ export function MonitoringPage() {
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => setFilters(initialFilters)}
+                onClick={resetFilters}
               >
                 초기화
               </button>
@@ -130,12 +156,12 @@ export function MonitoringPage() {
                 </button>
               ))}
             </div>
-          </article>
+          </AdminSection>
 
           <MonitoringGrid
             columns={columns}
             connections={filteredConnections}
-            onSelect={setSelectedConnection}
+            onSelect={(connection) => navigate(createMonitoringDetailPath(connection.id))}
           />
         </>
       )}
@@ -179,9 +205,7 @@ function MonitoringVideoCard({ connection, onSelect }: MonitoringVideoCardProps)
     <button type="button" className="video-card" onClick={onSelect}>
       {connection.connectionStatus === 'live' && <span className="live-badge">LIVE</span>}
       <strong>{connection.location || '정보 없음'}</strong>
-      <span className={`risk-badge risk-${connection.riskLevel}`}>
-        {riskLevelLabels[connection.riskLevel] ?? '정보 없음'}
-      </span>
+      <RiskBadge value={connection.riskLevel} />
       <span>연결 시간 {connection.connectedAt || '정보 없음'}</span>
       <span>AI 감지 {connection.aiDetected ? '감지됨' : '없음'}</span>
       <span>품질 {connectionQualityLabels[connection.quality] ?? '정보 없음'}</span>
@@ -195,6 +219,50 @@ interface MonitoringDetailViewProps {
 }
 
 function MonitoringDetailView({ connection, onBack }: MonitoringDetailViewProps) {
+  const { adminEmail } = useAuth()
+  const [message, setMessage] = useState('')
+  const [messageError, setMessageError] = useState('')
+  const [isSending, setIsSending] = useState(false)
+
+  const sendMessage = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (isSending) return
+
+    const trimmedMessage = message.trim()
+    if (!trimmedMessage) {
+      setMessageError('전달할 메시지를 입력해주세요.')
+      return
+    }
+    if (connection.connectionStatus !== 'live') {
+      setMessageError('현재 연결된 세션에서만 메시지를 보낼 수 있습니다.')
+      return
+    }
+    if (!adminEmail) {
+      setMessageError('관리자 정보를 확인할 수 없습니다.')
+      return
+    }
+
+    setIsSending(true)
+    setMessageError('')
+    try {
+      await sendAdminLiveMessage({
+        connectionId: connection.id,
+        reportId: connection.reportId,
+        adminEmail,
+        message: trimmedMessage,
+      })
+      setMessage('')
+    } catch (error) {
+      setMessageError(error instanceof Error ? error.message : '메시지 전송에 실패했습니다.')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const preventImeSubmit = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && event.nativeEvent.isComposing) event.preventDefault()
+  }
+
   return (
     <>
       <button type="button" className="secondary-button" onClick={onBack}>
@@ -208,11 +276,27 @@ function MonitoringDetailView({ connection, onBack }: MonitoringDetailViewProps)
             <strong>Mock WebRTC 영상</strong>
             <span>{connection.location || '정보 없음'}</span>
           </div>
-          <div className="detail-grid">
-            <div>
-              <span>LIVE 여부</span>
-              <strong>{connection.connectionStatus === 'live' ? 'LIVE' : 'LIVE 아님'}</strong>
-            </div>
+          <form className="live-message-form" onSubmit={sendMessage}>
+            <label className="sr-only" htmlFor={`live-message-${connection.id}`}>현장 사용자에게 보낼 메시지</label>
+            <input
+              id={`live-message-${connection.id}`}
+              type="text"
+              maxLength={200}
+              value={message}
+              onChange={(event) => {
+                setMessage(event.target.value)
+                if (messageError) setMessageError('')
+              }}
+              onKeyDown={preventImeSubmit}
+              placeholder="현장 사용자에게 전달할 메시지를 입력하세요."
+              aria-describedby={messageError ? 'live-message-error' : undefined}
+            />
+            <button type="submit" className="primary-button" disabled={isSending || connection.connectionStatus !== 'live'}>
+              {isSending ? '전송 중...' : '전송'}
+            </button>
+          </form>
+          {messageError && <p id="live-message-error" className="live-message-error" role="alert">{messageError}</p>}
+          <div className="detail-grid detail-grid--two-columns">
             <div>
               <span>위치</span>
               <strong>{connection.location || '정보 없음'}</strong>
@@ -237,7 +321,7 @@ function MonitoringDetailView({ connection, onBack }: MonitoringDetailViewProps)
             </div>
             <div>
               <dt>위험도</dt>
-              <dd>{riskLevelLabels[connection.riskLevel] ?? '정보 없음'}</dd>
+              <dd>{getRiskLabel(connection.riskLevel)}</dd>
             </div>
             <div>
               <dt>위험 점수</dt>

@@ -44,6 +44,7 @@ export const router = createBrowserRouter(
             { path: 'reports', element: <ReportListPage /> },
             { path: 'reports/:reportId', element: <ReportDetailPage /> },
             { path: 'monitoring', element: <MonitoringPage /> },
+            { path: 'monitoring/:connectionId', element: <MonitoringPage /> },
             { path: 'risk-map', element: <RiskMapPage /> },
             { path: 'settings', element: <SystemSettingsPage /> },
             { path: '*', element: <NotFoundPage /> },

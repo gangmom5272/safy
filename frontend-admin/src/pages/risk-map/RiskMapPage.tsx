@@ -2,11 +2,12 @@ import { useState } from 'react'
 import {
   adminReports,
   dashboardStats,
-  riskLevelLabels,
   riskMarkers,
   webrtcConnections,
 } from '../../mocks/adminMockData'
 import type { RiskLevel } from '../../types/admin'
+import { AdminSection } from '../../components/admin/AdminSection'
+import { getRiskConfig, matchesRiskLevel, RISK_LEVEL_CONFIG, RISK_LEVEL_OPTIONS, RISK_LEVEL_ORDER } from '../../utils/adminRisk'
 
 const allValue = 'all'
 const mapLayers = ['Heatmap', 'CCTV', 'WebRTC', '제보', '위험구역'] as const
@@ -34,18 +35,13 @@ export function RiskMapPage() {
     )
   }
 
+  const filteredMarkers = riskMarkers.filter((marker) => (
+    riskLevel === allValue || matchesRiskLevel(marker.riskLevel, riskLevel)
+  ))
+
   return (
     <section className="page-stack">
-      <article className="admin-card">
-        <div className="card-heading">
-          <div>
-            <h2>위험도 지도</h2>
-            <p>지도 SDK 없이 위험 지역과 레이어 상태를 확인합니다.</p>
-          </div>
-          <button type="button" className="secondary-button">
-            새로고침
-          </button>
-        </div>
+      <AdminSection title="위험도 지도" action={<button type="button" className="secondary-button">새로고침</button>}>
         <div className="filter-grid">
           <label>
             지역 검색
@@ -71,7 +67,7 @@ export function RiskMapPage() {
               onChange={(event) => setRiskLevel(event.target.value as RiskLevel | typeof allValue)}
             >
               <option value={allValue}>전체</option>
-              {Object.entries(riskLevelLabels).map(([value, label]) => (
+              {RISK_LEVEL_OPTIONS.map(({ value, label }) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -104,7 +100,7 @@ export function RiskMapPage() {
             </label>
           ))}
         </fieldset>
-      </article>
+      </AdminSection>
 
       <div className="risk-map-layout">
         <article className="admin-card">
@@ -112,15 +108,23 @@ export function RiskMapPage() {
             <div className="active-layer-list">
               활성 레이어: {activeLayers.length > 0 ? activeLayers.join(', ') : '없음'}
             </div>
-            {riskMarkers.map((marker) => (
+            {filteredMarkers.map((marker) => (
               <span
                 key={marker.id}
-                className={`map-marker risk-${marker.riskLevel}`}
-                style={{ top: `${marker.top}%`, left: `${marker.left}%` }}
+                className="map-marker"
+                style={{ top: `${marker.top}%`, left: `${marker.left}%`, backgroundColor: getRiskConfig(marker.riskLevel)?.markerColor ?? '#64748B', color: getRiskConfig(marker.riskLevel)?.markerTextColor ?? '#FFFFFF' }}
               >
                 {marker.location}
               </span>
             ))}
+            <div className="risk-map-legend" aria-label="위험도 범례">
+              {RISK_LEVEL_ORDER.map((level) => (
+                <span key={level}>
+                  <i style={{ backgroundColor: RISK_LEVEL_CONFIG[level].markerColor }} aria-hidden="true" />
+                  {RISK_LEVEL_CONFIG[level].label}
+                </span>
+              ))}
+            </div>
           </div>
         </article>
 
