@@ -1,16 +1,30 @@
 import { create } from 'zustand'
+import type { UserResponse } from '../pages/auth/authSession'
+
+export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated'
 
 type AuthState = {
-  isAuthenticated: boolean
-  login: () => void
-  logout: () => void
+  status: AuthStatus
+  user: UserResponse | null
+  sessionMessage: string | null
+  authenticate: (user: UserResponse) => void
+  clearAuthentication: (message?: string) => void
+  finishInitialization: () => void
+  clearSessionMessage: () => void
 }
 
-// Remove the obsolete write-only Mock flag created by the previous login flow.
-sessionStorage.removeItem('safy-mock-authenticated')
-
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false,
-  login: () => set({ isAuthenticated: true }),
-  logout: () => set({ isAuthenticated: false }),
+  status: 'initializing',
+  user: null,
+  sessionMessage: null,
+  authenticate: (user) => set({ status: 'authenticated', user, sessionMessage: null }),
+  clearAuthentication: (message) => set({
+    status: 'unauthenticated',
+    user: null,
+    sessionMessage: message ?? null,
+  }),
+  finishInitialization: () => set((state) => state.status === 'initializing'
+    ? { status: 'unauthenticated' }
+    : state),
+  clearSessionMessage: () => set({ sessionMessage: null }),
 }))

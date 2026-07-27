@@ -17,6 +17,8 @@ export interface ReportFormData {
   selectedTags: ReportTag[]
   content: string
   location: ReportLocation | null
+  reportId?: number
+  mediaFile?: File
 }
 
 export type LocationStatus =

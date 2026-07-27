@@ -22,6 +22,7 @@ import { NoticeDetailPage } from '../pages/app/support/NoticeDetailPage'
 import { SupportPage } from '../pages/app/support/SupportPage'
 import { LoginPage } from '../pages/auth/LoginPage'
 import { SignupPage } from '../pages/auth/SignupPage'
+import { OAuthCallbackPage } from '../pages/auth/OAuthCallbackPage'
 import { ProtectedApp } from './ProtectedApp'
 
 export const router = createBrowserRouter([
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
     element: <Navigate to="/login" replace />,
   },
   { path: '/login', element: <LoginPage /> },
+  { path: '/oauth/callback', element: <OAuthCallbackPage /> },
   { path: '/signup', element: <SignupPage /> },
   {
     path: '/app',
