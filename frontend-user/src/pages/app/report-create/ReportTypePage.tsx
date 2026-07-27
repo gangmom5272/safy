@@ -1,5 +1,6 @@
 import { type ChangeEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { PageHeader } from '../../../components/common/PageHeader'
 import { mockLocations } from '../../../mocks/locations'
 import { resolveLocation } from '../home/homeApi'
 import {
@@ -101,13 +102,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
 
   return (
     <section className="report-create-page report-type-page" aria-labelledby="report-create-title">
-      <header className="report-type-header">
-        <button type="button" aria-label="뒤로가기" onClick={() => navigate(-1)}>
-          <BackIcon />
-        </button>
-        <h1 id="report-create-title">제보하기</h1>
-        <span aria-hidden="true" />
-      </header>
+      <PageHeader title="제보하기" titleId="report-create-title" onBack={() => navigate(-1)} />
 
       <p className="report-type-intro">현장의 위험 상황을 실시간으로 공유해주세요.</p>
 
@@ -119,8 +114,8 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
         </div>
       </div>
 
-      <section className="report-create-card" aria-labelledby="report-method-title">
-        <h2 id="report-method-title">제보 방식 선택</h2>
+      <section className="report-form-section" aria-labelledby="report-method-title">
+        <h2 id="report-method-title" className="report-form-section-title">제보 방식 선택</h2>
         <div className="report-method-grid" role="radiogroup" aria-label="제보 방식">
           <button
             type="button"
@@ -152,9 +147,10 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
         </div>
       </section>
 
-      <section className="report-create-card report-location-card" aria-labelledby="report-location-title">
-        <h2 id="report-location-title">현재 위치</h2>
-        <div className="report-map-placeholder" aria-live="polite">
+      <section className="report-form-section" aria-labelledby="report-location-title">
+        <h2 id="report-location-title" className="report-form-section-title">현재 위치</h2>
+        <div className="report-location-card">
+          <div className="report-map-placeholder" aria-live="polite">
           <div className="report-mini-map" aria-hidden="true">
             <span className="report-map-park" />
             <span className="report-map-building building-one" />
@@ -178,13 +174,14 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
               </button>
             ) : null}
           </div>
+          </div>
         </div>
       </section>
 
-      <section className="report-create-card report-classification-card" aria-labelledby="report-classification-title">
-        <h2 id="report-classification-title">제보 분류</h2>
-        <div className="report-classification-group">
-          <h3 className="report-section-label">제보 카테고리</h3>
+      <section className="report-form-section" aria-labelledby="report-classification-title">
+        <h2 id="report-classification-title" className="report-form-section-title">제보 분류</h2>
+        <div className="report-classification-card">
+          <div className="report-classification-group">
           <div className="report-category-grid" role="radiogroup" aria-label="제보 카테고리">
             {REPORT_CATEGORIES.map((item) => (
               <button
@@ -202,8 +199,8 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
           </div>
         </div>
 
-        {category ? (
-          <div className="report-classification-group report-classification-group-separated">
+          {category ? (
+            <div className="report-classification-group report-classification-group-separated">
             <h3 className="report-section-label">세부 상황</h3>
             <p>현장 상황에 맞는 항목을 여러 개 선택해주세요.</p>
             <div className="report-tag-grid" aria-label="세부 상황">
@@ -223,30 +220,32 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
                 )
               })}
             </div>
-          </div>
-        ) : null}
+            </div>
+          ) : null}
+        </div>
       </section>
 
-      <section className="report-create-card report-content-card" aria-labelledby="report-content-title">
-        <h2 id="report-content-title">제보 내용</h2>
-        <p>현재 현장 상황을 구체적으로 작성해주세요.</p>
-        <textarea
+      <section className="report-form-section" aria-labelledby="report-content-title">
+        <h2 id="report-content-title" className="report-form-section-title">제보 내용</h2>
+        <div className="report-content-card">
+          <textarea
           className="report-content-textarea"
           value={content}
           maxLength={REPORT_CONTENT_MAX_LENGTH}
           rows={5}
           aria-describedby="report-content-guide report-content-count"
           aria-invalid={contentTouched && !isContentValid}
-          placeholder="예: 2번 출구 앞에 사람이 몰려 이동하기 어렵습니다."
+          placeholder="현장 상황을 구체적으로 작성해주세요."
           onChange={handleContentChange}
         />
-        <div className="report-content-meta">
-          <p id="report-content-guide" className={contentTouched && !isContentValid ? 'report-error-text' : 'report-create-muted'}>
-            {!isContentValid ? contentErrorMessage : '제보 내용이 입력되었습니다.'}
-          </p>
-          <span id="report-content-count" className="report-content-count">
-            {content.length} / {REPORT_CONTENT_MAX_LENGTH}
-          </span>
+          <div className="report-content-meta">
+            <p id="report-content-guide" className={contentTouched && !isContentValid ? 'report-error-text' : 'report-create-muted'}>
+              {!isContentValid ? contentErrorMessage : '제보 내용이 입력되었습니다.'}
+            </p>
+            <span id="report-content-count" className="report-content-count">
+              {content.length} / {REPORT_CONTENT_MAX_LENGTH}
+            </span>
+          </div>
         </div>
       </section>
 
@@ -270,14 +269,6 @@ function MethodIcon({ method }: { method: ReportMethod }) {
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <circle cx="8.5" cy="9" r="1.5" />
       <path d="M21 15l-5-5L5 20" />
-    </svg>
-  )
-}
-
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="m15 18-6-6 6-6" />
     </svg>
   )
 }

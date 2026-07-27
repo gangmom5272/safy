@@ -1,4 +1,5 @@
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { PageHeader } from '../../../components/common/PageHeader'
 import { mockLocations } from '../../../mocks/locations'
 import { resolveLocation } from '../home/homeApi'
 import { ConfirmReportModal } from './ConfirmReportModal'
@@ -472,13 +473,7 @@ export function MediaReportPage({
 
   return (
     <section className="report-create-page report-media-page" aria-labelledby="media-report-title">
-      <header className="report-media-header">
-        <button type="button" onClick={handleBack} aria-label="제보 방식 선택으로 돌아가기">
-          <MediaIcon name="back" />
-        </button>
-        <h1 id="media-report-title">사진 제보</h1>
-        <span aria-hidden="true" />
-      </header>
+      <PageHeader title="사진 제보" titleId="media-report-title" backLabel="제보 방식 선택으로 돌아가기" onBack={handleBack} />
       <p className="report-media-intro">카메라로 현장을 촬영하거나 갤러리에서 사진을 선택해주세요.</p>
 
       <section className="report-create-card" aria-labelledby="media-summary-title">

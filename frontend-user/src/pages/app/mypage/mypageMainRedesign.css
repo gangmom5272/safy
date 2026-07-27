@@ -4,41 +4,6 @@
   background: var(--color-background);
 }
 
-.mypage-header {
-  grid-template-columns: 44px 1fr 44px;
-  min-height: 56px;
-  background: var(--color-background);
-}
-
-.mypage-header.main {
-  grid-template-columns: 44px 1fr 44px;
-}
-
-.mypage-header h1,
-.mypage-header.main h1 {
-  color: #111827;
-  font-size: 20px;
-  text-align: center;
-}
-
-.mypage-header > button {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  border-radius: 14px;
-  color: #000000;
-  background: transparent;
-  cursor: pointer;
-}
-
-.mypage-header > button svg {
-  width: 24px;
-  height: 24px;
-}
-
 .mypage-message {
   margin: 0;
   padding: 10px 12px;
@@ -74,6 +39,34 @@
   font-size: 25px;
 }
 
+.profile-avatar-wrap {
+  position: relative;
+  width: 70px;
+  height: 70px;
+}
+
+.profile-edit-button {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  color: #004aad;
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(17, 24, 39, .2);
+  cursor: pointer;
+}
+
+.profile-edit-button svg {
+  width: 14px;
+  height: 14px;
+}
+
 .profile-details {
   min-width: 0;
 }
@@ -91,36 +84,6 @@
   font-size: 13px;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.profile-card .profile-details > span {
-  display: inline-flex;
-  margin-top: 8px;
-  padding: 5px 9px;
-  border-radius: 999px;
-  color: #004aad;
-  background: #eaf1ff;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.mypage-shell .profile-card .profile-details > span {
-  color: #004aad !important;
-  background: #eaf1ff !important;
-}
-
-.profile-card .profile-intro {
-  grid-column: 1 / -1;
-  display: block;
-  margin: 2px 0 0;
-  padding: 11px 14px;
-  border: 0;
-  border-radius: 999px;
-  color: #004aad;
-  background: #eef4ff;
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
 }
 
 .mypage-card {
@@ -142,8 +105,8 @@
 }
 
 .report-status-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .report-status-grid span,
@@ -159,21 +122,16 @@
 }
 
 .mypage-shell .report-status-grid span:nth-child(1) {
-  color: #a86200;
-  background: #fff7e8;
-}
-
-.mypage-shell .report-status-grid span:nth-child(2) {
   color: #004aad;
   background: #eef4ff;
 }
 
-.mypage-shell .report-status-grid span:nth-child(3) {
+.mypage-shell .report-status-grid span:nth-child(2) {
   color: #16835d;
   background: #ecf8f2;
 }
 
-.mypage-shell .report-status-grid span:nth-child(4) {
+.mypage-shell .report-status-grid span:nth-child(3) {
   color: #d14343;
   background: #fff0f0;
 }
@@ -248,7 +206,6 @@
   cursor: pointer;
 }
 
-.mypage-header > button:focus-visible,
 .mypage-title button:focus-visible,
 .mypage-menu button:focus-visible,
 .logout-button:focus-visible {
@@ -300,12 +257,6 @@
 
 .setting-toggle.on {
   background: #004aad;
-}
-
-.support-header h1,
-.account-header h1,
-.settings-header h1 {
-  color: #000000;
 }
 
 .mypage-shell .support-menu button > span,
@@ -374,6 +325,565 @@
   cursor: not-allowed;
 }
 
+.profile-edit-form {
+  gap: 16px;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(17, 24, 39, .045);
+}
+
+.profile-edit-form .profile-edit-avatar {
+  gap: 7px;
+  margin-bottom: 2px;
+}
+
+.profile-edit-form .profile-edit-avatar .avatar {
+  width: 88px;
+  height: 88px;
+  font-size: 28px;
+}
+
+.profile-edit-form .profile-photo-button {
+  display: inline-flex;
+  min-height: 34px;
+  padding: 0 13px;
+  align-items: center;
+  border: 1px solid #c8d8ef;
+  border-radius: 999px;
+  color: #004aad;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-photo-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.profile-edit-form label {
+  gap: 7px;
+  color: #374151;
+  font-size: 13px;
+}
+
+.profile-edit-form .profile-readonly-field input,
+.profile-edit-form .profile-email-field input {
+  height: 50px;
+  padding: 0 14px;
+  border: 1px solid #d8e0eb;
+  border-radius: 13px;
+  color: #111827;
+  background: #fff;
+  font-size: 14px;
+}
+
+.profile-email-field {
+  display: grid;
+  gap: 7px;
+}
+
+.profile-readonly-field {
+  display: grid;
+  gap: 7px;
+}
+
+.profile-readonly-field > label {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-readonly-field > div {
+  position: relative;
+}
+
+.profile-edit-form .profile-readonly-field input {
+  padding-right: 44px;
+  color: #4b5563;
+  background: #f5f7fa;
+  cursor: default;
+}
+
+.profile-readonly-field > div > span {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: grid;
+  color: #9ca3af;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.profile-readonly-field svg {
+  width: 16px;
+  height: 16px;
+}
+
+.profile-readonly-field > small {
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.profile-email-field > label {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-email-field > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 82px;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-email-field > div > button {
+  height: 50px;
+  border: 1px solid #004aad;
+  border-radius: 13px;
+  color: #004aad;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-email-field > div > button:disabled {
+  border-color: #d1d5db;
+  color: #9ca3af;
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.profile-email-field > p {
+  margin: 0;
+  color: #047857;
+  font-size: 12px;
+}
+
+.profile-field-error {
+  color: #d92d20;
+  font-size: 12px;
+}
+
+.profile-edit-form > button {
+  min-height: 52px;
+  margin-top: 8px;
+  border-radius: 14px;
+}
+
+.profile-edit-form > button:disabled {
+  background: #b9cbed;
+}
+
+.account-menu {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #e5eaf2;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 7px 24px rgba(17, 24, 39, .055);
+}
+
+.account-menu button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-height: 58px;
+  padding: 0 18px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid #edf0f4;
+  color: #111827;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-menu button:last-child {
+  border-bottom: 0;
+}
+
+.account-menu button:hover {
+  background: #fafcff;
+}
+
+.account-menu small {
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu b {
+  color: #9ca3af;
+  font-size: 21px;
+  font-weight: 400;
+}
+
+.account-withdrawal {
+  min-height: 48px;
+  border: 1px solid #f1b5b5;
+  border-radius: 16px;
+  color: #d92d20;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  padding: 24px;
+  place-items: center;
+  background: rgba(17, 24, 39, .45);
+}
+
+.account-modal {
+  display: grid;
+  width: min(100%, 340px);
+  gap: 12px;
+  padding: 22px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(17, 24, 39, .2);
+}
+
+.account-modal h2,
+.account-modal p {
+  margin: 0;
+}
+
+.account-modal h2 {
+  font-size: 19px;
+}
+
+.account-modal p {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.account-modal > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.account-modal button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 13px;
+  color: #374151;
+  background: #f3f4f6;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-modal button.danger {
+  color: #fff;
+  background: #d92d20;
+}
+
+.report-filters {
+  display: grid;
+  gap: 12px;
+  overflow: visible;
+}
+
+.report-status-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #eef2f7;
+}
+
+.report-status-filters button {
+  min-height: 38px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  color: #6b7280;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.report-status-filters button.active {
+  color: #004aad;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(17, 24, 39, .08);
+  font-weight: 600;
+}
+
+.report-filter-toolbar {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  overflow: visible;
+}
+
+.report-filter-toolbar > span {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.report-date-filter {
+  position: relative;
+  width: 136px;
+}
+
+.report-date-filter__trigger {
+  display: flex;
+  width: 100%;
+  height: 40px;
+  padding: 0 13px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #d9e1ec;
+  border-radius: 12px;
+  color: #374151;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.report-date-filter__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  width: 168px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border: 1px solid #d9e1ec;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(17, 24, 39, .1);
+}
+
+.report-date-filter__menu button {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #4b5563;
+  background: #fff;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.report-date-filter__menu button.active {
+  color: #004aad;
+  background: rgba(0, 74, 173, .08);
+  font-weight: 600;
+}
+
+.report-custom-dates {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 7px;
+}
+
+.report-custom-dates label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.report-custom-dates input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 8px;
+  border: 1px solid #d9e1ec;
+  border-radius: 12px;
+  color: #374151;
+  background: #fff;
+  font-size: 12px;
+}
+
+.report-custom-dates > span {
+  padding-bottom: 11px;
+  color: #9ca3af;
+}
+
+.my-report-list {
+  gap: 14px;
+}
+
+.mypage-shell .my-report-card {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  min-height: 112px;
+  overflow: hidden;
+  padding: 0;
+  gap: 0;
+  border: 1px solid #e5eaf2;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(17, 24, 39, .05);
+}
+
+.mypage-shell .report-thumb {
+  position: relative;
+  display: grid;
+  width: 104px;
+  height: 100%;
+  min-height: 112px;
+  place-items: center;
+  overflow: hidden;
+  border-right: 1px solid #e5eaf2;
+  color: #9ca3af;
+  background: #eef2f6;
+}
+
+.report-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.report-image-placeholder {
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.report-card-status {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.report-card-relative-date {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #6b7280;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 2px 8px rgba(17, 24, 39, .1);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.report-card-status--review {
+  color: #004aad;
+  background: rgba(232, 241, 255, .94);
+}
+
+.report-card-status--completed {
+  color: #047857;
+  background: rgba(220, 252, 231, .94);
+}
+
+.report-card-status--rejected {
+  color: #b42318;
+  background: rgba(254, 228, 226, .94);
+}
+
+.mypage-shell .report-card-body {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  padding: 14px 16px;
+  align-content: center;
+  text-align: left;
+}
+
+.report-card-body small {
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-card-body strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.report-card-body time {
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.report-status-filters button:focus-visible,
+.report-date-filter button:focus-visible,
+.report-custom-dates input:focus-visible,
+.my-report-card:focus-visible {
+  outline: 3px solid rgba(0, 74, 173, .25);
+  outline-offset: 2px;
+}
+
+@media (max-width: 380px) {
+  .mypage-shell .my-report-card {
+    grid-template-columns: 94px minmax(0, 1fr);
+  }
+
+  .mypage-shell .report-thumb {
+    width: 94px;
+  }
+
+}
+
+.profile-edit-button:focus-visible,
+.account-menu button:focus-visible,
+.account-withdrawal:focus-visible {
+  outline: 3px solid rgba(0, 74, 173, .25);
+  outline-offset: 2px;
+}
+
 @media (max-width: 360px) {
   .profile-card {
     grid-template-columns: 60px minmax(0, 1fr);
@@ -381,6 +891,11 @@
   }
 
   .profile-card .avatar {
+    width: 60px;
+    height: 60px;
+  }
+
+  .profile-avatar-wrap {
     width: 60px;
     height: 60px;
   }
