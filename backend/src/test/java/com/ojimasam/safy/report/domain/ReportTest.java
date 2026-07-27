@@ -9,9 +9,12 @@ import org.junit.jupiter.api.Test;
 
 class ReportTest {
 	@Test
-	void createsTextReportInReceivedState() {
-		Report report = Report.createText(
+	void createsImageReportInReceivedState() {
+		Report report = Report.create(
 				1L,
+				ReportType.IMAGE,
+				ReportCategory.CROWD_CONGESTION,
+				ReportSubcategory.EXIT_CONGESTION,
 				"출구 주변이 혼잡합니다.",
 				new BigDecimal("37.5665000"),
 				new BigDecimal("126.9780000"),
@@ -19,7 +22,9 @@ class ReportTest {
 		);
 
 		assertThat(report.getReporterId()).isEqualTo(1L);
-		assertThat(report.getType()).isEqualTo(ReportType.TEXT);
+		assertThat(report.getType()).isEqualTo(ReportType.IMAGE);
+		assertThat(report.getCategory()).isEqualTo(ReportCategory.CROWD_CONGESTION);
+		assertThat(report.getSubcategory()).isEqualTo(ReportSubcategory.EXIT_CONGESTION);
 		assertThat(report.getDescription()).isEqualTo("출구 주변이 혼잡합니다.");
 		assertThat(report.getLatitude()).isEqualByComparingTo("37.5665000");
 		assertThat(report.getLongitude()).isEqualByComparingTo("126.9780000");
@@ -29,22 +34,28 @@ class ReportTest {
 	}
 
 	@Test
-	void rejectsBlankTextContent() {
-		assertThatThrownBy(() -> Report.createText(
+	void rejectsBlankDescription() {
+		assertThatThrownBy(() -> Report.create(
 				1L,
+				ReportType.LIVE,
+				ReportCategory.CROWD_CONGESTION,
+				ReportSubcategory.MOVEMENT_DIFFICULTY,
 				"  ",
 				new BigDecimal("37.5665000"),
 				new BigDecimal("126.9780000"),
 				null
 		))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("텍스트 제보 내용은 비어 있을 수 없습니다.");
+				.hasMessage("제보 내용은 비어 있을 수 없습니다.");
 	}
 
 	@Test
 	void rejectsMissingReporterOrCoordinates() {
-		assertThatThrownBy(() -> Report.createText(
+		assertThatThrownBy(() -> Report.create(
 				null,
+				ReportType.IMAGE,
+				ReportCategory.CROWD_CONGESTION,
+				ReportSubcategory.CROWD_INCREASING,
 				"혼잡합니다.",
 				new BigDecimal("37.5665000"),
 				new BigDecimal("126.9780000"),
@@ -53,8 +64,11 @@ class ReportTest {
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessage("제보자 ID는 필수입니다.");
 
-		assertThatThrownBy(() -> Report.createText(
+		assertThatThrownBy(() -> Report.create(
 				1L,
+				ReportType.IMAGE,
+				ReportCategory.CROWD_CONGESTION,
+				ReportSubcategory.CROWD_INCREASING,
 				"혼잡합니다.",
 				null,
 				new BigDecimal("126.9780000"),
@@ -66,7 +80,9 @@ class ReportTest {
 
 	@Test
 	void cancelsReceivedReportAndRejectsRepeatedCancellation() {
-		Report report = Report.createText(1L, "제보 내용", new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+		Report report = Report.create(1L, ReportType.IMAGE,
+				ReportCategory.FACILITY_ROAD, ReportSubcategory.ROAD_DAMAGE, "제보 내용",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
 
 		report.cancel();
 
@@ -74,5 +90,14 @@ class ReportTest {
 			assertThatThrownBy(report::cancel)
 					.isInstanceOf(IllegalStateException.class)
 					.hasMessage("접수 또는 배정 상태의 제보만 취소할 수 있습니다.");
+	}
+
+	@Test
+	void rejectsSubcategoryFromAnotherCategory() {
+		assertThatThrownBy(() -> Report.create(
+				1L, ReportType.LIVE, ReportCategory.ACCIDENT_RISK, ReportSubcategory.EXIT_CONGESTION,
+				"사고 현장", new BigDecimal("37.5"), new BigDecimal("127.0"), null
+		)).isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("제보 카테고리와 세부 상황이 일치하지 않습니다.");
 	}
 }

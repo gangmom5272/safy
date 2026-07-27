@@ -39,6 +39,7 @@ public class ReportQueryService {
 	private final MediaObjectStorage mediaObjectStorage;
 	private final ReportCenterRouteRepository routeRepository;
 	private final ReportStatusHistoryRepository historyRepository;
+	private final OperatorReportAccessService operatorAccessService;
 	private final Clock clock;
 
 	@Autowired
@@ -47,18 +48,21 @@ public class ReportQueryService {
 			ReportImageRepository images,
 			MediaObjectStorage storage,
 			ReportCenterRouteRepository routeRepository,
-			ReportStatusHistoryRepository historyRepository
+			ReportStatusHistoryRepository historyRepository,
+			OperatorReportAccessService operatorAccessService
 	) {
-		this(reports, images, storage, routeRepository, historyRepository, Clock.systemUTC());
+		this(reports, images, storage, routeRepository, historyRepository, operatorAccessService, Clock.systemUTC());
 	}
 
 	ReportQueryService(ReportRepository reports, ReportImageRepository images, MediaObjectStorage storage,
-			ReportCenterRouteRepository routeRepository, ReportStatusHistoryRepository historyRepository, Clock clock) {
+			ReportCenterRouteRepository routeRepository, ReportStatusHistoryRepository historyRepository,
+			OperatorReportAccessService operatorAccessService, Clock clock) {
 		this.reportRepository = reports;
 		this.reportImageRepository = images;
 		this.mediaObjectStorage = storage;
 		this.routeRepository = routeRepository;
 		this.historyRepository = historyRepository;
+		this.operatorAccessService = operatorAccessService;
 		this.clock = clock;
 	}
 
@@ -66,6 +70,19 @@ public class ReportQueryService {
 	public ReportDetailView getMine(Long reporterId, Long reportId) {
 		Report report = reportRepository.findByIdAndReporterId(reportId, reporterId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+		return detail(report);
+	}
+
+	@Transactional(readOnly = true)
+	public ReportDetailView getForOperator(Long operatorId, Long reportId) {
+		operatorAccessService.requireAccess(operatorId, reportId);
+		Report report = reportRepository.findOneById(reportId)
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+		return detail(report);
+	}
+
+	private ReportDetailView detail(Report report) {
+		Long reportId = report.getId();
 		Instant expiresAt = clock.instant().plus(PREVIEW_URL_EXPIRY);
 		List<ReportImageView> images = reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(reportId)
 				.stream().map(image -> toImageView(image, expiresAt)).toList();
@@ -79,7 +96,8 @@ public class ReportQueryService {
 				))
 				.orElse(null);
 		return new ReportDetailView(
-				report.getId(), report.getType(), report.getDescription(), report.getLatitude(), report.getLongitude(),
+				report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
+				report.getDescription(), report.getLatitude(), report.getLongitude(),
 				report.getAddress(), report.getStatus(), report.getRoutingStatus(),
 				area == null ? null : area.getId(), area == null ? null : area.getCode(), area == null ? null : area.getName(),
 				assignedCenter,
@@ -117,7 +135,8 @@ public class ReportQueryService {
 			ReportImageView representative = images.isEmpty() ? null : toImageView(images.getFirst(), expiresAt);
 			AdministrativeArea area = report.getAdministrativeArea();
 			return new ReportListItemView(
-					report.getId(), report.getType(), report.getDescription(), report.getAddress(), report.getStatus(),
+					report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
+					report.getDescription(), report.getAddress(), report.getStatus(),
 					report.getRoutingStatus(), area == null ? null : area.getName(), report.getReportedAt(),
 					images.size(), representative
 			);

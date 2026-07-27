@@ -6,6 +6,8 @@ import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.ReportStatus;
+import com.ojimasam.safy.report.domain.ReportCategory;
+import com.ojimasam.safy.report.domain.ReportSubcategory;
 
 public record OperatorAssignmentResponse(
 		Long assignmentId,
@@ -13,6 +15,8 @@ public record OperatorAssignmentResponse(
 		ReportOperatorAssignmentStatus assignmentStatus,
 		ReportStatus reportStatus,
 		String reportType,
+		ReportCategory category,
+		ReportSubcategory subcategory,
 		String description,
 		String address,
 		String administrativeAreaName,
@@ -33,6 +37,8 @@ public record OperatorAssignmentResponse(
 				assignment.getStatus(),
 				report.getStatus(),
 				report.getType().name(),
+				report.getCategory(),
+				report.getSubcategory(),
 				report.getDescription(),
 				report.getAddress(),
 				report.getAdministrativeArea() == null ? null : report.getAdministrativeArea().getName(),

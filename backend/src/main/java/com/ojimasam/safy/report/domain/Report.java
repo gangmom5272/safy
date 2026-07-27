@@ -39,6 +39,14 @@ public class Report extends BaseEntity {
 	@Column(name = "report_type", nullable = false, length = 20)
 	private ReportType type;
 
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 30)
+	private ReportCategory category;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 40)
+	private ReportSubcategory subcategory;
+
 	@Column(nullable = false, columnDefinition = "text")
 	private String description;
 
@@ -84,6 +92,8 @@ public class Report extends BaseEntity {
 	private Report(
 			Long reporterId,
 			ReportType type,
+			ReportCategory category,
+			ReportSubcategory subcategory,
 			String description,
 			BigDecimal latitude,
 			BigDecimal longitude,
@@ -93,6 +103,8 @@ public class Report extends BaseEntity {
 	) {
 		this.reporterId = reporterId;
 		this.type = type;
+		this.category = category;
+		this.subcategory = subcategory;
 		this.description = description;
 		this.latitude = latitude;
 		this.longitude = longitude;
@@ -103,55 +115,25 @@ public class Report extends BaseEntity {
 		this.nextRoutingAt = reportedAt;
 	}
 
-	public static Report createText(
+	public static Report create(
 			Long reporterId,
-			String description,
-			BigDecimal latitude,
-			BigDecimal longitude,
-			String address
-	) {
-		if (reporterId == null) {
-			throw new IllegalArgumentException("제보자 ID는 필수입니다.");
-		}
-		if (description == null || description.isBlank()) {
-			throw new IllegalArgumentException("텍스트 제보 내용은 비어 있을 수 없습니다.");
-		}
-		if (latitude == null || longitude == null) {
-			throw new IllegalArgumentException("위도와 경도는 필수입니다.");
-		}
-		if (latitude.compareTo(new BigDecimal("-90")) < 0
-				|| latitude.compareTo(new BigDecimal("90")) > 0) {
-			throw new IllegalArgumentException("위도는 -90 이상 90 이하여야 합니다.");
-		}
-		if (longitude.compareTo(new BigDecimal("-180")) < 0
-				|| longitude.compareTo(new BigDecimal("180")) > 0) {
-			throw new IllegalArgumentException("경도는 -180 이상 180 이하여야 합니다.");
-		}
-
-		return new Report(
-				reporterId,
-				ReportType.TEXT,
-				description,
-				latitude,
-				longitude,
-				address,
-				ReportStatus.RECEIVED,
-				Instant.now()
-		);
-	}
-
-	public static Report createImage(
-			Long reporterId,
+			ReportType type,
+			ReportCategory category,
+			ReportSubcategory subcategory,
 			String description,
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String address
 	) {
 		validateCommon(reporterId, description, latitude, longitude);
+		if (type == null) throw new IllegalArgumentException("제보 유형은 필수입니다.");
+		validateCategory(category, subcategory);
 		return new Report(
 				reporterId,
-				ReportType.IMAGE,
-				description,
+				type,
+				category,
+				subcategory,
+				description.strip(),
 				latitude,
 				longitude,
 				address,
@@ -160,31 +142,26 @@ public class Report extends BaseEntity {
 		);
 	}
 
-	public static Report createLive(
-			Long reporterId,
-			String description,
-			BigDecimal latitude,
-			BigDecimal longitude,
-			String address
-	) {
-		if (reporterId == null) throw new IllegalArgumentException("제보자 ID는 필수입니다.");
-		validateCoordinates(latitude, longitude);
-		return new Report(
-				reporterId,
-				ReportType.LIVE,
-				description == null ? "" : description.strip(),
-				latitude,
-				longitude,
-				address,
-				ReportStatus.RECEIVED,
-				Instant.now()
-		);
+	private static void validateCategory(ReportCategory category, ReportSubcategory subcategory) {
+		if (category == null) throw new IllegalArgumentException("제보 카테고리는 필수입니다.");
+		if (subcategory == null) throw new IllegalArgumentException("제보 세부 상황은 필수입니다.");
+		if (!subcategory.belongsTo(category)) {
+			throw new IllegalArgumentException("제보 카테고리와 세부 상황이 일치하지 않습니다.");
+		}
 	}
 
 	private static void validateCommon(Long reporterId, String description, BigDecimal latitude, BigDecimal longitude) {
 		if (reporterId == null) throw new IllegalArgumentException("제보자 ID는 필수입니다.");
 		if (description == null || description.isBlank()) throw new IllegalArgumentException("제보 내용은 비어 있을 수 없습니다.");
 		validateCoordinates(latitude, longitude);
+	}
+
+	public void requireMediaCreation(Long userId, ReportType expectedType) {
+		if (!reporterId.equals(userId)) throw new IllegalArgumentException("본인의 제보만 미디어를 연결할 수 있습니다.");
+		if (type != expectedType) throw new IllegalStateException("제보 유형에 맞지 않는 미디어 요청입니다.");
+		if (status == ReportStatus.CANCELLED || status == ReportStatus.CLOSED || status == ReportStatus.REJECTED) {
+			throw new IllegalStateException("종료된 제보에는 미디어를 연결할 수 없습니다.");
+		}
 	}
 
 	private static void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
@@ -284,6 +261,14 @@ public class Report extends BaseEntity {
 
 	public ReportType getType() {
 		return type;
+	}
+
+	public ReportCategory getCategory() {
+		return category;
+	}
+
+	public ReportSubcategory getSubcategory() {
+		return subcategory;
 	}
 
 	public String getDescription() {

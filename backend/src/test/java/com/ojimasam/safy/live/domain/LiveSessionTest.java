@@ -49,6 +49,29 @@ class LiveSessionTest {
 				.isInstanceOf(LiveSessionAccessDeniedException.class);
 	}
 
+	@Test
+	void retriesCreationFailureWithSameRoom() {
+		LiveSession session = session();
+		String roomName = session.getRoomName();
+		session.markFailed("temporary failure", now.plusSeconds(1));
+
+		session.retryCreation(now.plusSeconds(2), Duration.ofMinutes(30));
+
+		assertThat(session.getStatus()).isEqualTo(LiveSessionStatus.CREATED);
+		assertThat(session.getRoomName()).isEqualTo(roomName);
+		assertThat(session.getExpiresAt()).isEqualTo(now.plusSeconds(2).plus(Duration.ofMinutes(30)));
+	}
+
+	@Test
+	void doesNotRetryFailureAfterStreamingStarted() {
+		LiveSession session = session();
+		session.activate(now.plusSeconds(1));
+		session.markFailed("close failure", now.plusSeconds(2));
+
+		assertThatThrownBy(() -> session.retryCreation(now.plusSeconds(3), Duration.ofMinutes(30)))
+				.isInstanceOf(IllegalStateException.class);
+	}
+
 	private LiveSession session() {
 		return LiveSession.create(10L, 1L, now, Duration.ofMinutes(30));
 	}

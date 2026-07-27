@@ -103,6 +103,19 @@ public class LiveSession extends BaseEntity {
 		failureReason = reason == null ? null : reason.substring(0, Math.min(reason.length(), 500));
 	}
 
+	public void retryCreation(Instant now, Duration ttl) {
+		if (status != LiveSessionStatus.FAILED || startedAt != null) {
+			throw new IllegalStateException("생성에 실패한 라이브 세션만 재시도할 수 있습니다.");
+		}
+		if (now == null || ttl == null || ttl.isZero() || ttl.isNegative()) {
+			throw new IllegalArgumentException("세션 유효 시간은 0보다 커야 합니다.");
+		}
+		status = LiveSessionStatus.CREATED;
+		endedAt = null;
+		expiresAt = now.plus(ttl);
+		failureReason = null;
+	}
+
 	public UUID getId() { return id; }
 	public Long getReportId() { return reportId; }
 	public Long getReporterId() { return reporterId; }

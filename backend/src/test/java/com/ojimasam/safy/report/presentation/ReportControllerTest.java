@@ -36,11 +36,9 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import com.ojimasam.safy.report.application.CreateImageReportCommand;
-import com.ojimasam.safy.report.application.CreateImageReportService;
+import com.ojimasam.safy.report.application.CreateReportCommand;
 import com.ojimasam.safy.report.application.CreateReportResult;
-import com.ojimasam.safy.report.application.CreateTextReportCommand;
-import com.ojimasam.safy.report.application.CreateTextReportService;
+import com.ojimasam.safy.report.application.CreateReportService;
 import com.ojimasam.safy.report.application.ReportDetailView;
 import com.ojimasam.safy.report.application.ReportListItemView;
 import com.ojimasam.safy.report.application.ReportQueryService;
@@ -48,6 +46,8 @@ import com.ojimasam.safy.report.application.CancelReportService;
 import com.ojimasam.safy.common.config.CorsProperties;
 import com.ojimasam.safy.report.domain.ReportStatus;
 import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.ReportCategory;
+import com.ojimasam.safy.report.domain.ReportSubcategory;
 import com.ojimasam.safy.report.domain.ReportRoutingStatus;
 
 @WebMvcTest(
@@ -65,8 +65,7 @@ import com.ojimasam.safy.report.domain.ReportRoutingStatus;
 @Import(ReportControllerTest.SecurityArgumentResolverConfig.class)
 class ReportControllerTest {
 	@Autowired MockMvc mockMvc;
-	@MockitoBean CreateTextReportService createTextReportService;
-	@MockitoBean CreateImageReportService createImageReportService;
+	@MockitoBean CreateReportService createReportService;
 	@MockitoBean ReportQueryService reportQueryService;
 	@MockitoBean CancelReportService cancelReportService;
 
@@ -83,7 +82,8 @@ class ReportControllerTest {
 	void getsMyReportDetail() throws Exception {
 		Instant now = Instant.parse("2026-07-21T04:00:00Z");
 		when(reportQueryService.getMine(1L, 42L)).thenReturn(new ReportDetailView(
-				42L, ReportType.TEXT, "제보 내용", new BigDecimal("37.5"), new BigDecimal("127.0"),
+				42L, ReportType.IMAGE, ReportCategory.FLOOD_WEATHER, ReportSubcategory.ROAD_FLOODING,
+				"제보 내용", new BigDecimal("37.5"), new BigDecimal("127.0"),
 				"서울특별시 중구", ReportStatus.RECEIVED, ReportRoutingStatus.ROUTED,
 				2L, "1114000000", "중구", null, now, now, now, List.of()
 		));
@@ -99,7 +99,9 @@ class ReportControllerTest {
 	void getsMyReportList() throws Exception {
 		Instant now = Instant.parse("2026-07-21T04:00:00Z");
 		when(reportQueryService.getMyList(1L, 0, 20)).thenReturn(new PageImpl<>(List.of(
-				new ReportListItemView(42L, ReportType.TEXT, "제보 내용", "서울특별시 중구",
+				new ReportListItemView(42L, ReportType.LIVE,
+						ReportCategory.CROWD_CONGESTION, ReportSubcategory.CROWD_INCREASING,
+						"제보 내용", "서울특별시 중구",
 						ReportStatus.RECEIVED, ReportRoutingStatus.ROUTED, "중구", now, 0, null)
 		)));
 
@@ -110,26 +112,30 @@ class ReportControllerTest {
 	}
 
 	@Test
-	void createsTextReportFromJson() throws Exception {
-		when(createTextReportService.create(any(CreateTextReportCommand.class)))
-				.thenReturn(new CreateReportResult(42L, ReportType.TEXT, ReportStatus.RECEIVED, ReportRoutingStatus.PENDING,
+	void createsLiveReportFromJson() throws Exception {
+		when(createReportService.create(any(CreateReportCommand.class)))
+				.thenReturn(new CreateReportResult(42L, ReportType.LIVE,
+						ReportCategory.CROWD_CONGESTION, ReportSubcategory.EXIT_CONGESTION,
+						ReportStatus.RECEIVED, ReportRoutingStatus.PENDING,
 						Instant.parse("2026-07-21T01:00:00Z")));
 
 		mockMvc.perform(post("/api/v1/reports")
 						.contentType(MediaType.APPLICATION_JSON)
-						.content(textBody("TEXT", "출구 주변이 혼잡합니다."))
+						.content(reportBody("LIVE", "출구 주변이 혼잡합니다."))
 						.with(authenticatedUser(1L)))
 				.andExpect(status().isCreated())
 				.andExpect(header().string("Location", "/api/v1/reports/42"))
-				.andExpect(jsonPath("$.data.reportType").value("TEXT"));
+				.andExpect(jsonPath("$.data.reportType").value("LIVE"));
 
-		verify(createTextReportService).create(any(CreateTextReportCommand.class));
+		verify(createReportService).create(any(CreateReportCommand.class));
 	}
 
 	@Test
-	void createsImageReportFromMediaAssetIds() throws Exception {
-		when(createImageReportService.create(any(CreateImageReportCommand.class)))
-				.thenReturn(new CreateReportResult(43L, ReportType.IMAGE, ReportStatus.RECEIVED, ReportRoutingStatus.PENDING,
+	void createsImageReportWithoutMediaAssets() throws Exception {
+		when(createReportService.create(any(CreateReportCommand.class)))
+				.thenReturn(new CreateReportResult(43L, ReportType.IMAGE,
+						ReportCategory.FLOOD_WEATHER, ReportSubcategory.ROAD_FLOODING,
+						ReportStatus.RECEIVED, ReportRoutingStatus.PENDING,
 						Instant.parse("2026-07-21T04:00:00Z")));
 
 		mockMvc.perform(post("/api/v1/reports")
@@ -137,11 +143,12 @@ class ReportControllerTest {
 						.content("""
 								{
 								  "reportType": "IMAGE",
+								  "category": "FLOOD_WEATHER",
+								  "subcategory": "ROAD_FLOODING",
 								  "description": "도로가 침수됐습니다.",
 								  "latitude": 37.5665,
 								  "longitude": 126.978,
-								  "address": "서울특별시 중구",
-								  "mediaAssetIds": [10, 11]
+								  "address": "서울특별시 중구"
 								}
 								""")
 						.with(authenticatedUser(1L)))
@@ -151,7 +158,7 @@ class ReportControllerTest {
 	}
 
 	@Test
-	void rejectsTextReportWithMediaAssets() throws Exception {
+	void rejectsRemovedTextReportType() throws Exception {
 		mockMvc.perform(post("/api/v1/reports")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
@@ -165,13 +172,15 @@ class ReportControllerTest {
 								""")
 						.with(authenticatedUser(1L)))
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("COMMON_001"));
+				.andExpect(jsonPath("$.code").value("COMMON_002"));
 	}
 
-	private String textBody(String reportType, String description) {
+	private String reportBody(String reportType, String description) {
 		return """
 				{
 				  "reportType": "%s",
+				  "category": "CROWD_CONGESTION",
+				  "subcategory": "EXIT_CONGESTION",
 				  "description": "%s",
 				  "latitude": 37.5665,
 				  "longitude": 126.978,

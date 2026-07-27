@@ -22,10 +22,13 @@ class JpaReportRepositoryTest {
 	private JpaReportRepository reportRepository;
 
 	@Test
-	void savesAndLoadsTextReport() {
+	void savesAndLoadsImageReport() {
 		Report saved = reportRepository.saveAndFlush(
-				Report.createText(
+				Report.create(
 						1L,
+						com.ojimasam.safy.report.domain.ReportType.IMAGE,
+						com.ojimasam.safy.report.domain.ReportCategory.CROWD_CONGESTION,
+						com.ojimasam.safy.report.domain.ReportSubcategory.EXIT_CONGESTION,
 						"출구 주변이 혼잡합니다.",
 						new BigDecimal("37.5665000"),
 						new BigDecimal("126.9780000"),
@@ -36,6 +39,10 @@ class JpaReportRepositoryTest {
 		Report found = reportRepository.findById(saved.getId()).orElseThrow();
 
 		assertThat(found.getReporterId()).isEqualTo(1L);
+		assertThat(found.getCategory()).isEqualTo(
+				com.ojimasam.safy.report.domain.ReportCategory.CROWD_CONGESTION);
+		assertThat(found.getSubcategory()).isEqualTo(
+				com.ojimasam.safy.report.domain.ReportSubcategory.EXIT_CONGESTION);
 		assertThat(found.getLatitude()).isEqualByComparingTo("37.5665000");
 		assertThat(found.getLongitude()).isEqualByComparingTo("126.9780000");
 		assertThat(found.getStatus()).isEqualTo(ReportStatus.RECEIVED);

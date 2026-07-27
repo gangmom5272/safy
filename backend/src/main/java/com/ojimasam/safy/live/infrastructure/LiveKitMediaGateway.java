@@ -19,6 +19,7 @@ import io.livekit.server.CanSubscribe;
 import io.livekit.server.RoomJoin;
 import io.livekit.server.RoomName;
 import io.livekit.server.RoomServiceClient;
+import livekit.LivekitModels;
 import retrofit2.Response;
 
 @Component
@@ -32,13 +33,26 @@ public class LiveKitMediaGateway implements LiveMediaGateway {
 	@Override
 	public void createRoom(String roomName) {
 		ensureConfigured();
+		RoomServiceClient client = client();
 		try {
-			Response<?> response = client().createRoom(roomName).execute();
+			Response<?> response = client.createRoom(roomName).execute();
 			if (!response.isSuccessful()) {
+				if (roomExists(client, roomName)) return;
 				throw new LiveMediaException("OpenVidu room creation failed: HTTP " + response.code());
 			}
 		} catch (IOException exception) {
+			if (roomExists(client, roomName)) return;
 			throw new LiveMediaException("OpenVidu room creation failed", exception);
+		}
+	}
+
+	private boolean roomExists(RoomServiceClient client, String roomName) {
+		try {
+			Response<List<LivekitModels.Room>> response = client.listRooms(List.of(roomName)).execute();
+			return response.isSuccessful() && response.body() != null
+					&& response.body().stream().anyMatch(room -> roomName.equals(room.getName()));
+		} catch (IOException exception) {
+			return false;
 		}
 	}
 

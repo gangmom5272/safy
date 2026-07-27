@@ -47,6 +47,7 @@ public class ReportOperatorAssignmentService {
 	private final AdminCenterMembershipRepository membershipRepository;
 	private final ReportOperatorAssignmentRepository assignmentRepository;
 	private final ReportStatusHistoryRepository historyRepository;
+	private final ReportRealtimeNotifier realtimeNotifier;
 	private final Clock clock;
 
 	@Autowired
@@ -55,9 +56,11 @@ public class ReportOperatorAssignmentService {
 			ReportCenterRouteRepository routeRepository,
 			AdminCenterMembershipRepository membershipRepository,
 			ReportOperatorAssignmentRepository assignmentRepository,
-			ReportStatusHistoryRepository historyRepository
+			ReportStatusHistoryRepository historyRepository,
+			ReportRealtimeNotifier realtimeNotifier
 	) {
 		this(reportRepository, routeRepository, membershipRepository, assignmentRepository, historyRepository,
+				realtimeNotifier,
 				Clock.systemUTC());
 	}
 
@@ -67,6 +70,7 @@ public class ReportOperatorAssignmentService {
 			AdminCenterMembershipRepository membershipRepository,
 			ReportOperatorAssignmentRepository assignmentRepository,
 			ReportStatusHistoryRepository historyRepository,
+			ReportRealtimeNotifier realtimeNotifier,
 			Clock clock
 	) {
 		this.reportRepository = reportRepository;
@@ -74,6 +78,7 @@ public class ReportOperatorAssignmentService {
 		this.membershipRepository = membershipRepository;
 		this.assignmentRepository = assignmentRepository;
 		this.historyRepository = historyRepository;
+		this.realtimeNotifier = realtimeNotifier;
 		this.clock = clock;
 	}
 
@@ -107,6 +112,7 @@ public class ReportOperatorAssignmentService {
 		historyRepository.save(ReportStatusHistory.record(
 				report, previous, report.getStatus(), null, "AUTO_OPERATOR_ASSIGNMENT", now
 		));
+		realtimeNotifier.reportAssigned(assignment);
 		return Optional.of(assignment);
 	}
 

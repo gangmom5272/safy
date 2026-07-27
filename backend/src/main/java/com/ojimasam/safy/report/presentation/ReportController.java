@@ -16,11 +16,9 @@ import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
-import com.ojimasam.safy.report.application.CreateImageReportCommand;
-import com.ojimasam.safy.report.application.CreateImageReportService;
+import com.ojimasam.safy.report.application.CreateReportCommand;
 import com.ojimasam.safy.report.application.CreateReportResult;
-import com.ojimasam.safy.report.application.CreateTextReportCommand;
-import com.ojimasam.safy.report.application.CreateTextReportService;
+import com.ojimasam.safy.report.application.CreateReportService;
 import com.ojimasam.safy.report.application.ReportDetailView;
 import com.ojimasam.safy.report.application.ReportListItemView;
 import com.ojimasam.safy.report.application.ReportStatusHistoryResponse;
@@ -35,16 +33,13 @@ import jakarta.validation.Valid;
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasRole('CITIZEN')")
 public class ReportController implements ReportApiDocs {
-	private final CreateTextReportService createTextReportService;
-	private final CreateImageReportService createImageReportService;
+	private final CreateReportService createReportService;
 	private final ReportQueryService reportQueryService;
 	private final CancelReportService cancelReportService;
 
-	public ReportController(CreateTextReportService createTextReportService,
-			CreateImageReportService createImageReportService, ReportQueryService reportQueryService,
+	public ReportController(CreateReportService createReportService, ReportQueryService reportQueryService,
 			CancelReportService cancelReportService) {
-		this.createTextReportService = createTextReportService;
-		this.createImageReportService = createImageReportService;
+		this.createReportService = createReportService;
 		this.reportQueryService = reportQueryService;
 		this.cancelReportService = cancelReportService;
 	}
@@ -109,11 +104,10 @@ public class ReportController implements ReportApiDocs {
 	) {
 		Long reporterId = CurrentUser.id(jwt);
 		try {
-			CreateReportResult result = switch (request.reportType()) {
-				case TEXT -> createText(reporterId, request);
-				case IMAGE -> createImage(reporterId, request);
-				case LIVE -> throw new IllegalArgumentException("LIVE 제보는 아직 지원하지 않습니다.");
-			};
+			CreateReportResult result = createReportService.create(new CreateReportCommand(
+					reporterId, request.reportType(), request.category(), request.subcategory(), request.description(),
+					request.latitude(), request.longitude(), request.address()
+			));
 			return ResponseEntity.created(URI.create("/api/v1/reports/" + result.reportId()))
 					.body(ApiResponse.success(CreateReportResponse.from(result)));
 		} catch (IllegalArgumentException exception) {
@@ -121,21 +115,5 @@ public class ReportController implements ReportApiDocs {
 		} catch (IllegalStateException exception) {
 			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
 		}
-	}
-
-	private CreateReportResult createText(Long reporterId, CreateReportRequest request) {
-		if (request.mediaAssetIds() != null && !request.mediaAssetIds().isEmpty()) {
-			throw new IllegalArgumentException("TEXT 제보에는 이미지를 첨부할 수 없습니다.");
-		}
-		return createTextReportService.create(new CreateTextReportCommand(
-				reporterId, request.description(), request.latitude(), request.longitude(), request.address()
-		));
-	}
-
-	private CreateReportResult createImage(Long reporterId, CreateReportRequest request) {
-		return createImageReportService.create(new CreateImageReportCommand(
-				reporterId, request.description(), request.latitude(), request.longitude(),
-				request.address(), request.mediaAssetIds() == null ? List.of() : request.mediaAssetIds()
-		));
 	}
 }

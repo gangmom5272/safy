@@ -27,6 +27,9 @@ import com.ojimasam.safy.report.domain.ReportImageRepository;
 import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
+import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.ReportCategory;
+import com.ojimasam.safy.report.domain.ReportSubcategory;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
@@ -38,14 +41,17 @@ class ReportQueryServiceTest {
 	@Mock MediaObjectStorage mediaObjectStorage;
 	@Mock ReportCenterRouteRepository routeRepository;
 	@Mock ReportStatusHistoryRepository historyRepository;
+	@Mock OperatorReportAccessService operatorAccessService;
 
 	@Test
 	void getsOwnedReportWithTemporaryPreviewUrl() {
 		Instant now = Instant.parse("2026-07-21T04:00:00Z");
-		Report report = Report.createImage(1L, "침수 제보", new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+		Report report = Report.create(1L, ReportType.IMAGE,
+				ReportCategory.FLOOD_WEATHER, ReportSubcategory.ROAD_FLOODING, "침수 제보",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
 		ReflectionTestUtils.setField(report, "id", 42L);
 		MediaAsset asset = MediaAsset.prepareOriginal(
-				1L, "safy", "reports/1/image.png", "현장.png", "image/png", now.plusSeconds(300)
+				1L, 42L, "safy", "reports/1/image.png", "현장.png", "image/png", now.plusSeconds(300)
 		);
 		ReflectionTestUtils.setField(asset, "id", 10L);
 		asset.markAvailable(1024L);
@@ -68,7 +74,9 @@ class ReportQueryServiceTest {
 	@Test
 	void includesAssignedControlCenterInOwnedReportDetail() {
 		Instant now = Instant.parse("2026-07-21T04:00:00Z");
-		Report report = Report.createText(1L, "침수 제보", new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+		Report report = Report.create(1L, ReportType.IMAGE,
+				ReportCategory.FLOOD_WEATHER, ReportSubcategory.ROAD_FLOODING, "침수 제보",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
 		ReflectionTestUtils.setField(report, "id", 42L);
 		ControlCenter center = org.mockito.Mockito.mock(ControlCenter.class);
 		ReportCenterRoute route = org.mockito.Mockito.mock(ReportCenterRoute.class);
@@ -95,7 +103,9 @@ class ReportQueryServiceTest {
 
 	@Test
 	void getsMyReportsInPage() {
-		Report report = Report.createText(1L, "텍스트 제보", new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+		Report report = Report.create(1L, ReportType.LIVE,
+				ReportCategory.CROWD_CONGESTION, ReportSubcategory.CROWD_INCREASING, "라이브 제보",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
 		ReflectionTestUtils.setField(report, "id", 1L);
 		when(reportRepository.findAllByReporterId(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
 				.thenReturn(new PageImpl<>(List.of(report)));
@@ -110,7 +120,7 @@ class ReportQueryServiceTest {
 
 	private ReportQueryService service(Instant now) {
 		return new ReportQueryService(reportRepository, reportImageRepository, mediaObjectStorage,
-				routeRepository, historyRepository,
+				routeRepository, historyRepository, operatorAccessService,
 				Clock.fixed(now, ZoneOffset.UTC));
 	}
 }

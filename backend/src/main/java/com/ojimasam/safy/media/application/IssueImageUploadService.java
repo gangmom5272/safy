@@ -16,6 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.media.domain.MediaAsset;
 import com.ojimasam.safy.media.domain.MediaAssetRepository;
+import com.ojimasam.safy.media.domain.MediaStorageStatus;
+import com.ojimasam.safy.report.domain.Report;
+import com.ojimasam.safy.report.domain.ReportRepository;
+import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.common.exception.BusinessException;
+import com.ojimasam.safy.common.exception.CommonErrorCode;
 
 @Service
 public class IssueImageUploadService {
@@ -26,6 +32,7 @@ public class IssueImageUploadService {
 	private static final long MAX_UPLOAD_ISSUES_PER_MINUTE = 20;
 
 	private final MediaAssetRepository mediaAssetRepository;
+	private final ReportRepository reportRepository;
 	private final MediaObjectStorage mediaObjectStorage;
 	private final String uploadBucket;
 	private final Clock clock;
@@ -33,14 +40,17 @@ public class IssueImageUploadService {
 	@Autowired
 	public IssueImageUploadService(
 			MediaAssetRepository mediaAssetRepository,
+			ReportRepository reportRepository,
 			MediaObjectStorage mediaObjectStorage,
 			@Value("${minio.upload-bucket}") String uploadBucket
 	) {
-		this(mediaAssetRepository, mediaObjectStorage, uploadBucket, Clock.systemUTC());
+		this(mediaAssetRepository, reportRepository, mediaObjectStorage, uploadBucket, Clock.systemUTC());
 	}
 
-	IssueImageUploadService(MediaAssetRepository repository, MediaObjectStorage storage, String bucket, Clock clock) {
+	IssueImageUploadService(MediaAssetRepository repository, ReportRepository reportRepository,
+			MediaObjectStorage storage, String bucket, Clock clock) {
 		this.mediaAssetRepository = repository;
+		this.reportRepository = reportRepository;
 		this.mediaObjectStorage = storage;
 		this.uploadBucket = bucket;
 		this.clock = clock;
@@ -50,12 +60,25 @@ public class IssueImageUploadService {
 	public IssuedImageUpload issue(IssueImageUploadCommand command) {
 		validate(command);
 		Instant now = clock.instant();
+		Report report = reportRepository.findByIdForUpdate(command.reportId())
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+		try {
+			report.requireMediaCreation(command.userId(), ReportType.IMAGE);
+		} catch (IllegalArgumentException exception) {
+			throw new BusinessException(CommonErrorCode.ACCESS_DENIED, exception.getMessage());
+		} catch (IllegalStateException exception) {
+			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
+		}
+		long issuedCount = mediaAssetRepository.countByReportIdAndStorageStatusIn(
+				command.reportId(), Set.of(MediaStorageStatus.PENDING_UPLOAD, MediaStorageStatus.AVAILABLE)
+		);
+		if (issuedCount >= 5) throw new IllegalStateException("이미지는 제보당 최대 5장까지 업로드할 수 있습니다.");
 		validateQuota(command.userId(), now);
 		Instant expiresAt = now.plus(UPLOAD_EXPIRY);
 		String normalizedContentType = command.contentType().toLowerCase(Locale.ROOT);
-		String objectKey = createObjectKey(command.userId(), normalizedContentType);
+		String objectKey = createObjectKey(command.reportId(), command.userId(), normalizedContentType);
 		MediaAsset asset = MediaAsset.prepareOriginal(
-				command.userId(), uploadBucket, objectKey, command.filename(),
+				command.userId(), command.reportId(), uploadBucket, objectKey, command.filename(),
 				normalizedContentType, expiresAt
 		);
 		MediaAsset saved = mediaAssetRepository.save(asset);
@@ -84,7 +107,7 @@ public class IssueImageUploadService {
 		}
 	}
 
-	private String createObjectKey(Long userId, String contentType) {
+	private String createObjectKey(Long reportId, Long userId, String contentType) {
 		String extension = switch (contentType) {
 			case "image/jpeg" -> ".jpg";
 			case "image/png" -> ".png";
@@ -92,6 +115,6 @@ public class IssueImageUploadService {
 			default -> throw new IllegalArgumentException("지원하지 않는 이미지 형식입니다.");
 		};
 		LocalDate date = LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC);
-		return "reports/%d/%s/%s%s".formatted(userId, date, UUID.randomUUID(), extension);
+		return "reports/%d/%d/%s/%s%s".formatted(reportId, userId, date, UUID.randomUUID(), extension);
 	}
 }
