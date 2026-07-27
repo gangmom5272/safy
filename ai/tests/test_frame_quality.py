@@ -1,7 +1,10 @@
 import cv2
 import numpy as np
 
-from app.services.frame_quality import inspect_frame_quality
+from app.services.frame_quality import (
+    FRAME_QUALITY_RULE_VERSION,
+    inspect_frame_quality,
+)
 
 
 def encode_image(image: np.ndarray) -> bytes:
@@ -81,3 +84,22 @@ def test_valid_frame_passes_quality_check() -> None:
     assert 35.0 <= result.brightness_score <= 220.0
     assert result.blur_score is not None
     assert result.blur_score >= 80.0
+
+
+def test_320_by_240_frame_passes_resolution_check() -> None:
+    rows, columns = np.indices((240, 320))
+    checkerboard = ((rows // 16 + columns // 16) % 2 * 255).astype(np.uint8)
+    image = cv2.cvtColor(
+        checkerboard,
+        cv2.COLOR_GRAY2BGR,
+    )
+
+    result = inspect_frame_quality(encode_image(image))
+
+    assert "LOW_RESOLUTION" not in result.issues
+    assert result.width == 320
+    assert result.height == 240
+
+
+def test_frame_quality_rule_version_matches_calibrated_rule() -> None:
+    assert FRAME_QUALITY_RULE_VERSION == "frame-quality-v0.2"

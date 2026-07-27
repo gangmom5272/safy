@@ -129,3 +129,23 @@ SAFY의 기본 사람 탐지 모델과 고밀도 군중 보완 후보를 비교�
 
 상세한 평가 조건, 재현 방법, 장면별 결과와 모델 선택 근거는
 [YOLO와 후보 모델 계수 성능 비교](docs/model-count-benchmark.md)에서 확인할 수 있습니다.
+
+## 프레임 품질 기준 검증
+
+프레임 품질 검사는 사람 탐지 전에 해상도, 밝기와 블러 상태를 판정합니다.
+
+현재 적용 규칙은 `frame-quality-v0.2`입니다.
+
+- 최소 짧은 변: 240px
+- 최소 전체 픽셀: 320×240
+- 최소 밝기 점수: 35
+- 최대 밝기 점수: 220
+- 최소 블러 점수: 80
+
+평가 매니페스트의 기대 결과와 실제 품질 판정을 비교하려면 다음 명령을
+실행합니다.
+
+```bash
+python -m scripts.evaluate_frame_quality \
+  docs/frame-quality-manifest.example.csv \
+  --output runs/evaluation/frame-quality-report.json
