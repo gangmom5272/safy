@@ -190,23 +190,51 @@ public class Report extends BaseEntity {
 		this.status = ReportStatus.ASSIGNED;
 	}
 
-	public void accept() {
+	/**
+	 * 담당자가 제보를 실제로 확인(타일 열람·라이브 시청)한 시점의 자동 전이.
+	 * push 기반 구조에서는 별도 수동 수락 없이 확인 즉시 처리중으로 간주한다. 멱등.
+	 */
+	public void beginHandling() {
+		if (status == ReportStatus.IN_PROGRESS) return;
 		requireStatus(ReportStatus.ASSIGNED);
-		this.status = ReportStatus.ACCEPTED;
-	}
-
-	public void startWork() {
-		requireStatus(ReportStatus.ACCEPTED);
 		this.status = ReportStatus.IN_PROGRESS;
 	}
 
 	public void completeWork(Instant closedAt) {
-		requireStatus(ReportStatus.IN_PROGRESS);
+		requireHandling();
+		this.status = ReportStatus.CLOSED;
+		this.closedAt = requireClosedAt(closedAt);
+	}
+
+	/**
+	 * 담당자가 무효 제보로 반려. 종결(terminal) 상태이며 CLOSED와 구분한다.
+	 */
+	public void reject(Instant closedAt) {
+		requireHandling();
+		this.status = ReportStatus.REJECTED;
+		this.closedAt = requireClosedAt(closedAt);
+	}
+
+	/**
+	 * 담당자가 처리를 놓아 다른 담당자에게 재배정되도록 접수 상태로 되돌린다.
+	 * routingStatus(ROUTED)는 유지되어 미배정 재시도 스케줄러가 다시 배정한다.
+	 */
+	public void releaseForReassignment() {
+		requireHandling();
+		this.status = ReportStatus.RECEIVED;
+	}
+
+	private Instant requireClosedAt(Instant closedAt) {
 		if (closedAt == null || closedAt.isBefore(reportedAt)) {
 			throw new IllegalArgumentException("종료 시각이 올바르지 않습니다.");
 		}
-		this.status = ReportStatus.CLOSED;
-		this.closedAt = closedAt;
+		return closedAt;
+	}
+
+	private void requireHandling() {
+		if (status != ReportStatus.ASSIGNED && status != ReportStatus.IN_PROGRESS) {
+			throw new IllegalStateException("배정 또는 처리중 상태의 제보만 처리할 수 있습니다.");
+		}
 	}
 
 	public void completeRouting(AdministrativeArea administrativeArea) {

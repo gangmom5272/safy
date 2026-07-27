@@ -7,6 +7,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,6 +23,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/operator/reports")
@@ -39,16 +41,20 @@ public class OperatorReportController {
 	}
 
 	@GetMapping("/{reportId}")
-	@Operation(summary = "담당자 제보 상세 조회", description = "담당자가 처리 대상 제보의 상세 정보를 조회합니다.")
+	@Operation(summary = "담당자 제보 상세 조회",
+			description = "담당자가 처리 대상 제보의 상세 정보를 조회합니다. 배정 담당자가 조회하면 자동으로 '처리중(확인)'으로 전이됩니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 상세 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	public ApiResponse<ReportDetailView> detail(@AuthenticationPrincipal Jwt jwt, @PathVariable Long reportId) {
-		return ApiResponse.success(reportQueryService.getForOperator(CurrentUser.id(jwt), reportId));
+		Long operatorId = CurrentUser.id(jwt);
+		assignmentService.markHandling(operatorId, reportId);
+		return ApiResponse.success(reportQueryService.getForOperator(operatorId, reportId));
 	}
 
 	@GetMapping("/me")
 	@PreAuthorize("hasRole('OPERATOR')")
-	@Operation(summary = "내 배정 제보 목록 조회", description = "현재 담당자에게 배정되어 진행 중(ASSIGNED/ACCEPTED/IN_PROGRESS)인 제보를 조회합니다.")
+	@Operation(summary = "내 배정 제보 목록 조회",
+			description = "현재 담당자에게 배정되어 진행 중(ASSIGNED/IN_PROGRESS)인 제보를 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "배정 제보 목록 조회 성공")
 	public ApiResponse<PageResponse<OperatorAssignmentResponse>> listMine(
 			@AuthenticationPrincipal Jwt jwt,
@@ -59,35 +65,10 @@ public class OperatorReportController {
 		));
 	}
 
-	@PatchMapping("/{reportId}/accept")
-	@PreAuthorize("hasRole('OPERATOR')")
-	@Operation(summary = "제보 수락", description = "배정받은 담당자가 제보를 수락합니다. (ASSIGNED → ACCEPTED)")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 수락 성공")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "수락할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
-	public ApiResponse<OperatorAssignmentResponse> accept(
-			@AuthenticationPrincipal Jwt jwt,
-			@PathVariable Long reportId
-	) {
-		return ApiResponse.success(assignmentService.accept(CurrentUser.id(jwt), reportId));
-	}
-
-	@PatchMapping("/{reportId}/start")
-	@PreAuthorize("hasRole('OPERATOR')")
-	@Operation(summary = "업무 시작", description = "수락한 제보의 처리를 시작합니다. (ACCEPTED → IN_PROGRESS)")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "업무 시작 성공")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "시작할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
-	public ApiResponse<OperatorAssignmentResponse> start(
-			@AuthenticationPrincipal Jwt jwt,
-			@PathVariable Long reportId
-	) {
-		return ApiResponse.success(assignmentService.start(CurrentUser.id(jwt), reportId));
-	}
-
 	@PatchMapping("/{reportId}/complete")
 	@PreAuthorize("hasRole('OPERATOR')")
-	@Operation(summary = "업무 종료", description = "진행 중인 제보를 종료합니다. 제보가 CLOSED 되고 관제센터 라우팅도 종료됩니다. (IN_PROGRESS → CLOSED)")
+	@Operation(summary = "업무 종료",
+			description = "제보를 종료합니다. 제보가 CLOSED 되고 관제센터 라우팅과 진행 중인 라이브 세션도 함께 종료되며 제보자에게 통지됩니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "업무 종료 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "종료할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
@@ -96,5 +77,37 @@ public class OperatorReportController {
 			@PathVariable Long reportId
 	) {
 		return ApiResponse.success(assignmentService.complete(CurrentUser.id(jwt), reportId));
+	}
+
+	@PatchMapping("/{reportId}/reject")
+	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "제보 반려",
+			description = "무효·중복·오배정 등으로 제보를 대응 없이 종결(REJECTED)합니다. 라이브가 있으면 세션도 종료되고 제보자에게 통지됩니다. 사유 필수.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 반려 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "반려 사유 누락", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "반려할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
+	public ApiResponse<OperatorAssignmentResponse> reject(
+			@AuthenticationPrincipal Jwt jwt,
+			@PathVariable Long reportId,
+			@Valid @RequestBody OperatorReportReleaseRequest request
+	) {
+		return ApiResponse.success(assignmentService.reject(CurrentUser.id(jwt), reportId, request.reason()));
+	}
+
+	@PatchMapping("/{reportId}/reassign")
+	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "재배정 요청",
+			description = "담당자가 처리를 놓고 같은 관제센터의 다른 담당자에게 재배정을 요청합니다. 제보는 유효한 상태로 유지되며 라이브 송출도 이어집니다. 사유 필수.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "재배정 요청 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "재배정 사유 누락", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "재배정할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
+	public ApiResponse<OperatorAssignmentResponse> reassign(
+			@AuthenticationPrincipal Jwt jwt,
+			@PathVariable Long reportId,
+			@Valid @RequestBody OperatorReportReleaseRequest request
+	) {
+		return ApiResponse.success(assignmentService.reassign(CurrentUser.id(jwt), reportId, request.reason()));
 	}
 }

@@ -21,6 +21,7 @@ import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportType;
 import com.ojimasam.safy.report.application.OperatorReportAccessService;
+import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
 import com.ojimasam.safy.report.application.ReportRealtimeNotifier;
 
 @Service
@@ -29,26 +30,34 @@ public class LiveSessionService {
 	private final LiveMediaGateway mediaGateway;
 	private final ReportRepository reportRepository;
 	private final OperatorReportAccessService operatorAccessService;
+	private final ReportOperatorAssignmentService assignmentService;
 	private final ReportRealtimeNotifier realtimeNotifier;
+	private final LiveRecordingService recordingService;
 	private final OpenViduProperties properties;
 	private final Clock clock;
 
 	@Autowired
 	public LiveSessionService(LiveSessionRepository repository, LiveMediaGateway mediaGateway,
 			ReportRepository reportRepository, OperatorReportAccessService operatorAccessService,
-			ReportRealtimeNotifier realtimeNotifier, OpenViduProperties properties) {
-		this(repository, mediaGateway, reportRepository, operatorAccessService, realtimeNotifier,
-				properties, Clock.systemUTC());
+			ReportOperatorAssignmentService assignmentService,
+			ReportRealtimeNotifier realtimeNotifier, LiveRecordingService recordingService,
+			OpenViduProperties properties) {
+		this(repository, mediaGateway, reportRepository, operatorAccessService, assignmentService, realtimeNotifier,
+				recordingService, properties, Clock.systemUTC());
 	}
 
 	LiveSessionService(LiveSessionRepository repository, LiveMediaGateway mediaGateway,
 			ReportRepository reportRepository, OperatorReportAccessService operatorAccessService,
-			ReportRealtimeNotifier realtimeNotifier, OpenViduProperties properties, Clock clock) {
+			ReportOperatorAssignmentService assignmentService,
+			ReportRealtimeNotifier realtimeNotifier, LiveRecordingService recordingService,
+			OpenViduProperties properties, Clock clock) {
 		this.repository = repository;
 		this.mediaGateway = mediaGateway;
 		this.reportRepository = reportRepository;
 		this.operatorAccessService = operatorAccessService;
+		this.assignmentService = assignmentService;
 		this.realtimeNotifier = realtimeNotifier;
+		this.recordingService = recordingService;
 		this.properties = properties;
 		this.clock = clock;
 	}
@@ -124,6 +133,7 @@ public class LiveSessionService {
 	public LiveTokenView issueViewerToken(Long operatorId, UUID sessionId) {
 		LiveSession session = find(sessionId);
 		operatorAccessService.requireAccess(operatorId, session.getReportId());
+		assignmentService.markHandling(operatorId, session.getReportId());
 		return readOnlyToken(session, "operator-" + operatorId, LiveParticipantRole.VIEWER);
 	}
 
@@ -168,12 +178,33 @@ public class LiveSessionService {
 			throw new BusinessException(LiveSessionErrorCode.ACCESS_DENIED);
 		}
 		if (session.getStatus() == LiveSessionStatus.ENDED) return;
+		recordingService.stopForSession(session.getId());
 		try {
 			mediaGateway.closeRoom(session.getRoomName());
 			session.end(clock.instant());
+			realtimeNotifier.liveEndedToOperator(session.getReportId());
 		} catch (LiveMediaException exception) {
 			session.markFailed(exception.getMessage(), clock.instant());
 			throw new BusinessException(LiveSessionErrorCode.MEDIA_SERVER_UNAVAILABLE);
+		}
+	}
+
+	/**
+	 * 담당자 종료(complete/reject)로 제보가 종결됐을 때 진행 중인 라이브를 서버 주도로 종료하고
+	 * 제보자에게 통지한다. 종료 이벤트 리스너에서 호출된다.
+	 */
+	@Transactional(noRollbackFor = BusinessException.class)
+	public void endByReport(Long reportId) {
+		LiveSession session = repository.findByReportId(reportId).orElse(null);
+		if (session == null || session.getStatus() == LiveSessionStatus.ENDED
+				|| session.getStatus() == LiveSessionStatus.FAILED) return;
+		recordingService.stopForSession(session.getId());
+		try {
+			mediaGateway.closeRoom(session.getRoomName());
+			session.end(clock.instant());
+			realtimeNotifier.liveEndedToReporter(session.getReportId(), session.getReporterId());
+		} catch (LiveMediaException exception) {
+			session.markFailed(exception.getMessage(), clock.instant());
 		}
 	}
 

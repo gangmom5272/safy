@@ -99,6 +99,38 @@ public class MediaAsset extends BaseEntity {
 		return new MediaAsset(ownerUserId, reportId, bucketName, objectKey, originalFilename, contentType, uploadExpiresAt);
 	}
 
+	/**
+	 * 서버가 만들어 이미 스토리지에 올라간 객체를 등록한다.
+	 * 미디어 서버 녹화본·추출 프레임처럼 presigned 업로드 흐름을 거치지 않는 산출물이 대상이며,
+	 * 생성 즉시 사용 가능(AVAILABLE) 상태다.
+	 *
+	 * @param source 파생본(BLURRED 등)이면 원본 자산, 원본이면 null
+	 */
+	public static MediaAsset recordServerObject(Long ownerUserId, Long reportId, String bucketName, String objectKey,
+			String originalFilename, String contentType, long fileSize, MediaVariantType variantType,
+			MediaAsset source, Instant now) {
+		if (ownerUserId == null || ownerUserId <= 0) throw new IllegalArgumentException("사용자 ID는 필수입니다.");
+		if (reportId == null || reportId <= 0) throw new IllegalArgumentException("제보 ID는 필수입니다.");
+		if (bucketName == null || bucketName.isBlank()) throw new IllegalArgumentException("버킷 이름은 필수입니다.");
+		if (objectKey == null || objectKey.isBlank()) throw new IllegalArgumentException("객체 키는 필수입니다.");
+		if (contentType == null || contentType.isBlank()) throw new IllegalArgumentException("콘텐츠 타입은 필수입니다.");
+		if (variantType == null) throw new IllegalArgumentException("미디어 변형 유형은 필수입니다.");
+		if (fileSize <= 0) throw new IllegalArgumentException("저장된 파일이 비어 있습니다.");
+		if (now == null) throw new IllegalArgumentException("생성 시각은 필수입니다.");
+
+		String filename = originalFilename == null || originalFilename.isBlank()
+				? objectKey.substring(objectKey.lastIndexOf('/') + 1)
+				: originalFilename;
+		MediaAsset asset = new MediaAsset(ownerUserId, reportId, bucketName, objectKey,
+				filename.length() > 255 ? filename.substring(filename.length() - 255) : filename,
+				contentType, now);
+		asset.variantType = variantType;
+		asset.sourceMediaAsset = source;
+		asset.fileSize = fileSize;
+		asset.storageStatus = MediaStorageStatus.AVAILABLE;
+		return asset;
+	}
+
 	public void verifyAttachable(Long userId, Long targetReportId, Instant now) {
 		if (!ownerUserId.equals(userId)) throw new IllegalArgumentException("다른 사용자의 미디어입니다.");
 		if (!reportId.equals(targetReportId)) throw new IllegalArgumentException("다른 제보에 발급된 미디어입니다.");
@@ -127,6 +159,7 @@ public class MediaAsset extends BaseEntity {
 	public String getContentType() { return contentType; }
 	public Long getFileSize() { return fileSize; }
 	public MediaVariantType getVariantType() { return variantType; }
+	public MediaAsset getSourceMediaAsset() { return sourceMediaAsset; }
 	public MediaStorageStatus getStorageStatus() { return storageStatus; }
 	public Instant getUploadExpiresAt() { return uploadExpiresAt; }
 }

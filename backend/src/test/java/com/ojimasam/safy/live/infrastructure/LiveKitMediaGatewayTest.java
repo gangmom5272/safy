@@ -18,10 +18,14 @@ class LiveKitMediaGatewayTest {
 
 	@BeforeEach
 	void setUp() {
-		gateway = new LiveKitMediaGateway(new OpenViduProperties(
-				"ws://localhost:7880", "devkey",
-				"0123456789012345678901234567890123456789012345678901234567890123",
-				Duration.ofMinutes(10), Duration.ofMinutes(30), Duration.ofMinutes(1)));
+		gateway = new LiveKitMediaGateway(
+				new OpenViduProperties(
+						"ws://localhost:7880", "devkey",
+						"0123456789012345678901234567890123456789012345678901234567890123",
+						Duration.ofMinutes(10), Duration.ofMinutes(30), Duration.ofMinutes(1),
+						Duration.ofSeconds(60)),
+				new com.ojimasam.safy.live.application.LiveRecordingProperties(
+						false, "safy", "http://localhost:9000", "key", "secret", null, null, 0, 0));
 	}
 
 	@Test

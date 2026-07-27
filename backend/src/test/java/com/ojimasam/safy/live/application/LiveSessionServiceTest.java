@@ -36,6 +36,7 @@ import com.ojimasam.safy.report.domain.ReportType;
 import com.ojimasam.safy.report.domain.ReportCategory;
 import com.ojimasam.safy.report.domain.ReportSubcategory;
 import com.ojimasam.safy.report.application.OperatorReportAccessService;
+import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
 import com.ojimasam.safy.report.application.ReportRealtimeNotifier;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,7 +47,9 @@ class LiveSessionServiceTest {
 	@Mock LiveMediaGateway mediaGateway;
 	@Mock ReportRepository reportRepository;
 	@Mock OperatorReportAccessService operatorAccessService;
+	@Mock ReportOperatorAssignmentService assignmentService;
 	@Mock ReportRealtimeNotifier realtimeNotifier;
+	@Mock LiveRecordingService recordingService;
 
 	private LiveSessionService service;
 
@@ -54,9 +57,10 @@ class LiveSessionServiceTest {
 	void setUp() {
 		OpenViduProperties properties = new OpenViduProperties(
 				"ws://openvidu:7880", "key", "secret", Duration.ofMinutes(10),
-				Duration.ofMinutes(30), Duration.ofMinutes(1));
+				Duration.ofMinutes(30), Duration.ofMinutes(1), Duration.ofSeconds(60));
 		service = new LiveSessionService(repository, mediaGateway, reportRepository,
-				operatorAccessService, realtimeNotifier, properties, Clock.fixed(NOW, ZoneOffset.UTC));
+				operatorAccessService, assignmentService, realtimeNotifier, recordingService, properties,
+				Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
 	@Test
