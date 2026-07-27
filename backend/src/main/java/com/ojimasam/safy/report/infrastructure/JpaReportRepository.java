@@ -30,6 +30,42 @@ public interface JpaReportRepository extends JpaRepository<Report, Long>, Report
 	org.springframework.data.domain.Page<Report> findAllByReporterId(Long reporterId, Pageable pageable);
 
 	@Override
+	@EntityGraph(attributePaths = "administrativeArea")
+	List<Report> findByStatusInAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+			java.util.Collection<ReportStatus> statuses,
+			Instant cursor,
+			Pageable pageable
+	);
+
+	@Override
+	@EntityGraph(attributePaths = "administrativeArea")
+	List<Report> findByAdministrativeArea_IdAndStatusInAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+			Long administrativeAreaId,
+			java.util.Collection<ReportStatus> statuses,
+			Instant cursor,
+			Pageable pageable
+	);
+
+	@Override
+	@EntityGraph(attributePaths = "administrativeArea")
+	List<Report> findByTypeAndStatusInAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+			com.ojimasam.safy.report.domain.ReportType type,
+			java.util.Collection<ReportStatus> statuses,
+			Instant cursor,
+			Pageable pageable
+	);
+
+	@Override
+	@EntityGraph(attributePaths = "administrativeArea")
+	List<Report> findByAdministrativeArea_IdAndTypeAndStatusInAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+			Long administrativeAreaId,
+			com.ojimasam.safy.report.domain.ReportType type,
+			java.util.Collection<ReportStatus> statuses,
+			Instant cursor,
+			Pageable pageable
+	);
+
+	@Override
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select report from Report report where report.id = :id")
 	Optional<Report> findByIdForUpdate(@Param("id") Long id);
