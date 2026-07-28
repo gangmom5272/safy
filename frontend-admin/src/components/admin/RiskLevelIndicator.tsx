@@ -1,5 +1,5 @@
 import type { RiskLevelValue } from '../../types/admin'
-import { getRiskLabel, normalizeRiskLevel, RISK_LEVEL_CONFIG, RISK_LEVEL_ORDER } from '../../utils/adminRisk'
+import { getRiskLabel, resolveRiskLevel, RISK_LEVEL_CONFIG, RISK_LEVEL_ORDER } from '../../utils/adminRisk'
 
 interface RiskLevelIndicatorProps {
   level: RiskLevelValue | string | null
@@ -7,12 +7,12 @@ interface RiskLevelIndicatorProps {
 }
 
 export function RiskLevelIndicator({ level, score }: RiskLevelIndicatorProps) {
-  const normalizedLevel = normalizeRiskLevel(level)
+  const normalizedLevel = resolveRiskLevel(level, score)
   const displayOrder = [...RISK_LEVEL_ORDER].reverse()
   const currentIndex = normalizedLevel ? displayOrder.indexOf(normalizedLevel) : -1
 
   return (
-    <div className="risk-indicator" aria-label={`현재 위험도 ${getRiskLabel(level)}, 위험 점수 ${score}점`}>
+    <div className="risk-indicator" aria-label={`현재 위험도 ${getRiskLabel(level, score)}, 위험 점수 ${score}점`}>
       <div className="risk-indicator__score">
         <span>현재 위험 점수</span>
         <strong>{Number.isFinite(score) ? `${score}점` : '정보 없음'}</strong>

@@ -2,11 +2,12 @@ import { getRiskConfig, getRiskLabel } from '../../utils/adminRisk'
 
 interface RiskBadgeProps {
   value: unknown
+  score?: unknown
   className?: string
 }
 
-export function RiskBadge({ value, className = '' }: RiskBadgeProps) {
-  const config = getRiskConfig(value)
+export function RiskBadge({ value, score, className = '' }: RiskBadgeProps) {
+  const config = getRiskConfig(value, score)
 
   return (
     <span
@@ -17,7 +18,7 @@ export function RiskBadge({ value, className = '' }: RiskBadgeProps) {
         borderColor: config.borderColor,
       } : undefined}
     >
-      {getRiskLabel(value)}
+      {getRiskLabel(value, score)}
     </span>
   )
 }

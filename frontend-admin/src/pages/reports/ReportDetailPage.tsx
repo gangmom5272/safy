@@ -71,7 +71,7 @@ export function ReportDetailPage() {
     )
   }
 
-  const riskLevel = analysis?.riskLevel ?? null
+  const riskLevel = analysis?.riskLevel ?? report.riskLevel
   const crowdCount = analysis?.crowdCount ?? null
   const summary = analysis?.summary ?? report.aiSummary
   const confidence = analysis?.confidence ?? null
@@ -112,7 +112,7 @@ export function ReportDetailPage() {
             <div><dt>제보 시간</dt><dd>{formatAdminDate(report.reportedAt)}</dd></div>
             <div className="report-summary__group">
               <dt>위험 정보</dt>
-              <dd><span>위험도</span><RiskBadge value={riskLevel} /></dd>
+              <dd><span>위험도</span><RiskBadge value={riskLevel} score={report.riskScore} /></dd>
               <dd><span>분석 상태</span><span>{analysis?.status ?? '-'}</span></dd>
               <dd><span>추정 인원</span><strong>{crowdCount ?? '-'}</strong></dd>
             </div>
@@ -128,7 +128,7 @@ export function ReportDetailPage() {
 
       <div className="report-detail-grid report-detail-grid--second">
         <AdminSection title="위험도 지표">
-          <RiskLevelIndicator level={riskLevel} score={confidence === null ? null : Math.round(confidence * 100)} />
+          <RiskLevelIndicator level={riskLevel} score={report.riskScore} />
         </AdminSection>
 
         <AdminSection title="제보 처리">
@@ -142,7 +142,7 @@ export function ReportDetailPage() {
       <AdminSection title="AI 상황 요약">
         <div className="ai-summary-layout">
           <div className="ai-summary-metrics">
-            <div><span>위험 단계</span><RiskBadge value={riskLevel} /></div>
+            <div><span>위험 단계</span><RiskBadge value={riskLevel} score={report.riskScore} /></div>
             <div><span>신뢰도</span><strong>{confidence === null ? '-' : `${Math.round(confidence * 100)}%`}</strong></div>
           </div>
           <section>
