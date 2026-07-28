@@ -1,4 +1,5 @@
 import { Navigate } from 'react-router'
+import { apiBaseUrl } from '../../api/client'
 import { SafyLogo } from '../../components/SafyLogo'
 import { useAuthStore } from '../../stores/authStore'
 import './login.css'
@@ -6,7 +7,7 @@ import './login.css'
 type SocialProvider = 'kakao' | 'google'
 
 function beginSocialLogin(provider: SocialProvider) {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
+  const baseUrl = apiBaseUrl.replace(/\/$/, '')
   window.location.assign(`${baseUrl}/auth/social/${provider}/login`)
 }
 

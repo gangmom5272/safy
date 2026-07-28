@@ -1,5 +1,5 @@
 import { clearAccessToken, getAccessToken } from './accessToken'
-import { refreshSession } from './client'
+import { apiBaseUrl, refreshSession } from './client'
 import { USE_MOCK_API } from './mockMode'
 import { notifySessionExpired } from './sessionEvents'
 
@@ -56,9 +56,7 @@ function parseEventBlock(block: string): { id: string | null; data: string } | n
 }
 
 function realtimeUrl() {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL
-  if (!baseUrl) throw new Error('VITE_API_BASE_URL이 설정되지 않았습니다.')
-  return baseUrl.replace(/\/$/, '') + '/realtime/events'
+  return apiBaseUrl.replace(/\/$/, '') + '/realtime/events'
 }
 
 async function waitForReconnect(signal: AbortSignal) {
