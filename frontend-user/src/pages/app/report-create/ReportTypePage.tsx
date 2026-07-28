@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/common/PageHeader'
 import { mockLocations } from '../../../mocks/locations'
 import { resolveLocation } from '../home/homeApi'
 import { LocationMap } from './LocationMap'
+import { resolveAddress } from './kakaoMap'
 import {
   DEFAULT_REPORT_METHOD,
   REPORT_CONTENT_MAX_LENGTH,
@@ -41,9 +42,11 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
     let isCurrent = true
     const locationKey = `${location.latitude}:${location.longitude}`
     const mockLocationName = getNearestMockLocationName(location.latitude, location.longitude)
-    void resolveLocation(location.latitude, location.longitude)
-      .then((resolvedLocation) => {
-        if (isCurrent) setResolvedLocation({ key: locationKey, name: resolvedLocation.areaName || mockLocationName })
+    // 상세 주소를 우선 쓰고, 실패하면 기존 행정구역명으로 물러난다.
+    void resolveAddress(location.latitude, location.longitude)
+      .catch(() => resolveLocation(location.latitude, location.longitude).then((area) => area.areaName))
+      .then((name) => {
+        if (isCurrent) setResolvedLocation({ key: locationKey, name: name || mockLocationName })
       })
       .catch(() => {
         if (isCurrent) setResolvedLocation({ key: locationKey, name: mockLocationName })
