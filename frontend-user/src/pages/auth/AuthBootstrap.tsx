@@ -1,9 +1,11 @@
 import { useEffect, type ReactNode } from 'react'
 import { clearAccessToken } from '../../api/accessToken'
 import { refreshSession } from '../../api/client'
+import { USE_MOCK_API } from '../../api/mockMode'
 import { subscribeToSessionExpired } from '../../api/sessionEvents'
 import { useAuthStore } from '../../stores/authStore'
 import { getCurrentUser } from './authApi'
+import { mockCitizen } from './authMock'
 import { canUseCitizenApp } from './authSession'
 
 export function AuthBootstrap({ children }: { children: ReactNode }) {
@@ -19,6 +21,12 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
     let active = true
 
     async function restoreSession() {
+      // 목 모드에서는 백엔드 없이 바로 로그인된 상태로 진입한다.
+      if (USE_MOCK_API) {
+        if (active) authenticate(mockCitizen)
+        return
+      }
+
       try {
         await refreshSession()
         const user = await getCurrentUser()

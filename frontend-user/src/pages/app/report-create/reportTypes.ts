@@ -18,7 +18,7 @@ export interface ReportFormData {
   content: string
   location: ReportLocation | null
   reportId?: number
-  mediaFile?: File
+  mediaFiles?: File[]
 }
 
 export type LocationStatus =

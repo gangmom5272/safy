@@ -7,6 +7,7 @@ import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, Notificat
 import { buildFavoriteSituationUrl } from './mypageUtils'
 import { useAuthStore } from '../../../stores/authStore'
 import { Faqs, Favorites, Guide, Inquiries, InquiryDetail, InquiryForm, NoticeDetail, Notices, ReportDetail, Reports, SectionTitle, Support } from './MyPageFeatures'
+import { subscribeToRealtimeSignals } from '../../../api/realtime'
 import './mypage.css'
 import './mypageRestored.css'
 import './mypageMenuContrast.css'
@@ -34,6 +35,24 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
   const back = () => { const previous = history.at(-1) ?? 'MAIN'; setHistory((items) => items.slice(0, -1)); setView(previous); setMessage('') }
 
   useEffect(() => { mounted.current = true; const timer = window.setTimeout(async () => { const results = await Promise.allSettled([getMe(), getReportSummary(), getMyReports(), getFavorites(), getNotificationSettings()]); if (!mounted.current) return; const [u, s, r, f, n] = results; if (u.status === 'fulfilled') setUser(u.value); if (s.status === 'fulfilled') setSummary(s.value); if (r.status === 'fulfilled') setReports(r.value); if (f.status === 'fulfilled') setFavorites(f.value); if (n.status === 'fulfilled') setNotificationSettings(n.value); if (results.some((result) => result.status === 'rejected') && USE_MYPAGE_MOCK_FALLBACK) { console.error('Mypage API failed; using mock fallback', results); if (u.status === 'rejected') setUser(mockUser); if (s.status === 'rejected') setSummary(mockSummary); if (r.status === 'rejected') setReports(mockReports); if (f.status === 'rejected') setFavorites(mockFavorites); if (n.status === 'rejected') { setNotificationSettings(mockNotificationSettings); setNotificationUsingMock(true) } setUsingMock(true) } setLoading(false) }, 0); return () => { mounted.current = false; window.clearTimeout(timer) } }, [])
+
+  useEffect(() => subscribeToRealtimeSignals((signal) => {
+    if (signal.kind === 'event'
+      && signal.event.eventType !== 'REPORT_CLOSED'
+      && signal.event.eventType !== 'REPORT_REJECTED') return
+
+    void Promise.all([getReportSummary(), getMyReports()]).then(([nextSummary, nextReports]) => {
+      if (!mounted.current) return
+      setSummary(nextSummary)
+      setReports(nextReports)
+    }).catch(() => undefined)
+
+    if (signal.kind === 'event' && selectedReportId === signal.event.reportId) {
+      void getMyReport(selectedReportId).then((report) => {
+        if (mounted.current) setReports((current) => [...current.filter((item) => item.id !== report.id), report])
+      }).catch(() => undefined)
+    }
+  }), [selectedReportId])
 
   useEffect(() => {
     if (!selectedReportId) return

@@ -8,7 +8,11 @@ interface PublicOnlyRouteProps {
 }
 
 export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
-  const { isAuthenticated } = useAuth()
+  const { status, isAuthenticated } = useAuth()
+
+  if (status === 'initializing') {
+    return <p role="status">세션을 확인하고 있습니다...</p>
+  }
 
   if (isAuthenticated) {
     return <Navigate to={ROUTE_PATHS.DASHBOARD} replace />

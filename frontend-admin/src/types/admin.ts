@@ -23,6 +23,8 @@ export type AiAnalysisStatus = 'queued' | 'analyzing' | 'detected' | 'completed'
 
 export type WebRTCConnectionStatus = 'live' | 'waiting' | 'requested' | 'ended'
 
+export type LiveStreamStatus = 'CONNECTING' | 'LIVE' | 'DISCONNECTED' | 'ENDED'
+
 export type ConnectionQuality = 'good' | 'normal' | 'poor'
 
 export interface AdminReportHistory {
@@ -36,34 +38,43 @@ export interface AdminReport {
   id: number
   location: string
   type: ReportType
-  riskLevel: RiskLevelValue
-  riskScore: number
+  // 백엔드가 아직 내려주지 않는 값은 null 로 두고 화면에서 '-' 로 표시한다.
+  riskLevel: RiskLevelValue | null
+  riskScore: number | null
   reportedAt: string
   status: ReportStatus
-  reviewStatus: ReviewStatus
-  aiAnalysisStatus: AiAnalysisStatus
+  reviewStatus: ReviewStatus | null
+  aiAnalysisStatus: AiAnalysisStatus | null
   managerName: string
   aiSummary: string
   riskTags: string[]
   history: AdminReportHistory[]
   reporterName?: string
   imageUrl?: string
+  imageCount?: number
+  mediaStatus?: string | null
   aiIndicators?: string[]
   aiCompletedAt?: string
+  assignmentId?: number
+  isLive?: boolean
+  streamRoomId?: string | null
+  liveStatus?: LiveStreamStatus | null
+  controlCenterName?: string | null
 }
 
 export interface WebRTCConnection {
-  id: number
+  // 백엔드 streamRoomId 는 UUID 문자열이다.
+  id: string
   reportId: number
   location: string
-  riskLevel: RiskLevelValue
-  riskScore: number
+  riskLevel: RiskLevelValue | null
+  riskScore: number | null
   connectedAt: string
   connectionStatus: WebRTCConnectionStatus
-  quality: ConnectionQuality
+  quality: ConnectionQuality | null
   aiDetected: boolean
   aiAnalysisResult: string
-  confidence: number
+  confidence: number | null
 }
 
 export interface RiskMarker {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Room, RoomEvent, Track } from 'livekit-client'
 import { ConfirmReportModal } from './ConfirmReportModal'
 import {
   DEFAULT_REPORT_CATEGORY,
@@ -7,7 +8,11 @@ import {
 } from './reportConstants'
 import type { ReportFormData } from './reportTypes'
 import { createReport } from './reportApi'
+import { createLiveSession, endLiveSession, issueReporterToken } from './liveApi'
 import { buildCreateReportRequest } from './reportMapper'
+import { getCitizenReportMessages, type ReportMessage } from './reportMessageApi'
+import { subscribeToRealtimeSignals } from '../../../api/realtime'
+import { USE_MOCK_API } from '../../../api/mockMode'
 import './report-create.css'
 
 type CameraStatus =
@@ -109,11 +114,11 @@ async function requestPreferredMediaStream(): Promise<MediaStream> {
       video: {
         facingMode: { ideal: 'environment' },
       },
-      audio: true,
+      audio: false,
     })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'OverconstrainedError') {
-      return navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      return navigator.mediaDevices.getUserMedia({ video: true, audio: false })
     }
 
     throw error
@@ -127,16 +132,23 @@ export function LiveReportPage({
 }: LiveReportPageProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const roomRef = useRef<Room | null>(null)
   const requestInProgressRef = useRef(false)
   const mountedRef = useRef(false)
   const timerRef = useRef<number | null>(null)
   const submitInProgressRef = useRef(false)
+  // 라이브 제보는 시작 시점에 제보와 스트림 룸을 만들고 종료 시점에 세션을 닫는다.
+  const liveSessionRef = useRef<{ reportId: number; streamRoomId: string } | null>(null)
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle')
+  const [isStarting, setIsStarting] = useState(false)
   const [isReporting, setIsReporting] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [activeReportId, setActiveReportId] = useState<number | null>(null)
+  const [hasReconnectableSession, setHasReconnectableSession] = useState(false)
+  const [operatorMessages, setOperatorMessages] = useState<ReportMessage[]>([])
 
   const stopTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -146,6 +158,8 @@ export function LiveReportPage({
   }, [])
 
   const cleanupCamera = useCallback((resetRequestFlag = true) => {
+    roomRef.current?.disconnect()
+    roomRef.current = null
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
@@ -201,18 +215,136 @@ export function LiveReportPage({
     }
   }, [cleanupCamera])
 
-  const startLiveReport = useCallback(() => {
-    if (cameraStatus !== 'ready' || isReporting) {
+  const startLiveReport = useCallback(async () => {
+    if (cameraStatus !== 'ready' || isReporting || isStarting) {
       return
     }
 
-    setIsReporting(true)
-    setElapsedSeconds(0)
+    setIsStarting(true)
+    setOperatorMessages([])
+    setSubmitError('')
+
+    let createdSession: { streamRoomId: string } | null = null
+    try {
+      const existingSession = liveSessionRef.current
+      let reportId: number
+      let session: { streamRoomId: string }
+
+      if (existingSession) {
+        reportId = existingSession.reportId
+        session = { streamRoomId: existingSession.streamRoomId }
+      } else {
+        const report = await createReport(buildCreateReportRequest({ ...formData, method: 'live' }))
+        reportId = report.reportId
+        session = await createLiveSession(report.reportId)
+        createdSession = session
+      }
+
+      const token = await issueReporterToken(session.streamRoomId)
+
+      // 목 모드에는 LiveKit 서버가 없어 실제 송출은 건너뛰고 로컬 미리보기만 유지한다.
+      if (!USE_MOCK_API) {
+        const room = new Room({ adaptiveStream: true, dynacast: true })
+        room.on(RoomEvent.Reconnecting, () => {
+          if (mountedRef.current) setSubmitError('라이브 연결을 복구하고 있습니다...')
+        })
+        room.on(RoomEvent.Reconnected, () => {
+          if (mountedRef.current) setSubmitError('')
+        })
+        room.on(RoomEvent.Disconnected, () => {
+          if (!mountedRef.current) return
+          roomRef.current = null
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((track) => track.stop())
+            streamRef.current = null
+          }
+          if (videoRef.current) videoRef.current.srcObject = null
+          stopTimer()
+          setIsReporting(false)
+          setActiveReportId(null)
+          setCameraStatus('idle')
+          setSubmitError('라이브 연결이 종료되었습니다.')
+        })
+        await room.connect(token.serverUrl, token.token)
+        const videoTrack = streamRef.current?.getVideoTracks()[0]
+        if (!videoTrack) throw new Error('송출할 카메라 영상을 찾을 수 없습니다.')
+        await room.localParticipant.publishTrack(videoTrack, { source: Track.Source.Camera })
+        roomRef.current = room
+      }
+
+      if (!mountedRef.current) return
+
+      liveSessionRef.current = { reportId, streamRoomId: session.streamRoomId }
+      setHasReconnectableSession(true)
+      setActiveReportId(reportId)
+      setIsReporting(true)
+      setElapsedSeconds(0)
+      stopTimer()
+      timerRef.current = window.setInterval(() => {
+        setElapsedSeconds((seconds) => seconds + 1)
+      }, 1000)
+    } catch (error) {
+      roomRef.current?.disconnect()
+      roomRef.current = null
+      if (createdSession) void endLiveSession(createdSession.streamRoomId).catch(() => undefined)
+      if (mountedRef.current) {
+        setSubmitError(error instanceof Error ? error.message : '라이브 제보를 시작하지 못했습니다.')
+      }
+    } finally {
+      if (mountedRef.current) setIsStarting(false)
+    }
+  }, [cameraStatus, formData, isReporting, isStarting, stopTimer])
+
+  useEffect(() => {
+    if (!activeReportId) return
+
+    let active = true
+    const loadMessages = async () => {
+      try {
+        const messages = await getCitizenReportMessages(activeReportId)
+        if (active) setOperatorMessages(messages.filter((message) => message.senderRole !== 'CITIZEN'))
+      } catch {
+        // 송출은 메시지 조회 실패와 독립적으로 유지한다.
+      }
+    }
+    void loadMessages()
+    const unsubscribe = subscribeToRealtimeSignals((signal) => {
+      if (signal.kind === 'connected'
+        || (signal.event.eventType === 'REPORT_MESSAGE' && signal.event.reportId === activeReportId)) {
+        void loadMessages()
+      }
+    })
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [activeReportId])
+
+  useEffect(() => subscribeToRealtimeSignals((signal) => {
+    if (signal.kind !== 'event') return
+    const session = liveSessionRef.current
+    if (!session || signal.event.reportId !== session.reportId) return
+
+    const { eventType } = signal.event
+    if (eventType !== 'LIVE_ENDED' && eventType !== 'REPORT_CLOSED' && eventType !== 'REPORT_REJECTED') return
+
     stopTimer()
-    timerRef.current = window.setInterval(() => {
-      setElapsedSeconds((seconds) => seconds + 1)
-    }, 1000)
-  }, [cameraStatus, isReporting, stopTimer])
+    setIsReporting(false)
+    setIsConfirmOpen(false)
+    setActiveReportId(null)
+    cleanupCamera()
+    liveSessionRef.current = null
+    setHasReconnectableSession(false)
+
+    if (eventType === 'REPORT_CLOSED') {
+      onComplete?.({ ...formData, method: 'live', reportId: session.reportId })
+      return
+    }
+    setCameraStatus('idle')
+    setSubmitError(eventType === 'REPORT_REJECTED'
+      ? '담당자가 제보를 반려하여 라이브가 종료되었습니다.'
+      : '담당자 처리로 라이브가 종료되었습니다.')
+  }), [cleanupCamera, formData, onComplete, stopTimer])
 
   const requestFinishLiveReport = () => {
     if (!isReporting || isConfirmOpen) {
@@ -227,20 +359,25 @@ export function LiveReportPage({
       return
     }
 
+    const session = liveSessionRef.current
+
     submitInProgressRef.current = true
     setIsSubmitting(true)
     stopTimer()
     setIsReporting(false)
     cleanupCamera()
+    setActiveReportId(null)
     setSubmitError('')
     try {
-      const report = await createReport(buildCreateReportRequest({ ...formData, method: 'live' }))
-      onComplete?.({ ...formData, method: 'live', reportId: report.reportId })
+      if (session) await endLiveSession(session.streamRoomId)
+      liveSessionRef.current = null
+      setHasReconnectableSession(false)
+      onComplete?.({ ...formData, method: 'live', reportId: session?.reportId })
     } catch (error) {
       submitInProgressRef.current = false
       setIsSubmitting(false)
       setIsConfirmOpen(false)
-      setSubmitError(error instanceof Error ? error.message : '제보를 등록하지 못했습니다.')
+      setSubmitError(error instanceof Error ? error.message : '제보를 종료하지 못했습니다.')
     }
   }, [cleanupCamera, formData, onComplete, stopTimer])
 
@@ -253,11 +390,16 @@ export function LiveReportPage({
   }, [isSubmitting])
 
   const handleBack = () => {
+    const session = liveSessionRef.current
+    liveSessionRef.current = null
+    setHasReconnectableSession(false)
+    if (session) void endLiveSession(session.streamRoomId).catch(() => undefined)
     setIsConfirmOpen(false)
     stopTimer()
     setIsReporting(false)
     setElapsedSeconds(0)
     cleanupCamera()
+    setActiveReportId(null)
     onBack?.()
   }
 
@@ -266,6 +408,7 @@ export function LiveReportPage({
     setIsReporting(false)
     setElapsedSeconds(0)
     cleanupCamera()
+    setActiveReportId(null)
     startCamera()
   }
 
@@ -284,7 +427,7 @@ export function LiveReportPage({
   const locationText = formData.location ? '현재 위치' : '위치 정보 없음'
   const categoryLabel = formData.category ? REPORT_CATEGORY_LABELS[formData.category] : '선택 없음'
   const cameraMessage = getCameraMessage(cameraStatus)
-  const canStart = cameraStatus === 'ready' && !isReporting
+  const canStart = cameraStatus === 'ready' && !isReporting && !isStarting
 
   return (
     <section className="report-live-overlay" aria-label="실시간 영상 제보">
@@ -320,6 +463,14 @@ export function LiveReportPage({
 
       <div className="report-live-bottom">
         {submitError ? <p className="report-error-text" role="alert">{submitError}</p> : null}
+        {isReporting && operatorMessages.length ? (
+          <section className="report-live-messages" aria-live="polite" aria-label="담당자 안내 메시지">
+            <strong>담당자 안내</strong>
+            {operatorMessages.slice(-3).map((message) => (
+              <p key={message.messageId}>{message.content}</p>
+            ))}
+          </section>
+        ) : null}
         <ul className="report-live-summary" aria-label="제보 정보">
           <li>
             <span><LiveInfoIcon name="location" />{locationText}</span>
@@ -336,10 +487,16 @@ export function LiveReportPage({
         <button
           type="button"
           className={`report-live-control ${canStart ? 'ready' : ''}`}
-          disabled={cameraStatus !== 'ready' || isSubmitting}
-          onClick={isReporting ? requestFinishLiveReport : startLiveReport}
+          disabled={cameraStatus !== 'ready' || isSubmitting || isStarting}
+          onClick={isReporting ? requestFinishLiveReport : () => void startLiveReport()}
         >
-          {isReporting ? '제보 종료' : '실시간 제보 시작'}
+          {isReporting
+            ? '제보 종료'
+            : isStarting
+              ? '제보 준비 중...'
+              : hasReconnectableSession
+                ? '라이브 재연결'
+                : '실시간 제보 시작'}
         </button>
       </div>
 

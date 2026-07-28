@@ -8,8 +8,12 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated } = useAuth()
+  const { status, isAuthenticated } = useAuth()
   const location = useLocation()
+
+  if (status === 'initializing') {
+    return <p role="status">세션을 확인하고 있습니다...</p>
+  }
 
   if (!isAuthenticated) {
     return <Navigate to={ROUTE_PATHS.LOGIN} replace state={{ from: location.pathname }} />

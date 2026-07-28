@@ -1,14 +1,19 @@
-# SAFY Admin Mock Authentication
+# SAFY Admin Authentication
 
-This frontend-admin authentication flow is a mock implementation for routing and UI validation only.
+The admin console authenticates against the backend auth API.
 
-- It does not call a backend login API.
-- It does not issue or validate JWT, access tokens, or refresh tokens.
-- It stores only `isAuthenticated` and `email` in `sessionStorage`.
-- It never stores the password.
-- Replace `AuthProvider.login` with the backend authentication API when the real admin login API is ready.
+- `POST /auth/admin/login` takes `{ loginId, password }` and returns an Access Token
+  plus a `SAFY_REFRESH_TOKEN` HttpOnly cookie.
+- The Access Token is kept in memory only (`src/api/accessToken.ts`); it is never
+  written to `localStorage` or `sessionStorage`.
+- On reload, `AuthProvider` restores the session with `POST /auth/token/refresh`
+  followed by `GET /users/me`.
+- A `401` on any request triggers a single refresh-and-retry in the axios
+  interceptor; if the refresh fails the session is cleared.
+- Only `OPERATOR` and `SUPER_ADMIN` accounts with status `ACTIVE` may enter the
+  console (`canUseAdminConsole`).
+- The password is never stored.
 
-Test-only account:
-
-- Email: `admin@safy.kr`
-- Password: `safy1234`
+Accounts are provisioned on the backend — a first `SUPER_ADMIN` from
+`SUPER_ADMIN_LOGIN_ID` / `SUPER_ADMIN_PASSWORD`, and operators through
+`POST /admin/operators`.
