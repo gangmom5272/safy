@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
 import { mockLocations } from '../../../mocks/locations'
 import { resolveLocation } from '../home/homeApi'
+import { LocationMap } from './LocationMap'
 import {
   DEFAULT_REPORT_METHOD,
   REPORT_CONTENT_MAX_LENGTH,
@@ -147,12 +148,11 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
         <h2 id="report-location-title" className="report-form-section-title">현재 위치</h2>
         <div className="report-location-card">
           <div className="report-map-placeholder" aria-live="polite">
-          <div className="report-mini-map" aria-hidden="true">
-            <span className="report-map-park" />
-            <span className="report-map-building building-one" />
-            <span className="report-map-building building-two" />
-            {hasLocation ? <span className="report-location-marker" /> : null}
-          </div>
+          {location ? (
+            <LocationMap latitude={location.latitude} longitude={location.longitude} />
+          ) : (
+            <div className="report-mini-map" aria-hidden="true" />
+          )}
           <div className="report-location-status">
             <strong className={hasLocation ? 'location-confirmed' : ''}>
               {hasLocation ? <LocationIcon /> : null}

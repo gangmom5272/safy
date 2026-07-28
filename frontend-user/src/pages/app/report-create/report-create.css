@@ -198,19 +198,6 @@
     #d7e9e6;
 }
 
-.report-location-marker {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 22px;
-  height: 22px;
-  border: 4px solid #ffffff;
-  border-radius: 50%;
-  background: #e11d48;
-  box-shadow: 0 8px 20px rgba(16, 32, 51, 0.25);
-  transform: translate(-50%, -50%);
-}
-
 .report-location-status {
   position: relative;
   z-index: 1;
@@ -1342,51 +1329,18 @@ button:focus-visible,
   overflow: hidden;
   border: 1px solid #d8e0ea;
   border-radius: 12px;
-  background:
-    linear-gradient(28deg, transparent 42%, rgba(255, 255, 255, 0.98) 43% 52%, transparent 53%),
-    linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.98) 36% 47%, transparent 48%),
-    #e7edf4;
+  background: #e7edf4;
 }
 
-.report-type-page .report-map-park,
-.report-type-page .report-map-building {
-  position: absolute;
-  border-radius: 5px;
-}
-
-.report-type-page .report-map-park {
-  top: 8px;
-  right: 7px;
-  width: 34%;
-  height: 27%;
-  background: #dcebdc;
-}
-
-.report-type-page .report-map-building {
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  background: #d6dee8;
-}
-
-.report-type-page .building-one {
-  bottom: 9px;
-  left: 7px;
-  width: 35%;
-  height: 28%;
-}
-
-.report-type-page .building-two {
-  right: 8px;
-  bottom: 13px;
-  width: 27%;
-  height: 22%;
-}
-
-.report-type-page .report-mini-map .report-location-marker {
-  width: 20px;
-  height: 20px;
-  border-width: 4px;
-  background: #004aad;
-  box-shadow: 0 5px 14px rgba(0, 74, 173, 0.3);
+.report-type-page .report-mini-map-fallback {
+  display: grid;
+  height: 100%;
+  margin: 0;
+  padding: 0 12px;
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
+  place-items: center;
 }
 
 .report-type-page .report-location-status {
