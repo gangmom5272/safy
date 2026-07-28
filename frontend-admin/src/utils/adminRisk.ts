@@ -51,18 +51,49 @@ const normalizedRiskAliases: Record<string, RiskLevel> = {
   safe: 'low',
 }
 
-export function normalizeRiskLevel(value: unknown): RiskLevel | null {
+const legacyRiskAliases: Record<string, RiskLevel> = {
+  danger: 'very_high',
+  warning: 'high',
+  caution: 'medium',
+  safe: 'low',
+}
+
+function normalizeCurrentRiskLevel(value: unknown): RiskLevel | null {
   if (typeof value !== 'string') return null
   return normalizedRiskAliases[value.trim().toLowerCase()] ?? null
 }
 
-export function getRiskLabel(value: unknown): string {
-  const level = normalizeRiskLevel(value)
+export function getRiskLevelFromScore(score: unknown): RiskLevel | null {
+  if (typeof score !== 'number' || !Number.isFinite(score) || score < 0 || score > 100) return null
+  if (score >= 81) return 'very_high'
+  if (score >= 61) return 'high'
+  if (score >= 41) return 'medium'
+  if (score >= 21) return 'low'
+  return 'very_low'
+}
+
+export function resolveRiskLevel(value: unknown, score?: unknown): RiskLevel | null {
+  const currentLevel = normalizeCurrentRiskLevel(value)
+  if (currentLevel) return currentLevel
+
+  const scoreLevel = getRiskLevelFromScore(score)
+  if (scoreLevel) return scoreLevel
+
+  if (typeof value !== 'string') return null
+  return legacyRiskAliases[value.trim().toLowerCase()] ?? null
+}
+
+export function normalizeRiskLevel(value: unknown): RiskLevel | null {
+  return resolveRiskLevel(value)
+}
+
+export function getRiskLabel(value: unknown, score?: unknown): string {
+  const level = resolveRiskLevel(value, score)
   return level ? RISK_LEVEL_CONFIG[level].label : '미분류'
 }
 
-export function getRiskConfig(value: unknown): RiskLevelConfig | null {
-  const level = normalizeRiskLevel(value)
+export function getRiskConfig(value: unknown, score?: unknown): RiskLevelConfig | null {
+  const level = resolveRiskLevel(value, score)
   return level ? RISK_LEVEL_CONFIG[level] : null
 }
 
@@ -79,8 +110,8 @@ export function compareRiskLevels(left: unknown, right: unknown, direction: 'hig
   return direction === 'high' ? rightOrder - leftOrder : leftOrder - rightOrder
 }
 
-export function matchesRiskLevel(value: unknown, selected: RiskLevel): boolean {
-  return normalizeRiskLevel(value) === selected
+export function matchesRiskLevel(value: unknown, selected: RiskLevel, score?: unknown): boolean {
+  return resolveRiskLevel(value, score) === selected
 }
 
 export function isEmergencyRisk(value: RiskLevelValue | null): boolean {

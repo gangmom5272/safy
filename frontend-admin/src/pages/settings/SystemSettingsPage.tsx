@@ -32,12 +32,7 @@ const statusSections = [
 export function SystemSettingsPage() {
   return (
     <section className="page-stack">
-      <article className="page-section">
-        <p className="eyebrow">System</p>
-        <h1>시스템 설정</h1>
-      </article>
-
-      <AdminSection title="시스템 상태 요약" action={<span className="status-badge">최근 업데이트 {systemStatus.lastUpdatedAt}</span>}>
+      <AdminSection title="시스템 상태 요약" action={<span className="status-badge">최근 업데이트 {systemStatus.lastUpdatedAt}</span>} cardClassName="system-summary-section">
         <div className="system-summary-grid">
           <div>
             <span>서버 상태</span>

@@ -24,6 +24,7 @@ import { formatAdminDate } from '../../utils/adminDate'
 import { LiveViewer } from './LiveViewer'
 
 const allValue = 'all'
+const unsetValue = ''
 const gridOptions = [2, 3, 5] as const
 const dismissedEndedReportsKey = 'safy-admin-dismissed-ended-reports'
 
@@ -31,8 +32,8 @@ type MediaTypeFilter = 'image' | 'live' | typeof allValue
 
 interface MonitoringFilters {
   mediaType: MediaTypeFilter
-  riskLevel: RiskLevel | typeof allValue
-  connectionStatus: WebRTCConnectionStatus | typeof allValue
+  riskLevel: RiskLevel | typeof allValue | typeof unsetValue
+  connectionStatus: WebRTCConnectionStatus | typeof allValue | typeof unsetValue
 }
 
 interface MonitoringNotice {
@@ -43,8 +44,25 @@ interface MonitoringNotice {
 
 const initialFilters: MonitoringFilters = {
   mediaType: allValue,
-  riskLevel: allValue,
-  connectionStatus: allValue,
+  riskLevel: unsetValue,
+  connectionStatus: unsetValue,
+}
+
+function LocationIcon() {
+  return (
+    <svg className="monitoring-filter__location-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  )
+}
+
+function ClearIcon() {
+  return (
+    <svg className="monitoring-filter__clear-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="m6 6 12 12M18 6 6 18" />
+    </svg>
+  )
 }
 
 const realtimeNoticeMessages: Partial<Record<RealtimeEventType, { tone: MonitoringNotice['tone']; text: string }>> = {
@@ -102,6 +120,7 @@ export function MonitoringPage() {
   const { connectionId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const keywordFromUrl = searchParams.get('keyword')?.trim() ?? ''
+  const [regionInput, setRegionInput] = useState(keywordFromUrl)
   const [filters, setFilters] = useState<MonitoringFilters>(initialFilters)
   const [columns, setColumns] = useState<(typeof gridOptions)[number]>(2)
   const [reports, setReports] = useState<AdminReport[]>([])
@@ -165,7 +184,7 @@ export function MonitoringPage() {
     : undefined
   const selectedConnection = selectedReport ? toLiveConnection(selectedReport) : null
 
-  const updateRegion = (region: string) => {
+  const applyRegion = (region: string) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current)
       const keyword = region.trim()
@@ -175,13 +194,14 @@ export function MonitoringPage() {
     }, { replace: true })
   }
 
+  const clearRegion = () => {
+    setRegionInput('')
+    applyRegion('')
+  }
+
   const resetFilters = () => {
     setFilters(initialFilters)
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current)
-      next.delete('keyword')
-      return next
-    }, { replace: true })
+    clearRegion()
   }
 
   const dismissEndedReport = (reportId: number) => {
@@ -202,9 +222,9 @@ export function MonitoringPage() {
         || report.location.toLowerCase().includes(keywordFromUrl.toLowerCase())
       const matchesType = filters.mediaType === allValue
         || (filters.mediaType === 'live' ? report.isLive : !report.isLive)
-      const matchesRisk = filters.riskLevel === allValue
-        || matchesRiskLevel(report.riskLevel, filters.riskLevel)
-      const matchesStatus = filters.connectionStatus === allValue
+      const matchesRisk = !filters.riskLevel || filters.riskLevel === allValue
+        || matchesRiskLevel(report.riskLevel, filters.riskLevel, report.riskScore)
+      const matchesStatus = !filters.connectionStatus || filters.connectionStatus === allValue
         || connection?.connectionStatus === filters.connectionStatus
 
       return matchesRegion && matchesType && matchesRisk && matchesStatus
@@ -247,20 +267,25 @@ export function MonitoringPage() {
         </section>
       ) : (
         <>
-          <AdminSection title="이미지·라이브 통합 관제">
-            <div className="filter-grid">
-              <label>
-                지역
+          <div className="monitoring-filter">
+            <div className="monitoring-filter__controls">
+              <form className="monitoring-filter__region" role="search" onSubmit={(event) => { event.preventDefault(); applyRegion(regionInput) }}>
+                <LocationIcon />
                 <input
+                  aria-label="지역 검색"
                   type="search"
-                  value={keywordFromUrl}
-                  onChange={(event) => updateRegion(event.target.value)}
-                  placeholder="지역 검색"
+                  value={regionInput}
+                  onChange={(event) => setRegionInput(event.target.value)}
+                  placeholder="지역명을 입력하세요."
                 />
-              </label>
-              <label>
-                제보 방식
+                {regionInput && (
+                  <button type="button" className="monitoring-filter__clear" onClick={clearRegion} aria-label="지역 검색어 초기화" title="검색어 지우기">
+                    <ClearIcon />
+                  </button>
+                )}
+              </form>
                 <select
+                  aria-label="제보 방식 선택"
                   value={filters.mediaType}
                   onChange={(event) => setFilters((current) => ({
                     ...current,
@@ -271,40 +296,39 @@ export function MonitoringPage() {
                   <option value="image">이미지</option>
                   <option value="live">라이브</option>
                 </select>
-              </label>
-              <label>
-                위험도
                 <select
+                  aria-label="위험도 선택"
+                  className={!filters.riskLevel ? 'select-placeholder' : undefined}
                   value={filters.riskLevel}
                   onChange={(event) => setFilters((current) => ({
                     ...current,
                     riskLevel: event.target.value as MonitoringFilters['riskLevel'],
                   }))}
                 >
+                  <option value={unsetValue} disabled>위험도</option>
                   <option value={allValue}>전체</option>
                   {RISK_LEVEL_OPTIONS.map(({ value, label }) => (
                     <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
-              </label>
-              <label>
-                라이브 상태
                 <select
+                  aria-label="연결 상태 선택"
+                  className={!filters.connectionStatus ? 'select-placeholder' : undefined}
                   value={filters.connectionStatus}
                   onChange={(event) => setFilters((current) => ({
                     ...current,
                     connectionStatus: event.target.value as MonitoringFilters['connectionStatus'],
                   }))}
                 >
+                  <option value={unsetValue} disabled>연결 상태</option>
                   <option value={allValue}>전체</option>
                   {Object.entries(connectionStatusLabels).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
-              </label>
               <button type="button" className="secondary-button" onClick={resetFilters}>초기화</button>
             </div>
-            <div className="segmented-control" aria-label="화면 배치 선택">
+            <div className="segmented-control monitoring-grid-selector" aria-label="화면 배치 선택">
               {gridOptions.map((option) => (
                 <button
                   key={option}
@@ -316,7 +340,7 @@ export function MonitoringPage() {
                 </button>
               ))}
             </div>
-          </AdminSection>
+          </div>
 
           {isLoading ? (
             <article className="admin-card"><p role="status">관제 제보를 불러오는 중입니다...</p></article>
@@ -397,7 +421,7 @@ function MonitoringReportCard({ report, onSelect, onDismissEnded }: MonitoringRe
           )}
         </span>
         <strong>{report.location || '위치 정보 없음'}</strong>
-        <RiskBadge value={report.riskLevel} />
+        <RiskBadge value={report.riskLevel} score={report.riskScore} />
         <span>{report.isLive
           ? `상태 ${connection ? connectionStatusLabels[connection.connectionStatus] : '준비 중'}`
           : `첨부 이미지 ${report.imageCount ?? 0}장`}</span>
@@ -558,7 +582,7 @@ function MonitoringDetailView({ connection, report, onBack, onActionComplete }: 
               <div><dt>관제센터</dt><dd>{detailReport.controlCenterName ?? '정보 없음'}</dd></div>
               <div><dt>연결 상태</dt><dd>{connectionStatusLabels[connection.connectionStatus]}</dd></div>
               <div><dt>연결 품질</dt><dd>{connection.quality ? connectionQualityLabels[connection.quality] : '정보 없음'}</dd></div>
-              <div><dt>위험도</dt><dd>{getRiskLabel(connection.riskLevel)}</dd></div>
+              <div><dt>위험도</dt><dd>{getRiskLabel(connection.riskLevel, connection.riskScore)}</dd></div>
               <div><dt>AI 분석 결과</dt><dd className="break-text">{connection.aiAnalysisResult || '정보 없음'}</dd></div>
             </dl>
           </aside>

@@ -6,24 +6,48 @@ import {
   webrtcConnections,
 } from '../../mocks/adminMockData'
 import type { RiskLevel } from '../../types/admin'
-import { AdminSection } from '../../components/admin/AdminSection'
 import { getRiskConfig, matchesRiskLevel, RISK_LEVEL_CONFIG, RISK_LEVEL_OPTIONS, RISK_LEVEL_ORDER } from '../../utils/adminRisk'
 
 const allValue = 'all'
+const unsetValue = ''
 const mapLayers = ['Heatmap', 'CCTV', 'WebRTC', '제보', '위험구역'] as const
 
+interface MapFilters {
+  region: string
+  riskLevel: RiskLevel | typeof allValue | typeof unsetValue
+}
+
+const initialMapFilters: MapFilters = {
+  region: '',
+  riskLevel: unsetValue,
+}
+
+function LocationIcon() {
+  return (
+    <svg className="monitoring-filter__location-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
+  )
+}
+
+function RefreshIcon() {
+  return (
+    <svg className="filter-reset-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15.3 6.4L3 16M3 21v-5h5" />
+    </svg>
+  )
+}
+
 export function RiskMapPage() {
-  const [region, setRegion] = useState('')
-  const [riskLevel, setRiskLevel] = useState<RiskLevel | typeof allValue>(allValue)
-  const [selectedDate, setSelectedDate] = useState('2026-07-23')
-  const [eventFilter, setEventFilter] = useState('')
+  const [draftFilters, setDraftFilters] = useState<MapFilters>(initialMapFilters)
+  const [appliedFilters, setAppliedFilters] = useState<MapFilters>(initialMapFilters)
   const [activeLayers, setActiveLayers] = useState<string[]>(['Heatmap', '제보'])
 
   const resetFilters = () => {
-    setRegion('')
-    setRiskLevel(allValue)
-    setSelectedDate('2026-07-23')
-    setEventFilter('')
+    setDraftFilters(initialMapFilters)
+    setAppliedFilters(initialMapFilters)
     setActiveLayers(['Heatmap', '제보'])
   }
 
@@ -36,56 +60,78 @@ export function RiskMapPage() {
   }
 
   const filteredMarkers = riskMarkers.filter((marker) => (
-    riskLevel === allValue || matchesRiskLevel(marker.riskLevel, riskLevel)
+    (!appliedFilters.region || marker.location.toLowerCase().includes(appliedFilters.region.toLowerCase())) &&
+    (!appliedFilters.riskLevel ||
+      appliedFilters.riskLevel === allValue ||
+      matchesRiskLevel(marker.riskLevel, appliedFilters.riskLevel, marker.riskScore))
   ))
 
   return (
     <section className="page-stack">
-      <AdminSection title="위험도 지도" action={<button type="button" className="secondary-button">새로고침</button>}>
-        <div className="filter-grid">
-          <label>
-            지역 검색
+      <form
+        className="risk-map-filter"
+        onSubmit={(event) => {
+          event.preventDefault()
+          setAppliedFilters({
+            ...draftFilters,
+            region: draftFilters.region.trim(),
+          })
+        }}
+      >
+        <div className="risk-map-filter__controls">
+          <div className="risk-map-filter__region">
+            <LocationIcon />
             <input
+              aria-label="지역 검색"
               type="search"
-              value={region}
-              onChange={(event) => setRegion(event.target.value)}
-              placeholder="지역명을 입력하세요"
+              value={draftFilters.region}
+              onChange={(event) => setDraftFilters((current) => ({ ...current, region: event.target.value }))}
+              placeholder="지역명을 입력하세요."
             />
-          </label>
-          <label>
-            날짜
+          </div>
+          <input
+            aria-label="현재 데이터에서 지원하지 않는 날짜 필터입니다"
+            title="현재 데이터에서 지원하지 않는 필터입니다"
+            type="date"
+            disabled
+          />
+          <select
+            aria-label="위험도 선택"
+            className={!draftFilters.riskLevel ? 'select-placeholder' : undefined}
+            value={draftFilters.riskLevel}
+            onChange={(event) => setDraftFilters((current) => ({
+              ...current,
+              riskLevel: event.target.value as MapFilters['riskLevel'],
+            }))}
+          >
+            <option value={unsetValue} disabled>위험도</option>
+            <option value={allValue}>전체</option>
+            {RISK_LEVEL_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
             <input
-              type="date"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-            />
-          </label>
-          <label>
-            위험도
-            <select
-              value={riskLevel}
-              onChange={(event) => setRiskLevel(event.target.value as RiskLevel | typeof allValue)}
-            >
-              <option value={allValue}>전체</option>
-              {RISK_LEVEL_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            행사 필터
-            <input
+              aria-label="현재 데이터에서 지원하지 않는 행사 필터입니다"
+              title="현재 데이터에서 지원하지 않는 필터입니다"
               type="text"
-              value={eventFilter}
-              onChange={(event) => setEventFilter(event.target.value)}
-              placeholder="행사명 placeholder"
+              placeholder="행사명"
+              disabled
             />
-          </label>
           <button type="button" className="secondary-button" onClick={resetFilters}>
-            필터 초기화
+            초기화
           </button>
+          <button
+            type="button"
+            className="secondary-button filter-reset-button"
+            onClick={() => setAppliedFilters({ ...draftFilters, region: draftFilters.region.trim() })}
+            aria-label="위험도 지도 새로고침"
+            title="새로고침"
+          >
+            <RefreshIcon />
+          </button>
+          <button type="submit" className="primary-button">필터 적용</button>
         </div>
         <fieldset className="layer-options">
           <legend>레이어 선택</legend>
@@ -100,7 +146,7 @@ export function RiskMapPage() {
             </label>
           ))}
         </fieldset>
-      </AdminSection>
+      </form>
 
       <div className="risk-map-layout">
         <article className="admin-card">
@@ -112,7 +158,7 @@ export function RiskMapPage() {
               <span
                 key={marker.id}
                 className="map-marker"
-                style={{ top: `${marker.top}%`, left: `${marker.left}%`, backgroundColor: getRiskConfig(marker.riskLevel)?.markerColor ?? '#64748B', color: getRiskConfig(marker.riskLevel)?.markerTextColor ?? '#FFFFFF' }}
+                style={{ top: `${marker.top}%`, left: `${marker.left}%`, backgroundColor: getRiskConfig(marker.riskLevel, marker.riskScore)?.markerColor ?? '#64748B', color: getRiskConfig(marker.riskLevel, marker.riskScore)?.markerTextColor ?? '#FFFFFF' }}
               >
                 {marker.location}
               </span>

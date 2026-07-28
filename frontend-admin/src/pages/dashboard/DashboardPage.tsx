@@ -79,7 +79,7 @@ export function DashboardPage() {
               <span
                 key={marker.id}
                 className="map-marker"
-                style={{ top: `${marker.top}%`, left: `${marker.left}%`, backgroundColor: getRiskConfig(marker.riskLevel)?.markerColor ?? '#64748B', color: getRiskConfig(marker.riskLevel)?.markerTextColor ?? '#FFFFFF' }}
+                style={{ top: `${marker.top}%`, left: `${marker.left}%`, backgroundColor: getRiskConfig(marker.riskLevel, marker.riskScore)?.markerColor ?? '#64748B', color: getRiskConfig(marker.riskLevel, marker.riskScore)?.markerTextColor ?? '#FFFFFF' }}
               >
                 {marker.location}
               </span>
@@ -108,7 +108,7 @@ export function DashboardPage() {
                   >
                     <td>{report.location}</td>
                     <td>
-                      <RiskBadge value={report.riskLevel} />
+                      <RiskBadge value={report.riskLevel} score={report.riskScore} />
                     </td>
                     <td>{formatAdminTimestamp(report.reportedAt) || '정보 없음'}</td>
                     <td>{reportStatusLabels[report.status]}</td>
@@ -194,7 +194,7 @@ function LiveConnectionCard({ connection, uploadedAt, onOpenMonitoring }: LiveCo
     >
       <header className="live-connection-item__header">
         <strong className="live-connection-item__location">{connection.location || `제보 #${connection.reportId}`}</strong>
-        <RiskBadge value={connection.riskLevel} />
+        <RiskBadge value={connection.riskLevel} score={connection.riskScore} />
       </header>
       <div className="live-connection-item__media">
         {isConnected && <span className="live-badge">LIVE</span>}
