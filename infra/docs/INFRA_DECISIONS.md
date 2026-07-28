@@ -306,3 +306,203 @@
   제약) — 제보 라우팅 기능 검증에 필요.
 - **2주차 잔여 인프라**: nginx WebSocket 프록시 + 도메인 루트(Caddy) 연결로 end-to-end 성립.
 - FE–BE–AI–인프라 통합 인테그레이션 착수 시 위 항목들이 선행 조건이다.
+---
+
+# 2026-07-28 (화) — 배포 환경 보안 차단 · 환경변수 배선 완결 · seed 적재
+
+**오늘의 원칙**: 통합 인테그레이션(7/29) 전날. "설정이 있다"가 아니라 "배포 서버에서 실제로
+동작한다"를 실호출로 증명하는 것을 완료 기준으로 삼았다.
+
+## 1. DB·Redis가 인터넷에 열려 있었음 (최우선 조치)
+
+포트 바인딩 작업 전 점검 중 발견. 외부(개발 PC)에서 직접 스캔한 결과:
+
+| 포트 | 서비스 | 외부 접근 |
+|---|---|---|
+| 5432 | PostgreSQL | **OPEN** |
+| 6379 | Redis | **OPEN** |
+| 8090 | backend | OPEN |
+| 8091 | nginx | OPEN (정상) |
+| 9200 | MinIO S3 API | OPEN (presign에 필요) |
+| 9201 | MinIO 콘솔 | closed |
+| 3001 | Uptime Kuma | closed (127.0.0.1 바인딩) |
+
+Redis는 추정에 그치지 않고 외부에서 raw TCP로 PING을 보내 `+PONG` 응답을 확인했다.
+compose에 requirepass가 없어 무인증 상태였고, Redis에는 리프레시 토큰(RefreshTokenStore)과
+로그아웃 블랙리스트가 저장된다. 사용자가 로그인을 시작하는 순간부터 세션 탈취가 가능한 상태였다.
+
+조치: backend는 도커 네트워크 내부 이름(db/redis)으로 접속하므로 호스트 포트 매핑은
+디버깅 용도일 뿐이다. 127.0.0.1 바인딩으로 변경해도 앱 동작에 영향이 없음을 확인하고 적용했다.
+MinIO 콘솔(9201)도 외부 미도달 상태였지만 방화벽 정책 변경에 대비해 명시적으로 로컬 바인딩했다.
+S3 API(9200)는 브라우저가 presigned URL로 직접 PUT해야 하므로 공개를 유지한다.
+
+## 2. ufw가 못 막은 이유 — Docker의 iptables 우회
+
+`sudo ufw status` 허용 목록에는 22 / 80 / 443 / 8989 / 7881·7885 / 50000-60000 뿐이고
+**5432도 6379도 8091도 없다. 그런데 전부 열려 있었다.**
+
+원인은 Docker가 포트를 publish할 때 iptables의 DOCKER 체인에 DNAT 규칙을 직접 써넣기 때문이다.
+이 규칙이 ufw의 필터 체인보다 먼저 평가돼서 ufw는 해당 트래픽을 보지도 못한다.
+**"ufw를 켰으니 안전하다"가 컨테이너 publish 포트에는 성립하지 않는다.**
+
+실제 외부 노출 여부를 결정하고 있던 것은 ufw가 아니라 SSAFY Lightsail 쪽 방화벽이었다
+(9201·3001이 막힌 이유). 우리가 통제할 수 없는 계층에 의존하고 있었던 셈이라, compose의
+바인딩 주소로 우리 쪽에서 확정하는 방식으로 바꿨다.
+
+## 3. DB 비밀번호 불일치 — Postgres는 기존 볼륨의 비밀번호를 유지한다
+
+포트 바인딩 변경으로 컨테이너를 재생성하자 backend가 Exited (1).
+로그 최하단은 `FATAL: password authentication failed for user "safy"`.
+
+- `.env` / backend 컨테이너 / db 컨테이너의 DB_PASSWORD 해시가 **셋 다 동일**했다.
+- 그런데도 인증이 실패했다. 원인은 **db_data 볼륨이 7/23에 만들어졌다**는 것.
+- **POSTGRES_PASSWORD는 데이터 디렉토리를 최초 초기화할 때 한 번만 반영된다.** 이후 값을
+  바꿔도 볼륨 안의 비밀번호는 그대로다. `.env`를 편집하면서 값이 바뀌었고, 재생성 전까지는
+  기존 컨테이너가 옛 값으로 이미 접속해 있어 드러나지 않았다.
+
+조치: `ALTER USER`로 DB를 `.env` 기준에 맞췄다(데이터 0행이라 위험 없음).
+psql `-c`는 psql 변수를 치환하지 않으므로 표준입력(`-f -`)으로 넘겨야 한다.
+
+포트 바인딩 변경이 원인은 아니었지만 방아쇠 역할을 했다. **그대로 뒀으면 오늘 밤 CI 배포에서
+터졌을 문제**이고, 그때는 배포 변경과 뒤섞여 원인 규명이 훨씬 어려웠을 것이다.
+
+## 4. 검증 방법이 틀려서 두 번 오진했다 (기록 가치 있음)
+
+- **해시 비교 오진**: `printenv | sha256sum`(값+개행)과 `printf %s | sha256sum`(값만)을
+  비교했다. 개행 하나 때문에 **항상 불일치**로 나와 정상인 값을 다르다고 판단했다.
+- **인증 테스트 오진**: db 컨테이너 안에서 `psql -h 127.0.0.1`로 테스트해 "인증 성공"을 얻었다.
+  그러나 postgres 이미지 기본 pg_hba.conf는 127.0.0.1을 **trust**로 처리해 비밀번호를
+  아예 검사하지 않는다. **틀린 비밀번호로도 성공이 뜬다.**
+  backend는 도커 네트워크로 접속하므로 `docker run --network infra_default`로 같은 경로를
+  재현해서야 실패가 드러났다.
+
+교훈: **검증은 실제 사용 경로와 동일한 경로로 해야 한다.** 편한 경로로 확인하면 "확인했다는
+착각"만 얻는다.
+
+## 5. 환경변수 배선 누락 4종 — 7/27 2층 문제의 잔여분
+
+7/27에 JWT_SECRET으로 겪은 것과 같은 함정이 남아 있었다. `.env`에 값이 있어도
+compose `environment:`에 나열하지 않으면 컨테이너에 전달되지 않는다.
+
+| 변수 | 누락 시 증상 |
+|---|---|
+| KAKAO_LOCAL_REST_API_KEY | 좌표→행정구역 해석 예외 → 제보가 관제센터에 배정되지 않고 재시도만 반복. 홈 화면 `/locations/resolve`도 실패 |
+| SUPER_ADMIN_LOGIN_ID/PASSWORD/DISPLAY_NAME | admin_credentials가 비어 어드민 로그인 자체가 불가능 |
+| MINIO_PUBLIC_ENDPOINT | presigned URL이 내부 주소(minio:9000)로 발급 → 브라우저가 닿지 못해 이미지 업로드 100% 실패 |
+
+MINIO_PUBLIC_ENDPOINT는 `.env`에도 없어서 새로 추가했다(`http://i15a503.p.ssafy.io:9200`).
+`infra/env.example`은 인증·OAuth·관리자 항목이 통째로 빠져 있어 그대로 복사하면 부팅이
+불가능한 상태였고, 존재하지 않는 local 프로필을 권하고 있어 함께 바로잡았다.
+
+**값이 사라질 수 있는 지점이 세 층이라는 것이 이번에 정리됐다**:
+① `.env`에 값이 있는가 → ② compose가 컨테이너에 전달하는가 → ③ 앱·저장소가 실제로 쓰는가.
+오늘 ②에서 4건(위 표), ③에서 1건(Postgres 볼륨 비밀번호)이 걸렸다.
+
+## 6. nginx 헬스체크가 27시간 동안 거짓말을 하고 있었음
+
+`docker ps`에 nginx가 unhealthy(FailingStreak **3188**, 약 27시간)로 표시됐으나
+호스트에서 `/healthz`는 200이었다. 컨테이너 안에서 직접 확인:
+
+- `wget http://127.0.0.1/healthz` → ok
+- `wget http://localhost/healthz` → Connection refused
+
+busybox wget이 localhost를 ::1(IPv6)로 먼저 해석하는데 nginx는 IPv4에만 바인딩돼 있어
+거부된 것이다. **서비스는 처음부터 정상이었고 헬스체크만 실패하고 있었다.**
+127.0.0.1로 변경 후 healthy(FailingStreak 0) 확인. Kuma 알림 노이즈의 원인이기도 했다.
+
+## 7. seed 적재
+
+사전에 ON CONFLICT가 의존하는 제약을 확인(이게 없으면 seed가 실패한다):
+
+- administrative_areas UNIQUE (code)
+- control_centers UNIQUE (code)
+- control_center_areas UNIQUE (control_center_id, administrative_area_id, coverage_role)
+
+서버의 seed 파일이 저장소와 동일한지 해시로 확인한 뒤 ON_ERROR_STOP=1로 순서대로 적재:
+행정구역 → 관제센터(+매핑) → 라우팅 제약.
+
+결과: 행정구역 26(서울시 1 + 자치구 25) · 관제센터 25 · 매핑 25(전부 ACTIVE) ·
+부분 유니크 인덱스 2종 생성. 매핑 정합성도 확인(1111000000 종로구 → 종로구 재난안전상황실).
+
+## 8. 배포 환경 실동작 검증
+
+| 검증 | 결과 |
+|---|---|
+| 어드민 로그인 `POST /auth/admin/login` | **HTTP 200 + accessToken** (배포 서버 최초) |
+| 좌표 해석 `/locations/resolve` (경복궁) | **resolved:true, 1111000000, 종로구** |
+| 지역명 검색 `/locations/search` | 200, seed 데이터 반환 |
+| `/areas/2/status`, `/areas/2/map` | 200, 실데이터 |
+| `/reports/recent`, `/administrative-areas/2` | 200 |
+
+좌표 해석 성공이 한 번에 증명한 것: 카카오 키가 컨테이너에 도달했고 · 키가 유효하며 ·
+서버에서 카카오 API로 아웃바운드가 열려 있고 · 카카오 응답 코드 형식이 seed와 맞물린다.
+**제보 라우팅의 핵심 경로가 뚫렸다.**
+
+미검증: 제보 생성 → 라우팅 → 배정, 이미지 업로드 presign. 둘 다 CITIZEN 계정이 필요한데
+시민 계정은 소셜로그인을 거쳐야만 생성되므로 브라우저 없이는 만들 수 없다.
+아래 9번이 해결돼야 가능하다.
+
+## 9. 시민 앱이 서버에 붙지 않는 원인 규명 (프론트 영역, 별건)
+
+어드민(:8091/admin/login)은 뜨는데 시민 앱은 로그인 시
+`localhost:8080/api/v1/auth/social/google/login`으로 이동해 ERR_CONNECTION_REFUSED.
+nginx `/api` 프록시(7/27 수정)는 정상이며 무관하다.
+
+배포된 번들을 직접 grep한 결과 `frontend-user/dist/assets/index-*.js`에
+`http://localhost:8080/api/v1`이 **3곳** 박혀 있었다(axios baseURL · SSE URL · 소셜로그인
+리다이렉트). `frontend-admin/dist`에는 0건.
+
+원인은 **`.env`의 git 추적 여부** 하나다:
+
+| | .env 커밋 여부 | CI 빌드 시 | 결과 |
+|---|---|---|---|
+| frontend-admin | 미추적 | .env 없음 → 코드 폴백 `/api/v1` | 같은 출처로 붙어 동작 |
+| frontend-user | **추적됨** | .env의 localhost:8080 주입 | 실패 |
+
+Vite는 `.env`를 **빌드 시점**에 읽어 문자열을 번들에 박아 넣는다. 런타임 설정이 아니라서
+서버에서 무엇을 고쳐도 이미 구운 번들은 바뀌지 않는다.
+
+수정 대상은 VITE_API_BASE_URL을 직접 읽는 3곳(api/client.ts, api/realtime.ts,
+pages/auth/LoginPage.tsx)과 `.env` 추적 해제다. 별도 브랜치로 분리 예정.
+
+## 10. 발견한 배포 함정 — DEPLOY_TAG 미지정
+
+compose가 `image: safy-backend:${DEPLOY_TAG:-latest}`인데 서버에 safy-backend:latest
+(24시간 전 빌드)가 남아 있다. 서버에서 DEPLOY_TAG 없이 `docker compose up -d backend`를
+실행하면 **현재 운영 이미지가 아니라 낡은 latest로 조용히 롤백된다. 에러도 나지 않는다.**
+오늘 서버 작업에는 모두 DEPLOY_TAG를 명시했다. 기본값 제거 여부는 롤백 스크립트가
+같은 변수를 쓰므로 별도 판단이 필요하다.
+
+## 11. 오늘 배운 점
+
+- **ufw는 컨테이너 publish 포트를 막지 못한다.** Docker가 iptables에 직접 규칙을 넣기 때문이다.
+  컨테이너 노출은 compose의 바인딩 주소(127.0.0.1:)로 통제해야 한다.
+- **Postgres는 기존 볼륨이 있으면 POSTGRES_PASSWORD를 무시한다.** 반대로 **MinIO는 root
+  자격증명을 매 기동마다 env에서 다시 읽는다.** 같은 "env로 자격증명 주입"이라도 저장 방식이
+  달라 변경 절차가 정반대다.
+- **검증은 실제 사용 경로로 해야 한다.** 컨테이너 내부 127.0.0.1은 trust라 비밀번호를
+  검사하지 않아, 틀린 값으로도 성공이 뜬다.
+- **설정값은 세 층에서 유실될 수 있다**(.env → compose 전달 → 앱 사용). 층을 분리해 확인하면
+  원인 위치가 바로 특정된다.
+- **빌드 시점에 박히는 값과 런타임 값은 다르다.** Vite `.env`는 전자라 서버 수정으로 못 고친다.
+  같은 이유로 `.env`를 저장소에 커밋하면 CI 빌드가 그 값을 그대로 굽는다.
+- 비밀은 값을 출력하지 않고 **길이·해시·기본값 대조**로 검증할 수 있다. 다만 비교 방식 자체가
+  틀리면(개행 혼입) 멀쩡한 값을 불일치로 오판한다.
+
+## 12. 후속 / 미결
+
+- **MINIO_ACCESS_KEY가 기본값(minioadmin)**: 9200이 외부 공개라 스캐너의 1순위 표적이다.
+  secret이 32자 랜덤이라 즉시 위험은 아니나 교체 필요. access key는 presigned URL에 평문으로
+  들어가는 식별자이므로 랜덤일 필요는 없고, 기본값만 벗어나면 된다.
+- **frontend-user baseURL 수정(위 9번)**: 시민 앱 통합의 선행 조건. 별도 브랜치 예정.
+- **`/api` 이중 접두어 8곳**: homeApi.ts 3곳은 백엔드에 엔드포인트가 실재하므로 `/api`만
+  제거하면 동작한다. notificationsApi.ts 5곳은 백엔드에 알림 API 자체가 없어 팀 결정 필요.
+- **백엔드에 없는 엔드포인트**: `/users/me/favorite-locations`, `/faqs`, `/notices`,
+  `/inquiries`, `/notifications*`, `/users/me/notification-settings` — 프론트가 뺄지
+  백엔드가 만들지 통합 회의에서 결정.
+- **행정구역 경계 GeoJSON 부재**: `/areas/{id}/map`의 boundaryGeoJson이 null이다. 지도에
+  자치구 경계를 그리려면 필요. seed 추가(백엔드) vs 프론트 자체 보유 중 결정 필요.
+- **Flyway 도입(백엔드)**: dev/ddl-auto update는 여전히 스톱갭. 스키마 변경 이력이 남지
+  않아 통합 주차에 드리프트 위험이 있다.
+- **제보 생성 E2E·presign 실검증**: 시민 계정이 필요해 위 9번 해결 후 가능.
+- **배포·복구 런북(티켓 49)**: 이 저널과 별개로 팀원이 따라할 절차서 미작성.

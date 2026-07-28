@@ -32,7 +32,9 @@ services:
       # 8080은 OpenVidu ingress가 이미 점유 중(실서버 실측, 2026-07-23).
       # 컨테이너 내부는 기본값 8080 그대로 두고, 호스트에는 디버깅용으로만
       # 8090을 매핑한다. 정식 진입점은 nginx(8091)다.
-      - "8090:8080"
+      # 127.0.0.1 바인딩: 디버깅용 포트를 인터넷에 노출할 이유가 없다.
+      # 외부에서 봐야 하면 SSH 터널을 쓴다.
+      - "127.0.0.1:8090:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
       - DB_HOST=db
@@ -46,6 +48,11 @@ services:
       - OPENVIDU_API_KEY=${OPENVIDU_API_KEY}
       - OPENVIDU_API_SECRET=${OPENVIDU_API_SECRET}
       - MINIO_ENDPOINT=http://minio:9000
+      # presigned URL은 브라우저가 직접 PUT하는 주소라, 브라우저 기준으로
+      # 닿는 호스트로 서명돼야 한다. 내부 이름(minio:9000)으로 발급하면
+      # 브라우저가 그 주소를 알 수 없어 업로드가 100% 실패한다.
+      # 미지정 시 application.yml이 MINIO_ENDPOINT로 대체하므로 반드시 채운다.
+      - MINIO_PUBLIC_ENDPOINT=${MINIO_PUBLIC_ENDPOINT}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_UPLOAD_BUCKET=${MINIO_UPLOAD_BUCKET}
@@ -66,6 +73,17 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-not-configured}
       - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID:-not-configured}
       - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET:-not-configured}
+      # 카카오 로컬 API(좌표 → 행정구역 역지오코딩) 키.
+      # 소셜로그인용 KAKAO_CLIENT_*와는 다른 값이다.
+      # 제보 라우팅(ReportRoutingProcessor)과 홈 화면의 /locations/resolve가
+      # 이 키에 의존한다. 비어 있으면 예외가 발생해 제보가 관제센터에
+      # 배정되지 않고 재시도만 반복한다(KakaoAdministrativeAreaResolver).
+      - KAKAO_LOCAL_REST_API_KEY=${KAKAO_LOCAL_REST_API_KEY:-}
+      # 최초 관리자 계정. 값이 있으면 부팅 시 SuperAdminInitializer가 생성한다.
+      # 비어 있으면 admin_credentials가 비어 어드민 로그인 자체가 불가능하다.
+      - SUPER_ADMIN_LOGIN_ID=${SUPER_ADMIN_LOGIN_ID:-}
+      - SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-}
+      - SUPER_ADMIN_DISPLAY_NAME=${SUPER_ADMIN_DISPLAY_NAME:-Super Admin}
     depends_on:
       - db
       - redis
@@ -83,7 +101,11 @@ services:
   db:
     image: postgres:16
     ports:
-      - "${DB_PORT}:5432"
+      # 127.0.0.1 바인딩 필수. backend는 도커 네트워크 내부 이름(db)으로 붙으므로
+      # 호스트 매핑은 순전히 디버깅용이다. 0.0.0.0으로 두면 인터넷에 그대로 열린다.
+      # ufw는 이걸 못 막는다 — Docker가 iptables에 직접 규칙을 넣어 ufw보다 먼저
+      # 평가되기 때문이다(2026-07-28 실측: 외부에서 5432 접속 성공).
+      - "127.0.0.1:${DB_PORT}:5432"
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
@@ -108,7 +130,10 @@ services:
   redis:
     image: redis:7
     ports:
-      - "${REDIS_PORT}:6379"
+      # 127.0.0.1 바인딩 필수. Redis는 비밀번호가 없어서 노출되면 즉시 무방비다.
+      # 2026-07-28 실측: 외부에서 PING을 보내 +PONG 응답을 받았다.
+      # 리프레시 토큰과 로그아웃 블랙리스트가 들어있어 유출 시 세션 탈취로 이어진다.
+      - "127.0.0.1:${REDIS_PORT}:6379"
     logging: *default-logging
     healthcheck:
       # redis-cli는 이미지에 기본 포함. PONG 응답이면 정상.
@@ -130,8 +155,10 @@ services:
     ports:
       # OpenVidu 자체 MinIO(녹화/Egress용)와 충돌해서 9200/9201로 이미 재배정함
       # (실서버 실측 확인, 2026-07-21, INFRA_DECISIONS.md 참고)
+      # 9200(S3 API)은 브라우저가 presigned URL로 직접 접근해야 하므로 공개한다.
       - "9200:9000"   # S3 API
-      - "9201:9001"   # 관리 콘솔
+      # 관리 콘솔은 팀만 쓰면 되므로 외부에 열지 않는다. SSH 터널로 접근한다.
+      - "127.0.0.1:9201:9001"   # 관리 콘솔
     environment:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
@@ -180,7 +207,10 @@ services:
     logging: *default-logging
     healthcheck:
       # default.conf의 전용 /healthz(항상 200)를 busybox wget으로 확인.
-      test: ["CMD-SHELL", "wget -q --spider http://localhost/healthz || exit 1"]
+      # localhost가 아니라 127.0.0.1을 쓴다. busybox wget은 localhost를 ::1로
+      # 먼저 해석하는데 nginx는 IPv4에만 바인딩돼 있어 연결이 거부된다.
+      # 이 때문에 서비스는 멀쩡한데 27시간 동안 unhealthy로 표시됐다(2026-07-28).
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/healthz || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
