@@ -96,6 +96,7 @@ python -m ruff check .
 - 전체 시각적 혼잡도 `visualCongestionScore` 반환
 - 국소 최대 혼잡도 `localPeakCongestionScore` 반환
 - `COMPLETED`, `INVALID_FRAME`, `FAILED` 분석 상태 처리
+- 표준 품질 문제 코드와 AI 내부 실패 코드 반환
 - GPU 추론 처리시간 측정
 
 C·L 계산은 대표 표본 검증으로 보정한 `yolo-grid-v0.2` 규칙을 사용합니다.
@@ -107,6 +108,11 @@ C·L 계산은 대표 표본 검증으로 보정한 `yolo-grid-v0.2` 규칙을 �
 모델·가중치·분석 규칙 버전은 모든 분석 상태에 포함합니다.
 상세한 필드 의미와 상태별 JSON 명세는
 [분석 신뢰도와 모델 버전 기록 기준](docs/analysis-confidence-versioning.md)을 참고합니다.
+
+영상 프레임은 OpenVidu 측에서 5초 간격으로 추출하며,
+AI 서버는 전달받은 단일 프레임의 품질 검사와 분석만 담당합니다.
+프레임 상태, 실패 코드, 재시도 및 영상 단위 집계 기준은
+[영상 프레임 분석 상태 및 실패 처리 기준](docs/video-frame-analysis.md)을 참고합니다.
 
 혼잡 지속성 P, 혼잡 증가 추세 G, 최종 위험도 계산과 개인정보 블러는 후속 구현 범위입니다.
 

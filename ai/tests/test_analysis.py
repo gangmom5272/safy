@@ -60,6 +60,24 @@ def fake_detection_failure(_: bytes) -> PersonDetectionResult:
     raise RuntimeError("YOLO inference failed")
 
 
+def fake_detection_value_error(
+    _: bytes,
+) -> PersonDetectionResult:
+    raise ValueError(
+        "Sensitive internal model error",
+    )
+
+
+def fake_congestion_failure(
+    _: list[tuple[float, float]],
+) -> None:
+    raise RuntimeError("Congestion calculation failed")
+
+
+def fake_quality_failure(_: bytes) -> None:
+    raise RuntimeError("Frame quality inspection failed")
+
+
 def test_analyze_frame(monkeypatch) -> None:
     monkeypatch.setattr(
         analysis,
@@ -84,6 +102,7 @@ def test_analyze_frame(monkeypatch) -> None:
         "riskScore": None,
         "confidence": None,
         "qualityIssues": [],
+        "failureCodes": [],
         "frameWidth": 1280,
         "frameHeight": 720,
         "brightnessScore": 127.5,
@@ -138,7 +157,11 @@ def test_invalid_frame_skips_detection(monkeypatch) -> None:
     assert response_body["confidence"] is None
 
 
-def test_analysis_failure_returns_failed_status(monkeypatch) -> None:
+def test_analysis_failure_returns_failed_status(
+    monkeypatch,
+    caplog,
+) -> None:
+    caplog.set_level("ERROR")
     monkeypatch.setattr(
         analysis,
         "inspect_frame_quality",
@@ -160,6 +183,9 @@ def test_analysis_failure_returns_failed_status(monkeypatch) -> None:
     assert response.json()["personCount"] is None
     assert response.json()["personConfidences"] == []
     assert response.json()["qualityIssues"] == []
+    assert response.json()["failureCodes"] == [
+        "MODEL_INFERENCE_FAILED",
+    ]
     assert response.json()["visualCongestionScore"] is None
     assert response.json()["localPeakCongestionScore"] is None
 
@@ -171,6 +197,116 @@ def test_analysis_failure_returns_failed_status(monkeypatch) -> None:
     assert response_body["modelWeightId"] == "yolo11n.pt"
     assert response_body["congestionRuleVersion"] == "yolo-grid-v0.2"
     assert response_body["frameQualityRuleVersion"] == "frame-quality-v0.2"
+    assert "Person detection failed" in caplog.text
+
+
+def test_detection_value_error_does_not_expose_detail(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_valid_quality,
+    )
+    monkeypatch.setattr(
+        analysis,
+        "detect_people",
+        fake_detection_value_error,
+    )
+
+    response = client.post(
+        "/api/v1/analyze/frame",
+        files={
+            "image": (
+                "test.jpg",
+                b"fake-image",
+                "image/jpeg",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["analysisStatus"] == "FAILED"
+    assert response.json()["failureCodes"] == [
+        "MODEL_INFERENCE_FAILED",
+    ]
+    assert "detail" not in response.json()
+    assert "Sensitive internal model error" not in response.text
+
+
+def test_congestion_failure_returns_failure_code(
+    monkeypatch,
+    caplog,
+) -> None:
+    caplog.set_level("ERROR")
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_valid_quality,
+    )
+    monkeypatch.setattr(
+        analysis,
+        "detect_people",
+        fake_detect_people,
+    )
+    monkeypatch.setattr(
+        analysis,
+        "calculate_congestion",
+        fake_congestion_failure,
+    )
+
+    response = client.post(
+        "/api/v1/analyze/frame",
+        files={
+            "image": (
+                "test.jpg",
+                b"fake-image",
+                "image/jpeg",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["analysisStatus"] == "FAILED"
+    assert response.json()["failureCodes"] == [
+        "CONGESTION_CALCULATION_FAILED",
+    ]
+    assert response.json()["personCount"] is None
+    assert "Congestion calculation failed" in caplog.text
+
+
+def test_quality_inspection_failure_returns_internal_error(
+    monkeypatch,
+    caplog,
+) -> None:
+    caplog.set_level("ERROR")
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_quality_failure,
+    )
+
+    response = client.post(
+        "/api/v1/analyze/frame",
+        files={
+            "image": (
+                "test.jpg",
+                b"fake-image",
+                "image/jpeg",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["analysisStatus"] == "FAILED"
+    assert response.json()["failureCodes"] == [
+        "INTERNAL_AI_ERROR",
+    ]
+    assert response.json()["qualityIssues"] == []
+    assert response.json()["personCount"] is None
+    assert response.json()["frameWidth"] is None
+    assert response.json()["frameHeight"] is None
+    assert "Frame quality inspection failed" in caplog.text
 
 
 def test_no_people_returns_completed_with_zero_congestion(
