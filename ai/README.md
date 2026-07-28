@@ -166,3 +166,22 @@ SAFY의 기본 사람 탐지 모델과 고밀도 군중 보완 후보를 비교�
 python -m scripts.evaluate_frame_quality \
   docs/frame-quality-manifest.example.csv \
   --output runs/evaluation/frame-quality-report.json
+
+
+  ## Blur a representative image
+
+백엔드가 정상 분석 프레임 중 대표 이미지 한 장을 선정하면,
+AI 서버가 전달받은 이미지 전체를 블러 처리해 JPEG로 반환합니다.
+
+```bash
+curl -X POST \
+  "http://127.0.0.1:8000/api/v1/privacy/blur" \
+  -F "image=@runs/bus.jpg" \
+  --output runs/bus-blurred.jpg
+```
+
+대표 프레임 선정은 백엔드가 담당하며, AI 서버는 제보별 상태나
+프레임 간 분석 결과를 저장하지 않습니다.
+
+대표 프레임 선정 기준, 전체 처리 흐름, 실패 코드와 보안 원칙은
+[대표 이미지 전체 블러 처리](docs/image-blur.md)를 참고합니다.
