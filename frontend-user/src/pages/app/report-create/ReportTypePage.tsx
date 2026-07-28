@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
 import { mockLocations } from '../../../mocks/locations'
 import { resolveLocation } from '../home/homeApi'
+import { LocationMap } from './LocationMap'
+import { resolveAddress } from './kakaoMap'
 import {
   DEFAULT_REPORT_METHOD,
   REPORT_CONTENT_MAX_LENGTH,
@@ -11,7 +13,7 @@ import {
   REPORT_CATEGORY_LABELS,
   REPORT_TAG_LABELS,
 } from './reportConstants'
-import type { ReportCategory, ReportFormData, ReportMethod, ReportTag } from './reportTypes'
+import type { ReportCategory, ReportFormData, ReportLocation, ReportMethod, ReportTag } from './reportTypes'
 import { useGeolocation } from './useGeolocation'
 import './report-create.css'
 
@@ -30,19 +32,35 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   const [content, setContent] = useState(initialFormData?.content ?? '')
   const [contentTouched, setContentTouched] = useState(false)
   const [resolvedLocation, setResolvedLocation] = useState<{ key: string; name: string } | null>(null)
+  const [adjustedLocation, setAdjustedLocation] = useState<ReportLocation | null>(null)
   const { status, location, message, requestLocation } = useGeolocation()
+  const effectiveLocation = adjustedLocation ?? location
 
   useEffect(() => {
-    if (status !== 'success' || !location) {
+    if (status !== 'success' || !effectiveLocation) {
+      return
+    }
+
+    const locationKey = `${effectiveLocation.latitude}:${effectiveLocation.longitude}`
+
+    if (resolvedLocation?.key === locationKey) {
       return
     }
 
     let isCurrent = true
-    const locationKey = `${location.latitude}:${location.longitude}`
-    const mockLocationName = getNearestMockLocationName(location.latitude, location.longitude)
-    void resolveLocation(location.latitude, location.longitude)
-      .then((resolvedLocation) => {
-        if (isCurrent) setResolvedLocation({ key: locationKey, name: resolvedLocation.areaName || mockLocationName })
+    const mockLocationName = getNearestMockLocationName(
+      effectiveLocation.latitude,
+      effectiveLocation.longitude,
+    )
+    // 상세 주소를 우선 쓰고, 실패하면 기존 행정구역명으로 물러난다.
+    void resolveAddress(effectiveLocation.latitude, effectiveLocation.longitude)
+      .catch(() =>
+        resolveLocation(effectiveLocation.latitude, effectiveLocation.longitude).then(
+          (area) => area.areaName,
+        ),
+      )
+      .then((name) => {
+        if (isCurrent) setResolvedLocation({ key: locationKey, name: name || mockLocationName })
       })
       .catch(() => {
         if (isCurrent) setResolvedLocation({ key: locationKey, name: mockLocationName })
@@ -51,7 +69,14 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
     return () => {
       isCurrent = false
     }
-  }, [location, status])
+  }, [effectiveLocation, resolvedLocation, status])
+
+  const handleRequestLocation = () => {
+    // GPS 를 다시 잡으면 직접 조정한 위치는 버린다.
+    setAdjustedLocation(null)
+    requestLocation()
+  }
+
 
   const handleCategorySelect = (nextCategory: ReportCategory) => {
     setCategory(nextCategory)
@@ -77,13 +102,15 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
       category,
       selectedTags,
       content: content.trim(),
-      location,
+      location: effectiveLocation,
     })
   }
 
   const ctaLabel = method === 'live' ? '실시간 영상 제보 시작하기' : '사진·영상 제보 등록하기'
-  const hasLocation = status === 'success' && location
-  const locationKey = location ? `${location.latitude}:${location.longitude}` : ''
+  const hasLocation = status === 'success' && effectiveLocation
+  const locationKey = effectiveLocation
+    ? `${effectiveLocation.latitude}:${effectiveLocation.longitude}`
+    : ''
   const locationName = resolvedLocation?.key === locationKey
     ? resolvedLocation.name
     : '위치명을 확인하는 중입니다.'
@@ -147,12 +174,15 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
         <h2 id="report-location-title" className="report-form-section-title">현재 위치</h2>
         <div className="report-location-card">
           <div className="report-map-placeholder" aria-live="polite">
-          <div className="report-mini-map" aria-hidden="true">
-            <span className="report-map-park" />
-            <span className="report-map-building building-one" />
-            <span className="report-map-building building-two" />
-            {hasLocation ? <span className="report-location-marker" /> : null}
-          </div>
+          {effectiveLocation ? (
+            <LocationMap
+              latitude={effectiveLocation.latitude}
+              longitude={effectiveLocation.longitude}
+              onCenterChange={setAdjustedLocation}
+            />
+          ) : (
+            <div className="report-location-map-frame" aria-hidden="true" />
+          )}
           <div className="report-location-status">
             <strong className={hasLocation ? 'location-confirmed' : ''}>
               {hasLocation ? <LocationIcon /> : null}
@@ -163,10 +193,16 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
             {hasLocation ? (
               <p className="report-location-name">{locationName}</p>
             ) : null}
-            {hasLocation ? <p className="report-location-guide">제보 위치는 현재 위치로 자동 설정됩니다.</p> : null}
+            {hasLocation ? (
+              <p className="report-location-guide">
+                {adjustedLocation
+                  ? '직접 조정한 위치로 제보됩니다.'
+                  : '위치가 부정확하면 지도를 움직여 조정해주세요.'}
+              </p>
+            ) : null}
             {status !== 'checking' ? (
-              <button type="button" className="report-secondary-button" onClick={requestLocation}>
-                위치 다시 확인
+              <button type="button" className="report-secondary-button" onClick={handleRequestLocation}>
+                현위치 다시 확인
               </button>
             ) : null}
           </div>
