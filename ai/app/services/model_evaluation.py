@@ -157,6 +157,9 @@ def _summary_to_dict(
 def save_evaluation_report(
     records: list[EvaluationRecord],
     output_path: Path,
+    *,
+    model_name: str = "YOLO",
+    model_version: str = "yolo11n",
 ) -> None:
     summary = summarize_evaluations(records)
 
@@ -178,8 +181,8 @@ def save_evaluation_report(
 
     report = {
         "model": {
-            "name": "YOLO",
-            "version": "yolo11n",
+            "name": model_name,
+            "version": model_version,
         },
         "summary": _summary_to_dict(summary),
         "scenarioSummaries": scenario_summaries,
