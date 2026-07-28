@@ -202,7 +202,8 @@ export function mapLocationSearchResult(raw: unknown): LocationSearchResult {
   return {
     id: asString(item.id ?? item.areaId ?? item.locationId),
     name: asString(item.name ?? item.areaName ?? item.locationName),
-    address: asString(item.address ?? item.roadAddress),
+    // 지역명 검색 응답은 주소를 displayName 으로 준다.
+    address: asString(item.address ?? item.roadAddress ?? item.displayName),
     latitude: asOptionalNumber(item.latitude ?? item.lat),
     longitude: asOptionalNumber(item.longitude ?? item.lng),
   }
@@ -360,8 +361,9 @@ export async function searchLocations(keyword: string): Promise<LocationSearchRe
     return waitForMock(filterMockLocations(keyword))
   }
 
+  // 백엔드가 요구하는 파라미터명은 query 다. keyword 로 보내면 필수값 누락으로 400이 온다.
   const response = await apiClient.get<unknown>('/locations/search', {
-    params: { keyword },
+    params: { query: keyword },
   })
 
   return readArrayResponse(response.data).map(mapLocationSearchResult)
