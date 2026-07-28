@@ -147,6 +147,22 @@ SAFY의 기본 사람 탐지 모델과 고밀도 군중 보완 후보를 비교�
 상세한 평가 조건, 재현 방법, 장면별 결과와 모델 선택 근거는
 [YOLO와 후보 모델 계수 성능 비교](docs/model-count-benchmark.md)에서 확인할 수 있습니다.
 
+## P2PNet 머리 좌표 C·L 연결 검증
+
+P2PNet이 예측한 머리 점을 정규화된 좌표로 변환해 기존 8×8 C·L
+계산에 연결했습니다.
+
+- 일반·희소 장면 기본 모델: YOLO11n 유지
+- 고밀도 장면 보완 우선 후보: P2PNet
+- ShanghaiTech Part A 계수 MAE: YOLO `428.85`, P2PNet `57.16`
+- ShanghaiTech Part A C MAE: YOLO `59.22`, P2PNet `2.90`
+- P2PNet의 전체 장면 적용과 자동 전환은 아직 적용하지 않음
+- 중간 밀도 및 실제 SAFY 데이터 확보 후 전환 기준 재검증 예정
+
+연결 방식, 재현 명령, 시나리오별 결과와 현재 결정은
+[P2PNet 머리 좌표 C·L 연결 검증](docs/p2pnet-congestion-validation.md)을
+참고합니다.
+
 ## 프레임 품질 기준 검증
 
 프레임 품질 검사는 사람 탐지 전에 해상도, 밝기와 블러 상태를 판정합니다.
