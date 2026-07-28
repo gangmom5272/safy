@@ -1,9 +1,32 @@
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    model_validator,
+)
 
 
-AnalysisStatus = Literal["COMPLETED", "INVALID_FRAME", "FAILED"]
+AnalysisStatus = Literal[
+    "COMPLETED",
+    "INVALID_FRAME",
+    "FAILED",
+]
+
+QualityIssue = Literal[
+    "TOO_DARK",
+    "TOO_BRIGHT",
+    "TOO_BLURRY",
+    "LOW_RESOLUTION",
+    "DECODE_FAILED",
+]
+
+FailureCode = Literal[
+    "MODEL_INFERENCE_FAILED",
+    "CONGESTION_CALCULATION_FAILED",
+    "INTERNAL_AI_ERROR",
+]
 
 
 class FrameAnalysisResponse(BaseModel):
@@ -26,6 +49,7 @@ class FrameAnalysisResponse(BaseModel):
                     "riskScore": None,
                     "confidence": None,
                     "qualityIssues": [],
+                    "failureCodes": [],
                     "frameWidth": 810,
                     "frameHeight": 1080,
                     "brightnessScore": 127.5,
@@ -65,9 +89,13 @@ class FrameAnalysisResponse(BaseModel):
             "보정된 분석 결과 신뢰도입니다. MVP에서는 산정하지 않아 null을 반환합니다."
         ),
     )
-    quality_issues: list[str] = Field(
+    quality_issues: list[QualityIssue] = Field(
         default_factory=list,
         alias="qualityIssues",
+    )
+    failure_codes: list[FailureCode] = Field(
+        default_factory=list,
+        alias="failureCodes",
     )
     frame_width: int | None = Field(default=None, alias="frameWidth")
     frame_height: int | None = Field(default=None, alias="frameHeight")
@@ -85,4 +113,25 @@ class FrameAnalysisResponse(BaseModel):
     frame_quality_rule_version: str = Field(
         alias="frameQualityRuleVersion",
     )
-    processing_time_ms: int = Field(alias="processingTimeMs")
+    processing_time_ms: int = Field(
+        alias="processingTimeMs",
+    )
+
+    @model_validator(mode="after")
+    def validate_status_codes(self) -> Self:
+        if self.analysis_status == "COMPLETED" and self.failure_codes:
+            raise ValueError("COMPLETED 응답에는 failureCodes를 포함할 수 없습니다")
+
+        if self.analysis_status == "INVALID_FRAME":
+            if self.failure_codes:
+                raise ValueError(
+                    "INVALID_FRAME 응답에는 failureCodes를 포함할 수 없습니다"
+                )
+
+            if not self.quality_issues:
+                raise ValueError("INVALID_FRAME 응답에는 qualityIssues가 필요합니다")
+
+        if self.analysis_status == "FAILED" and not self.failure_codes:
+            raise ValueError("FAILED 응답에는 failureCodes가 필요합니다")
+
+        return self
