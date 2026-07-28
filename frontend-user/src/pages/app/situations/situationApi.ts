@@ -44,8 +44,12 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
 }
 
+// 백엔드는 areaId·reportId 같은 식별자를 숫자로 준다. 숫자를 버리면 ID가 빈 값이 되어
+// /areas//map 처럼 경로가 만들어지고 400이 온다. 숫자도 문자열로 받아들인다.
 function asString(value: unknown, fallback = '') {
-  return typeof value === 'string' ? value : fallback
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  return fallback
 }
 
 function asNumber(value: unknown, fallback = 0) {
