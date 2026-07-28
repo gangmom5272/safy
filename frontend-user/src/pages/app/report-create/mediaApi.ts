@@ -1,4 +1,5 @@
 import apiClient from '../../../api/client'
+import { mockResponse, USE_MOCK_API } from '../../../api/mockMode'
 import type { ApiResponse } from '../../../api/types'
 import { uploadReportImage } from './mediaUploadFlow'
 import type { IssueImageUploadRequest, IssueImageUploadResponse } from './mediaUploadFlow'
@@ -27,6 +28,9 @@ async function completeImageUpload(reportId: number, mediaAssetId: number) {
 }
 
 export function uploadImage(reportId: number, file: File) {
+  // 목 모드에서는 MinIO 가 없으므로 업로드 성공만 흉내낸다.
+  if (USE_MOCK_API) return mockResponse(undefined, 400)
+
   return uploadReportImage(reportId, file, {
     issue: issueImageUpload,
     put: putImageDirectly,

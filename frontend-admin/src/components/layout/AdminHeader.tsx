@@ -47,12 +47,12 @@ function LogOutIcon() {
 export function AdminHeader() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { adminEmail, logout } = useAuth()
+  const { adminName, logout } = useAuth()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
   const dangerReports = adminReports.filter((report) => isEmergencyRisk(report.riskLevel))
-  const displayName = adminEmail?.split('@')[0] || '관리자'
+  const displayName = adminName || '관리자'
 
   useEffect(() => {
     if (!isProfileOpen) return

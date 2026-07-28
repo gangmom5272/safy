@@ -1,4 +1,5 @@
 import apiClient from '../../../api/client'
+import { USE_MOCK_API } from '../../../api/mockMode'
 import {
   filterAndSortMockAreaReports,
   filterAndSortMockReports,
@@ -28,8 +29,6 @@ import type {
   WebRtcStatus,
 } from './types'
 import { DEFAULT_REPORT_LIMIT } from './types'
-
-const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== 'false'
 
 function toTypeParam(types: ReportType[]) {
   return types.length ? types.join(',') : undefined
@@ -61,46 +60,61 @@ function asBoolean(value: unknown) {
   return value === true
 }
 
-function readArrayResponse(raw: unknown): unknown[] {
-  if (Array.isArray(raw)) {
-    return raw
-  }
-
+// 백엔드는 모든 응답을 { success, data } 로 감싼다.
+function unwrapEnvelope(raw: unknown): unknown {
   const item = asRecord(raw)
 
-  if (Array.isArray(item.data)) {
-    return item.data
+  return 'success' in item && 'data' in item ? item.data : raw
+}
+
+function readArrayResponse(raw: unknown): unknown[] {
+  const unwrapped = unwrapEnvelope(raw)
+
+  if (Array.isArray(unwrapped)) {
+    return unwrapped
+  }
+
+  const item = asRecord(unwrapped)
+
+  // 커서 페이지 응답은 content 에 목록이 담긴다.
+  if (Array.isArray(item.content)) {
+    return item.content
   }
 
   if (Array.isArray(item.items)) {
     return item.items
   }
 
-  if (Array.isArray(item.content)) {
-    return item.content
+  if (Array.isArray(item.data)) {
+    return item.data
   }
 
   return []
 }
 
 function normalizeReportType(value: unknown): ReportType {
-  if (value === 'crowd' || value === '인파 밀집') {
+  if (value === 'crowd' || value === 'CROWD_CONGESTION' || value === '인파 밀집') {
     return 'crowd'
   }
 
-  if (value === 'accident' || value === '사고·위험') {
+  if (value === 'accident' || value === 'ACCIDENT_RISK' || value === '사고·위험') {
     return 'accident'
   }
 
-  if (value === 'flood_weather' || value === 'weather' || value === '침수·기상') {
+  if (value === 'flood_weather' || value === 'FLOOD_WEATHER' || value === 'weather' || value === '침수·기상') {
     return 'flood_weather'
   }
 
-  if (value === 'facility_road' || value === 'facility' || value === '시설물·도로') {
+  if (value === 'facility_road' || value === 'FACILITY_ROAD' || value === 'facility' || value === '시설물·도로') {
     return 'facility_road'
   }
 
   return 'etc'
+}
+
+// 라이브 세션이 열려 있으면(CREATED/ACTIVE) 송출 중으로 본다.
+function isLiveStreamStatus(value: unknown) {
+  return value === 'CREATED' || value === 'ACTIVE'
 }
 
 export function normalizeRiskLevel(value: unknown): RiskLevel {
@@ -108,11 +122,11 @@ export function normalizeRiskLevel(value: unknown): RiskLevel {
     return 'critical'
   }
 
-  if (value === 'high' || value === '높음' || value === 3) {
+  if (value === 'high' || value === 'HIGH' || value === '높음' || value === 3) {
     return 'high'
   }
 
-  if (value === 'medium' || value === 'normal' || value === '보통' || value === 2) {
+  if (value === 'medium' || value === 'MEDIUM' || value === 'normal' || value === '보통' || value === 2) {
     return 'medium'
   }
 
@@ -140,6 +154,10 @@ function normalizeAnalysisStatus(value: unknown): AnalysisStatus {
     return value
   }
 
+  if (value === 'PROCESSING') return 'processing'
+  if (value === 'COMPLETED') return 'completed'
+  if (value === 'FAILED') return 'failed'
+
   return 'pending'
 }
 
@@ -153,6 +171,13 @@ function normalizeWebRtcStatus(value: unknown): WebRtcStatus {
   ) {
     return value
   }
+
+  // 백엔드 LiveSessionStatus 를 화면 상태로 옮긴다.
+  if (value === 'CREATED') return 'waiting'
+  if (value === 'ACTIVE') return 'connected'
+  if (value === 'DISCONNECTED') return 'connecting'
+  if (value === 'ENDED') return 'ended'
+  if (value === 'FAILED') return 'failed'
 
   return 'none'
 }
@@ -200,22 +225,28 @@ export function mapAreaDetail(raw: unknown): AreaDetail {
 export function mapLiveReport(raw: unknown): LiveReportSummary {
   const item = asRecord(raw)
 
+  const description = asString(item.description ?? item.summary)
+  const isLive = item.streamStatus === undefined
+    ? asBoolean(item.isLive ?? item.live)
+    : isLiveStreamStatus(item.streamStatus)
+
   return {
     id: asString(item.id ?? item.reportId),
-    title: asString(item.title, '제목 없는 제보'),
+    // 백엔드 피드에는 제목 필드가 없어 본문 앞부분을 제목으로 쓴다.
+    title: asString(item.title, '') || description || '제목 없는 제보',
     type: normalizeReportType(item.type ?? item.category),
-    locationName: asString(item.locationName ?? item.placeName),
+    locationName: asString(item.locationName ?? item.areaName ?? item.placeName),
     address: asString(item.address),
     latitude: asOptionalNumber(item.latitude ?? item.lat),
     longitude: asOptionalNumber(item.longitude ?? item.lng),
     reportedAt: asString(item.reportedAt ?? item.createdAt ?? item.createdDate),
     relativeTime: asString(item.relativeTime),
     riskLevel: normalizeRiskLevel(item.riskLevel ?? item.risk ?? item.riskScore),
-    description: asString(item.description ?? item.summary),
+    description,
     maskedThumbnailUrl:
       asString(item.maskedThumbnailUrl ?? item.thumbnailUrl ?? item.maskedImageUrl, '') || null,
-    isWebRtc: asBoolean(item.isWebRtc ?? item.webRtc ?? item.webrtc),
-    isLive: asBoolean(item.isLive ?? item.live),
+    isWebRtc: item.streamRoomId ? true : asBoolean(item.isWebRtc ?? item.webRtc ?? item.webrtc),
+    isLive,
     viewerCount: asOptionalNumber(item.viewerCount ?? item.participantCount),
     thumbnailType: asString(item.thumbnailType),
   }
@@ -225,13 +256,16 @@ export function mapAreaMapData(raw: unknown): AreaMapData {
   const item = asRecord(raw)
   const center = asRecord(item.center)
   const zones = Array.isArray(item.zones) ? item.zones : []
-  const markerSource = item.reportMarkers ?? item.markers
+  // 백엔드 AreaMapResponse 는 마커를 reports.content 로 내려준다.
+  const markerSource = item.reportMarkers ?? item.markers ?? asRecord(item.reports).content
   const markers = Array.isArray(markerSource) ? markerSource : []
+  const firstMarker = asRecord(markers[0])
 
   return {
     center: {
-      latitude: asNumber(center.latitude ?? center.lat, 0),
-      longitude: asNumber(center.longitude ?? center.lng, 0),
+      // 백엔드에 중심 좌표 필드가 없어 첫 제보 위치로 대체한다.
+      latitude: asNumber(center.latitude ?? center.lat ?? firstMarker.latitude, 0),
+      longitude: asNumber(center.longitude ?? center.lng ?? firstMarker.longitude, 0),
     },
     zones: zones.map((zoneRaw) => {
       const zone = asRecord(zoneRaw)
@@ -272,7 +306,7 @@ export function mapAreaStatus(raw: unknown): AreaStatus {
   return {
     riskLevel: normalizeRiskLevel(item.riskLevel ?? item.risk),
     congestionLevel: normalizeCongestionLevel(item.congestionLevel),
-    recentReportCount: asNumber(item.recentReportCount ?? item.reportCount, 0),
+    recentReportCount: asNumber(item.recentReportCount ?? item.activeReportCount ?? item.reportCount, 0),
     weather: item.weather
       ? {
           condition: asString(weather.condition),
@@ -298,8 +332,10 @@ export function mapReportAnalysis(raw: unknown): ReportAnalysis {
   return {
     reportId: asString(item.reportId),
     status: normalizeAnalysisStatus(item.status),
-    congestionLevel: item.congestionLevel ? normalizeRiskLevel(item.congestionLevel) : undefined,
-    estimatedPeopleCount: asOptionalNumber(item.estimatedPeopleCount),
+    congestionLevel: item.congestionLevel ?? item.riskLevel
+      ? normalizeRiskLevel(item.congestionLevel ?? item.riskLevel)
+      : undefined,
+    estimatedPeopleCount: asOptionalNumber(item.estimatedPeopleCount ?? item.crowdCount),
     aiSummary: asString(item.aiSummary ?? item.summary),
     analyzedAt: asString(item.analyzedAt),
     errorMessage: asString(item.errorMessage),
@@ -311,7 +347,7 @@ export function mapReportWebRtcInfo(raw: unknown): ReportWebRtcInfo {
 
   return {
     reportId: asString(item.reportId),
-    roomId: asString(item.roomId),
+    roomId: asString(item.roomId ?? item.streamRoomId),
     signalingUrl: asString(item.signalingUrl),
     statusSocketUrl: asString(item.statusSocketUrl),
     status: normalizeWebRtcStatus(item.status),
@@ -348,9 +384,9 @@ export async function getArea(areaId: string): Promise<AreaDetail> {
     return waitForMock(getMockArea(areaId))
   }
 
-  const response = await apiClient.get<unknown>(`/areas/${areaId}`)
+  const response = await apiClient.get<unknown>(`/administrative-areas/${areaId}`)
 
-  return mapAreaDetail(response.data)
+  return mapAreaDetail(unwrapEnvelope(response.data))
 }
 
 export async function getAreaByQuery(keyword: string): Promise<AreaDetail | null> {
@@ -379,7 +415,7 @@ export async function getAreaMap(areaIdOrQuery: string): Promise<AreaMapData> {
 
   const response = await apiClient.get<unknown>(`/areas/${areaIdOrQuery}/map`)
 
-  return mapAreaMapData(response.data)
+  return mapAreaMapData(unwrapEnvelope(response.data))
 }
 
 export async function getAreaStatus(areaId: string): Promise<AreaStatus> {
@@ -389,7 +425,7 @@ export async function getAreaStatus(areaId: string): Promise<AreaStatus> {
 
   const response = await apiClient.get<unknown>(`/areas/${areaId}/status`)
 
-  return mapAreaStatus(response.data)
+  return mapAreaStatus(unwrapEnvelope(response.data))
 }
 
 export async function getAreaLiveReports(
@@ -420,7 +456,7 @@ export async function getReportDetail(reportId: string): Promise<ReportDetail> {
 
   const response = await apiClient.get<unknown>(`/reports/${reportId}`)
 
-  return mapReportDetail(response.data)
+  return mapReportDetail(unwrapEnvelope(response.data))
 }
 
 export async function getReportAnalysis(reportId: string): Promise<ReportAnalysis | null> {
@@ -429,8 +465,9 @@ export async function getReportAnalysis(reportId: string): Promise<ReportAnalysi
   }
 
   const response = await apiClient.get<unknown | null>(`/reports/${reportId}/analysis`)
+  const analysis = unwrapEnvelope(response.data)
 
-  return response.data ? mapReportAnalysis(response.data) : null
+  return analysis ? mapReportAnalysis(analysis) : null
 }
 
 export async function getReportWebRtcInfo(reportId: string): Promise<ReportWebRtcInfo> {
@@ -440,5 +477,5 @@ export async function getReportWebRtcInfo(reportId: string): Promise<ReportWebRt
 
   const response = await apiClient.get<unknown>(`/reports/${reportId}/webrtc`)
 
-  return mapReportWebRtcInfo(response.data)
+  return mapReportWebRtcInfo(unwrapEnvelope(response.data))
 }

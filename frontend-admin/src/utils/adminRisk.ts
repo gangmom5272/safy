@@ -44,6 +44,11 @@ const normalizedRiskAliases: Record<string, RiskLevel> = {
   very_low: 'very_low',
   verylow: 'very_low',
   '매우 낮음': 'very_low',
+  // LegacyRiskLevel — 목 데이터와 구 API 응답이 쓰는 4단계 표기
+  danger: 'very_high',
+  warning: 'high',
+  caution: 'medium',
+  safe: 'low',
 }
 
 export function normalizeRiskLevel(value: unknown): RiskLevel | null {
@@ -78,12 +83,12 @@ export function matchesRiskLevel(value: unknown, selected: RiskLevel): boolean {
   return normalizeRiskLevel(value) === selected
 }
 
-export function isEmergencyRisk(value: RiskLevelValue): boolean {
+export function isEmergencyRisk(value: RiskLevelValue | null): boolean {
   const normalized = normalizeRiskLevel(value)
   return normalized === 'very_high' || value === 'danger'
 }
 
-export function isHighRisk(value: RiskLevelValue): boolean {
+export function isHighRisk(value: RiskLevelValue | null): boolean {
   const normalized = normalizeRiskLevel(value)
   const legacyValue = value as LegacyRiskLevel
   return normalized === 'very_high' || normalized === 'high' || legacyValue === 'danger' || legacyValue === 'warning'

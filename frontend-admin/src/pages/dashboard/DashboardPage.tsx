@@ -1,24 +1,59 @@
-import { type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useState, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
 import {
-  adminReports,
   reportStatusLabels,
   riskMarkers,
-  webrtcConnections,
 } from '../../mocks/adminMockData'
-import type { WebRTCConnection } from '../../types/admin'
+import type { AdminReport, WebRTCConnection } from '../../types/admin'
 import { ROUTE_PATHS, createMonitoringDetailPath, createReportDetailPath } from '../../router/paths'
 import { AdminSection } from '../../components/admin/AdminSection'
 import { RiskBadge } from '../../components/admin/RiskBadge'
-import { getRiskConfig, isHighRisk } from '../../utils/adminRisk'
+import { getRiskConfig } from '../../utils/adminRisk'
 import { formatAdminTimestamp } from '../../utils/adminDate'
+import { getDashboardReports } from '../reports/reportApi'
+import { getLiveSessions } from '../monitoring/monitoringApi'
+import { LiveViewer } from '../monitoring/LiveViewer'
+import { subscribeToRealtimeSignals } from '../../api/realtime'
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const activeConnections = webrtcConnections.filter(
+  const [reports, setReports] = useState<AdminReport[]>([])
+  const [connections, setConnections] = useState<WebRTCConnection[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [loadedReports, loadedConnections] = await Promise.all([
+        getDashboardReports(0, 5),
+        getLiveSessions(),
+      ])
+      setReports(loadedReports)
+      setConnections(loadedConnections)
+      setLoadError('')
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : '대시보드 정보를 불러오지 못했습니다.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const initialLoad = window.setTimeout(() => void loadDashboard(), 0)
+    const unsubscribe = subscribeToRealtimeSignals((signal) => {
+      if (signal.kind === 'connected' || signal.event.eventType !== 'REPORT_MESSAGE') {
+        void loadDashboard()
+      }
+    })
+    return () => {
+      window.clearTimeout(initialLoad)
+      unsubscribe()
+    }
+  }, [loadDashboard])
+
+  const activeConnections = connections.filter(
     (connection) => connection.connectionStatus !== 'ended',
   )
-  const recentDangerReports = adminReports.filter((report) => isHighRisk(report.riskLevel))
 
   const openMonitoring = (connection: WebRTCConnection) => {
     navigate(createMonitoringDetailPath(connection.id))
@@ -26,6 +61,7 @@ export function DashboardPage() {
 
   return (
     <section className="page-stack">
+      {loadError && <p className="admin-card empty-state" role="alert">{loadError}</p>}
       <div className="home-content-grid">
         <AdminSection
           title="실시간 위험도 지도"
@@ -51,7 +87,7 @@ export function DashboardPage() {
           </button>
         </AdminSection>
 
-        <AdminSection title="최근 위험 제보" className="home-recent-section">
+        <AdminSection title="최근 배정 제보" className="home-recent-section">
           <div className="table-wrap">
             <table className="admin-table recent-reports-table">
               <thead>
@@ -64,7 +100,7 @@ export function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentDangerReports.map((report) => (
+                {reports.map((report) => (
                   <tr
                     key={report.id}
                     className="clickable-row"
@@ -74,7 +110,7 @@ export function DashboardPage() {
                     <td>
                       <RiskBadge value={report.riskLevel} />
                     </td>
-                    <td>{report.reportedAt}</td>
+                    <td>{formatAdminTimestamp(report.reportedAt) || '정보 없음'}</td>
                     <td>{reportStatusLabels[report.status]}</td>
                     <td>
                       <button
@@ -90,6 +126,11 @@ export function DashboardPage() {
                     </td>
                   </tr>
                 ))}
+                {!isLoading && reports.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="empty-state">현재 배정된 제보가 없습니다.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -107,11 +148,13 @@ export function DashboardPage() {
                 <LiveConnectionCard
                   key={connection.id}
                   connection={connection}
-                  uploadedAt={adminReports.find((report) => report.id === connection.reportId)?.reportedAt}
+                  uploadedAt={reports.find((report) => report.id === connection.reportId)?.reportedAt}
                   onOpenMonitoring={() => openMonitoring(connection)}
                 />
               ))}
             </div>
+          ) : isLoading ? (
+            <div className="empty-state" role="status">실시간 연결을 불러오는 중입니다...</div>
           ) : (
             <div className="empty-state">현재 실시간 연결이 없습니다.</div>
           )}
@@ -153,9 +196,9 @@ function LiveConnectionCard({ connection, uploadedAt, onOpenMonitoring }: LiveCo
         <strong className="live-connection-item__location">{connection.location || `제보 #${connection.reportId}`}</strong>
         <RiskBadge value={connection.riskLevel} />
       </header>
-      <div className="live-connection-item__media" aria-hidden="true">
+      <div className="live-connection-item__media">
         {isConnected && <span className="live-badge">LIVE</span>}
-        <span>WebRTC</span>
+        <LiveViewer connection={connection} compact />
       </div>
       <footer className="live-connection-item__footer">
         <time dateTime={uploadedAt}>{uploadTimestamp ? `업로드 ${uploadTimestamp}` : '업로드 시간 정보 없음'}</time>

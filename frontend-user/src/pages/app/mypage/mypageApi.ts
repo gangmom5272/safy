@@ -1,4 +1,15 @@
 import apiClient from '../../../api/client'
+import { mockResponse, USE_MOCK_API } from '../../../api/mockMode'
+import {
+  mockFaqs,
+  mockFavorites,
+  mockInquiries,
+  mockNotices,
+  mockNotificationSettings,
+  mockReports,
+  mockSummary,
+  mockUser,
+} from './mypageMock'
 import type { ApiResponse, PageResponse } from '../../../api/types'
 import type { Faq, FavoriteLocation, Inquiry, MyReport, Notice, NotificationSettingsData, ReportStatus, ReportSummary, UserProfile } from './mypageTypes'
 
@@ -67,27 +78,37 @@ function toMyReport(report: ReportListItemView, history: ReportStatusHistoryResp
 }
 
 export async function getMe() {
+  if (USE_MOCK_API) return mockResponse(mockUser)
+
   const response = await apiClient.get<ApiResponse<{ id: number; displayName: string }>>('/users/me')
   return { id: response.data.data.id, nickname: response.data.data.displayName, email: '' } satisfies UserProfile
 }
 
 export async function updateMyProfile(nickname: string) {
+  if (USE_MOCK_API) return mockResponse({ ...mockUser, nickname })
+
   const response = await apiClient.patch<ApiResponse<{ id: number; displayName: string }>>('/users/me', { displayName: nickname })
   return { id: response.data.data.id, nickname: response.data.data.displayName, email: '' } satisfies UserProfile
 }
 
 export async function getReportSummary(): Promise<ReportSummary> {
+  if (USE_MOCK_API) return mockResponse(mockSummary)
+
   const response = await apiClient.get<ApiResponse<MyReportSummaryResponse>>('/reports/me/summary')
   const summary = response.data.data
   return { totalCount: summary.totalCount, receivedCount: summary.activeCount, checkingCount: 0, completedCount: summary.closedCount, rejectedCount: 0 }
 }
 
 export async function getMyReports() {
+  if (USE_MOCK_API) return mockResponse(mockReports)
+
   const response = await apiClient.get<ApiResponse<PageResponse<ReportListItemView>>>('/reports/me', { params: { page: 0, size: 30 } })
   return response.data.data.content.map((report) => toMyReport(report))
 }
 
 export async function getMyReport(reportId: number) {
+  if (USE_MOCK_API) return mockResponse(mockReports.find((report) => report.id === reportId) ?? mockReports[0])
+
   const [detailResponse, historyResponse] = await Promise.all([
     apiClient.get<ApiResponse<ReportDetailView>>(`/reports/${reportId}`),
     apiClient.get<ApiResponse<ReportStatusHistoryResponse[]>>(`/reports/${reportId}/status-history`),
@@ -99,20 +120,26 @@ export async function getMyReport(reportId: number) {
 }
 
 export async function cancelMyReport(reportId: number) {
+  if (USE_MOCK_API) return mockResponse(undefined)
+
   await apiClient.patch(`/reports/${reportId}/cancel`)
 }
 
-export async function logout() { await apiClient.post('/auth/logout') }
+export async function logout() {
+  if (USE_MOCK_API) return mockResponse(undefined)
 
-export async function getFavorites() { return (await apiClient.get<ApiResponse<FavoriteLocation[]>>('/users/me/favorite-locations')).data.data }
-export async function createFavorite(data: Omit<FavoriteLocation, 'id' | 'areaId' | 'riskLevel' | 'isPrimary'>) { return (await apiClient.post<FavoriteLocation>('/users/me/favorite-locations', data)).data }
-export async function patchFavorite(id: number, data: Partial<FavoriteLocation>) { return (await apiClient.patch<FavoriteLocation>(`/users/me/favorite-locations/${id}`, data)).data }
-export async function removeFavorite(id: number) { await apiClient.delete(`/users/me/favorite-locations/${id}`) }
-export async function getFaqs(category?: string) { return (await apiClient.get<ApiResponse<Faq[]>>('/faqs', { params: category ? { category } : {} })).data.data }
-export async function getNotices() { return (await apiClient.get<ApiResponse<PageResponse<Notice>>>('/notices', { params: { page: 0, size: 30 } })).data.data.content }
-export async function getNotice(id: number) { return (await apiClient.get<ApiResponse<Notice>>(`/notices/${id}`)).data.data }
-export async function getInquiries() { return (await apiClient.get<ApiResponse<PageResponse<Inquiry>>>('/users/me/inquiries', { params: { page: 0, size: 30 } })).data.data.content }
-export async function createInquiry(data: Pick<Inquiry, 'type' | 'title' | 'content' | 'attachmentName'>) { return (await apiClient.post<Inquiry>('/inquiries', data)).data }
-export async function getInquiry(id: number) { return (await apiClient.get<ApiResponse<Inquiry>>(`/users/me/inquiries/${id}`)).data.data }
-export async function getNotificationSettings() { return (await apiClient.get<NotificationSettingsData>('/users/me/notification-settings')).data }
-export async function updateNotificationSettings(settings: NotificationSettingsData) { return (await apiClient.patch<NotificationSettingsData>('/users/me/notification-settings', settings)).data }
+  await apiClient.post('/auth/logout')
+}
+
+export async function getFavorites() { if (USE_MOCK_API) return mockResponse(mockFavorites); return (await apiClient.get<ApiResponse<FavoriteLocation[]>>('/users/me/favorite-locations')).data.data }
+export async function createFavorite(data: Omit<FavoriteLocation, 'id' | 'areaId' | 'riskLevel' | 'isPrimary'>) { if (USE_MOCK_API) return mockResponse({ ...data, id: Date.now(), areaId: 0, riskLevel: 'SAFE', isPrimary: false } as FavoriteLocation); return (await apiClient.post<FavoriteLocation>('/users/me/favorite-locations', data)).data }
+export async function patchFavorite(id: number, data: Partial<FavoriteLocation>) { if (USE_MOCK_API) return mockResponse({ ...(mockFavorites.find((favorite) => favorite.id === id) ?? mockFavorites[0]), ...data }); return (await apiClient.patch<FavoriteLocation>(`/users/me/favorite-locations/${id}`, data)).data }
+export async function removeFavorite(id: number) { if (USE_MOCK_API) return mockResponse(undefined); await apiClient.delete(`/users/me/favorite-locations/${id}`) }
+export async function getFaqs(category?: string) { if (USE_MOCK_API) return mockResponse(category ? mockFaqs.filter((faq) => faq.category === category) : mockFaqs); return (await apiClient.get<ApiResponse<Faq[]>>('/faqs', { params: category ? { category } : {} })).data.data }
+export async function getNotices() { if (USE_MOCK_API) return mockResponse(mockNotices); return (await apiClient.get<ApiResponse<PageResponse<Notice>>>('/notices', { params: { page: 0, size: 30 } })).data.data.content }
+export async function getNotice(id: number) { if (USE_MOCK_API) return mockResponse(mockNotices.find((notice) => notice.id === id) ?? mockNotices[0]); return (await apiClient.get<ApiResponse<Notice>>(`/notices/${id}`)).data.data }
+export async function getInquiries() { if (USE_MOCK_API) return mockResponse(mockInquiries); return (await apiClient.get<ApiResponse<PageResponse<Inquiry>>>('/users/me/inquiries', { params: { page: 0, size: 30 } })).data.data.content }
+export async function createInquiry(data: Pick<Inquiry, 'type' | 'title' | 'content' | 'attachmentName'>) { if (USE_MOCK_API) return mockResponse({ ...data, id: Date.now(), createdAt: new Date().toISOString(), status: 'PENDING', answer: null, answeredAt: null } as unknown as Inquiry); return (await apiClient.post<Inquiry>('/inquiries', data)).data }
+export async function getInquiry(id: number) { if (USE_MOCK_API) return mockResponse(mockInquiries.find((inquiry) => inquiry.id === id) ?? mockInquiries[0]); return (await apiClient.get<ApiResponse<Inquiry>>(`/users/me/inquiries/${id}`)).data.data }
+export async function getNotificationSettings() { if (USE_MOCK_API) return mockResponse(mockNotificationSettings); return (await apiClient.get<NotificationSettingsData>('/users/me/notification-settings')).data }
+export async function updateNotificationSettings(settings: NotificationSettingsData) { if (USE_MOCK_API) return mockResponse(settings); return (await apiClient.patch<NotificationSettingsData>('/users/me/notification-settings', settings)).data }

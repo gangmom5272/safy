@@ -17,6 +17,7 @@ import './report-create.css'
 type PhotoSource = 'camera' | 'gallery'
 
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const MAX_PHOTO_COUNT = 5
 
 type PhotoCameraStatus =
   | 'idle'
@@ -157,9 +158,9 @@ export function MediaReportPage({
   const mountedRef = useRef(false)
   const submitInProgressRef = useRef(false)
   const createdReportIdRef = useRef<number | null>(formData.reportId ?? null)
-  const selectedPhotoRef = useRef<SelectedPhoto | null>(null)
+  const selectedPhotosRef = useRef<SelectedPhoto[]>([])
   const capturedPhotoRef = useRef<CapturedPhoto | null>(null)
-  const [selectedPhoto, setSelectedPhoto] = useState<SelectedPhoto | null>(null)
+  const [selectedPhotos, setSelectedPhotos] = useState<SelectedPhoto[]>([])
   const [capturedPhoto, setCapturedPhoto] = useState<CapturedPhoto | null>(null)
   const [cameraStatus, setCameraStatus] = useState<PhotoCameraStatus>('idle')
   const [errorMessage, setErrorMessage] = useState('')
@@ -226,27 +227,26 @@ export function MediaReportPage({
     })
   }, [revokePhotoUrl])
 
-  const clearSelectedPhoto = useCallback(() => {
-    setSelectedPhoto((currentPhoto) => {
-      revokePhotoUrl(currentPhoto)
-      return null
+  const clearSelectedPhotos = useCallback(() => {
+    setSelectedPhotos((currentPhotos) => {
+      currentPhotos.forEach(revokePhotoUrl)
+      return []
     })
     clearFileInput()
   }, [revokePhotoUrl])
 
   const resetPhotoState = useCallback(() => {
-    clearSelectedPhoto()
+    clearSelectedPhotos()
     clearCapturedPhoto()
     setErrorMessage('')
     setCameraStatus('idle')
-  }, [clearCapturedPhoto, clearSelectedPhoto])
+  }, [clearCapturedPhoto, clearSelectedPhotos])
 
   const startPhotoCamera = useCallback(async () => {
     if (cameraRequestInProgressRef.current || streamRef.current) {
       return
     }
 
-    clearSelectedPhoto()
     clearCapturedPhoto()
     setErrorMessage('')
     cameraModeActiveRef.current = true
@@ -295,7 +295,7 @@ export function MediaReportPage({
       cleanupCamera()
       setCameraStatus(getCameraErrorStatus(error))
     }
-  }, [cleanupCamera, clearCapturedPhoto, clearSelectedPhoto])
+  }, [cleanupCamera, clearCapturedPhoto])
 
   const switchToGallery = () => {
     invalidateCameraWork()
@@ -376,13 +376,15 @@ export function MediaReportPage({
       return
     }
 
+    if (selectedPhotos.length >= MAX_PHOTO_COUNT) {
+      setErrorMessage(`이미지는 최대 ${MAX_PHOTO_COUNT}장까지 첨부할 수 있습니다.`)
+      return
+    }
+
     invalidateCameraWork()
-    clearSelectedPhoto()
-    setSelectedPhoto({
-      source: 'camera',
-      file: capturedPhoto.file,
-      previewUrl: capturedPhoto.previewUrl,
-    })
+    setSelectedPhotos((currentPhotos) => [...currentPhotos, {
+      source: 'camera', file: capturedPhoto.file, previewUrl: capturedPhoto.previewUrl,
+    }])
     setCapturedPhoto(null)
     cleanupCamera()
     setCameraStatus('idle')
@@ -390,36 +392,50 @@ export function MediaReportPage({
   }
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const files = Array.from(event.target.files ?? [])
     invalidateCameraWork()
     cleanupCamera()
     clearCapturedPhoto()
     setCameraStatus('idle')
     setErrorMessage('')
 
-    if (!file) {
+    if (!files.length) {
       return
     }
 
-    if (!ALLOWED_IMAGE_TYPES.has(file.type.toLowerCase())) {
-      clearSelectedPhoto()
+    if (files.some((file) => !ALLOWED_IMAGE_TYPES.has(file.type.toLowerCase()))) {
       setErrorMessage('JPEG, PNG, WEBP 이미지만 선택할 수 있습니다.')
       return
     }
 
-    if (file.size > MAX_PHOTO_SIZE_BYTES) {
-      clearSelectedPhoto()
+    if (files.some((file) => file.size > MAX_PHOTO_SIZE_BYTES)) {
       setErrorMessage('10MB 이하의 이미지 파일만 선택할 수 있습니다.')
       return
     }
 
-    clearSelectedPhoto()
-    const previewUrl = URL.createObjectURL(file)
-    setSelectedPhoto({ source: 'gallery', file, previewUrl })
+    const remainingCount = MAX_PHOTO_COUNT - selectedPhotos.length
+    if (files.length > remainingCount) {
+      setErrorMessage(`이미지는 최대 ${MAX_PHOTO_COUNT}장까지 첨부할 수 있습니다.`)
+      return
+    }
+
+    setSelectedPhotos((currentPhotos) => [
+      ...currentPhotos,
+      ...files.map((file) => ({ source: 'gallery' as const, file, previewUrl: URL.createObjectURL(file) })),
+    ])
+    clearFileInput()
+  }
+
+  const removeSelectedPhoto = (index: number) => {
+    setSelectedPhotos((currentPhotos) => {
+      revokePhotoUrl(currentPhotos[index])
+      return currentPhotos.filter((_, photoIndex) => photoIndex !== index)
+    })
+    setErrorMessage('')
   }
 
   const requestPhotoSubmit = () => {
-    if (!selectedPhoto || isConfirmOpen) {
+    if (!selectedPhotos.length || isConfirmOpen) {
       setErrorMessage('사진을 먼저 선택하거나 촬영해주세요.')
       return
     }
@@ -428,7 +444,7 @@ export function MediaReportPage({
   }
 
   const confirmPhotoSubmit = useCallback(async () => {
-    if (!selectedPhoto || submitInProgressRef.current) {
+    if (!selectedPhotos.length || submitInProgressRef.current) {
       return
     }
 
@@ -441,12 +457,14 @@ export function MediaReportPage({
         buildCreateReportRequest({ ...formData, method: 'photo' }),
       )).reportId
       createdReportIdRef.current = reportId
-      await uploadImage(reportId, selectedPhoto.file)
+      for (const photo of selectedPhotos) {
+        await uploadImage(reportId, photo.file)
+      }
       onComplete?.({
         ...formData,
         method: 'photo',
         reportId,
-        mediaFile: selectedPhoto.file,
+        mediaFiles: selectedPhotos.map((photo) => photo.file),
       })
     } catch (error) {
       submitInProgressRef.current = false
@@ -454,7 +472,7 @@ export function MediaReportPage({
       setIsConfirmOpen(false)
       setErrorMessage(error instanceof Error ? error.message : '제보를 등록하지 못했습니다.')
     }
-  }, [cleanupCamera, formData, onComplete, selectedPhoto])
+  }, [cleanupCamera, formData, onComplete, selectedPhotos])
 
   const closeConfirmModal = useCallback(() => {
     if (isSubmitting) {
@@ -479,14 +497,14 @@ export function MediaReportPage({
       mountedRef.current = false
       invalidateCameraWork()
       cleanupCamera(false)
-      revokePhotoUrl(selectedPhotoRef.current)
+      selectedPhotosRef.current.forEach(revokePhotoUrl)
       revokePhotoUrl(capturedPhotoRef.current)
     }
   }, [cleanupCamera, invalidateCameraWork, revokePhotoUrl])
 
   useEffect(() => {
-    selectedPhotoRef.current = selectedPhoto
-  }, [selectedPhoto])
+    selectedPhotosRef.current = selectedPhotos
+  }, [selectedPhotos])
 
   useEffect(() => {
     capturedPhotoRef.current = capturedPhoto
@@ -525,11 +543,12 @@ export function MediaReportPage({
           id="report-photo-input"
           className="report-file-input"
           type="file"
+          multiple
           accept="image/jpeg,image/png,image/webp"
           onChange={handleFileChange}
         />
 
-        {!selectedPhoto ? (
+        {selectedPhotos.length < MAX_PHOTO_COUNT ? (
           <div className="report-photo-mode-grid">
             <button
               type="button"
@@ -547,7 +566,7 @@ export function MediaReportPage({
 
         {errorMessage ? <p className="report-error-text">{errorMessage}</p> : null}
 
-        {!selectedPhoto && cameraStatus !== 'idle' ? (
+        {cameraStatus !== 'idle' ? (
           <div className="report-camera-box">
             {cameraStatus === 'ready' ? (
               <>
@@ -598,33 +617,26 @@ export function MediaReportPage({
           </div>
         ) : null}
 
-        {selectedPhoto ? (
-          <div className="report-media-preview">
-            <img src={selectedPhoto.previewUrl} alt="선택한 제보 사진 미리보기" />
-            <span className="report-info-badge">
-              {selectedPhoto.source === 'camera' ? '카메라 촬영' : '갤러리 선택'}
-            </span>
-            <p>
-              {selectedPhoto.file.name} · {formatFileSize(selectedPhoto.file.size)}
-            </p>
-            <div className="report-media-preview-actions">
-              <button type="button" className="report-secondary-button" onClick={resetPhotoState}>
-                다시 선택
-              </button>
-              <button type="button" className="report-photo-delete-button" onClick={resetPhotoState}>
-                삭제
-              </button>
-            </div>
+        {selectedPhotos.length ? (
+          <div className="report-media-preview-grid" aria-label={`선택한 이미지 ${selectedPhotos.length}장`}>
+            {selectedPhotos.map((photo, index) => (
+              <div className="report-media-preview" key={photo.previewUrl}>
+                <img src={photo.previewUrl} alt={`선택한 제보 사진 ${index + 1}`} />
+                <span className="report-info-badge">{index + 1} · {photo.source === 'camera' ? '카메라 촬영' : '갤러리 선택'}</span>
+                <p>{photo.file.name} · {formatFileSize(photo.file.size)}</p>
+                <button type="button" className="report-photo-delete-button" onClick={() => removeSelectedPhoto(index)}>삭제</button>
+              </div>
+            ))}
           </div>
         ) : (
-          <p className="report-create-muted">10MB 이하의 이미지 파일을 선택하거나 카메라로 촬영해주세요.</p>
+          <p className="report-create-muted">장당 10MB 이하의 이미지를 최대 5장까지 선택하거나 촬영해주세요.</p>
         )}
 
         <div className="report-create-actions">
           <button
             type="button"
             className="report-primary-button"
-            disabled={!selectedPhoto || isSubmitting}
+            disabled={!selectedPhotos.length || isSubmitting}
             onClick={requestPhotoSubmit}
           >
             사진 제출하기
@@ -634,8 +646,8 @@ export function MediaReportPage({
 
       {isConfirmOpen ? (
         <ConfirmReportModal
-          title="정말 이 사진으로 제보하시겠습니까?"
-          description="사진에 실제 현장 상황이 정확하게 담겼는지 확인해주세요. 허위 또는 장난 제보는 제재 대상이 될 수 있습니다."
+          title={`선택한 사진 ${selectedPhotos.length}장으로 제보하시겠습니까?`}
+          description="모든 사진에 실제 현장 상황이 정확하게 담겼는지 확인해주세요. 선택한 순서대로 등록됩니다."
           isSubmitting={isSubmitting}
           onCancel={closeConfirmModal}
           onConfirm={confirmPhotoSubmit}

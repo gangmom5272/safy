@@ -1,4 +1,5 @@
 import apiClient from '../../../api/client'
+import { mockResponse, USE_MOCK_API } from '../../../api/mockMode'
 import type { ApiResponse } from '../../../api/types'
 
 export type ReportTypeValue = 'IMAGE' | 'LIVE'
@@ -31,6 +32,18 @@ export interface CreateReportResponse {
 }
 
 export async function createReport(request: CreateReportRequest) {
+  if (USE_MOCK_API) {
+    return mockResponse<CreateReportResponse>({
+      reportId: 9001,
+      reportType: request.reportType,
+      category: request.category,
+      subcategory: request.subcategory,
+      status: 'RECEIVED',
+      routingStatus: 'PENDING',
+      reportedAt: new Date().toISOString(),
+    })
+  }
+
   const response = await apiClient.post<ApiResponse<CreateReportResponse>>('/reports', request)
   return response.data.data
 }

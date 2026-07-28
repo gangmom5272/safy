@@ -181,7 +181,7 @@ export const adminReports: AdminReport[] = [
 
 export const webrtcConnections: WebRTCConnection[] = [
   {
-    id: 101,
+    id: '101',
     reportId: 1,
     location: '서울 마포구 홍대입구역 9번 출구',
     riskLevel: 'danger',
@@ -194,7 +194,7 @@ export const webrtcConnections: WebRTCConnection[] = [
     confidence: 94,
   },
   {
-    id: 102,
+    id: '102',
     reportId: 5,
     location: '인천 중구 월미도 문화거리',
     riskLevel: 'danger',
@@ -207,7 +207,7 @@ export const webrtcConnections: WebRTCConnection[] = [
     confidence: 87,
   },
   {
-    id: 103,
+    id: '103',
     reportId: 2,
     location: '서울 강남구 강남역 교차로',
     riskLevel: 'warning',
@@ -220,7 +220,7 @@ export const webrtcConnections: WebRTCConnection[] = [
     confidence: 61,
   },
   {
-    id: 104,
+    id: '104',
     reportId: 3,
     location: '부산 해운대구 해운대해수욕장',
     riskLevel: 'warning',
@@ -233,7 +233,7 @@ export const webrtcConnections: WebRTCConnection[] = [
     confidence: 79,
   },
   {
-    id: 105,
+    id: '105',
     reportId: 4,
     location: '대전 유성구 갑천 산책로',
     riskLevel: 'caution',
@@ -246,7 +246,7 @@ export const webrtcConnections: WebRTCConnection[] = [
     confidence: 72,
   },
   {
-    id: 106,
+    id: '106',
     reportId: 6,
     location: '광주 동구 충장로',
     riskLevel: 'safe',

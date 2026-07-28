@@ -1,18 +1,20 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { AdminSection } from '../../components/admin/AdminSection'
 import { StatusBadge } from '../../components/admin/StatusBadge'
 import { RiskBadge } from '../../components/admin/RiskBadge'
 import {
-  adminReports,
   aiAnalysisStatusLabels,
   reportStatusLabels,
   reportTypeLabels,
 } from '../../mocks/adminMockData'
+import type { AdminReport } from '../../types/admin'
+import { getDashboardReports } from './reportApi'
 import { createReportDetailPath } from '../../router/paths'
 import type { AiAnalysisStatus, ReportStatus, ReportType, RiskLevel } from '../../types/admin'
 import { getReportStatusTone } from '../../utils/adminStatus'
 import { compareRiskLevels, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
+import { subscribeToRealtimeSignals } from '../../api/realtime'
 
 const allValue = 'all'
 
@@ -63,12 +65,40 @@ export function ReportListPage() {
   const [draftFilters, setDraftFilters] = useState<ReportFilters>(initialFilters)
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(initialFilters)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [reports, setReports] = useState<AdminReport[]>([])
+  const [loadError, setLoadError] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+
+  const loadReports = useCallback(async () => {
+    try {
+      const loaded = await getDashboardReports()
+      setReports(loaded)
+      setLoadError('')
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : '제보 목록을 불러오지 못했습니다.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const initialLoad = window.setTimeout(() => void loadReports(), 0)
+    const unsubscribe = subscribeToRealtimeSignals((signal) => {
+      if (signal.kind === 'connected' || signal.event.eventType !== 'REPORT_MESSAGE') {
+        void loadReports()
+      }
+    })
+    return () => {
+      window.clearTimeout(initialLoad)
+      unsubscribe()
+    }
+  }, [loadReports])
 
   const filteredReports = useMemo(() => {
     const keyword = appliedFilters.keyword.trim().toLowerCase()
     const region = appliedFilters.region.trim().toLowerCase()
 
-    return adminReports
+    return reports
       .filter((report) => {
         const searchableText = [
           String(report.id),
@@ -95,7 +125,7 @@ export function ReportListPage() {
         const difference = new Date(second.reportedAt.replace(' ', 'T')).getTime() - new Date(first.reportedAt.replace(' ', 'T')).getTime()
         return appliedFilters.sortOrder === 'newest' ? difference : -difference
       })
-  }, [appliedFilters])
+  }, [appliedFilters, reports])
 
   const resetFilters = () => {
     setDraftFilters(initialFilters)
@@ -175,7 +205,13 @@ export function ReportListPage() {
       </form>
 
       <AdminSection title={`검색 결과 ${filteredReports.length}건`}>
-        {filteredReports.length === 0 ? (
+        {isLoading ? (
+          <p role="status">제보 목록을 불러오는 중입니다...</p>
+        ) : loadError ? (
+          <div className="empty-state">
+            <strong role="alert">{loadError}</strong>
+          </div>
+        ) : filteredReports.length === 0 ? (
           <div className="empty-state">
             <strong>조건에 맞는 제보가 없습니다.</strong>
             <button type="button" className="primary-button" onClick={resetFilters}>전체 목록 보기</button>
@@ -189,7 +225,7 @@ export function ReportListPage() {
                   <tr key={report.id} className="clickable-row" onClick={() => navigate(createReportDetailPath(report.id))}>
                     <td>#{report.id}</td><td>{report.location}</td><td>{reportTypeLabels[report.type]}</td>
                     <td><RiskBadge value={report.riskLevel} /></td>
-                    <td>{report.reportedAt}</td><td>{aiAnalysisStatusLabels[report.aiAnalysisStatus]}</td><td>{report.managerName}</td>
+                    <td>{report.reportedAt}</td><td>{report.aiAnalysisStatus ? aiAnalysisStatusLabels[report.aiAnalysisStatus] : '-'}</td><td>{report.managerName}</td>
                     <td><StatusBadge tone={getReportStatusTone(report.status)}>{reportStatusLabels[report.status]}</StatusBadge></td>
                   </tr>
                 ))}

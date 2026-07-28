@@ -2,8 +2,8 @@ import type { RiskLevelValue } from '../../types/admin'
 import { getRiskLabel, normalizeRiskLevel, RISK_LEVEL_CONFIG, RISK_LEVEL_ORDER } from '../../utils/adminRisk'
 
 interface RiskLevelIndicatorProps {
-  level: RiskLevelValue
-  score: number
+  level: RiskLevelValue | string | null
+  score: number | null
 }
 
 export function RiskLevelIndicator({ level, score }: RiskLevelIndicatorProps) {
