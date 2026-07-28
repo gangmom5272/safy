@@ -4,9 +4,12 @@ export interface KakaoLatLng {
 }
 
 export interface KakaoMap {
+  getCenter: () => KakaoLatLng
   setCenter: (position: KakaoLatLng) => void
   setMinLevel: (level: number) => void
   setMaxLevel: (level: number) => void
+  setDraggable: (draggable: boolean) => void
+  setZoomable: (zoomable: boolean) => void
 }
 
 export interface KakaoMarker {
@@ -32,6 +35,10 @@ interface KakaoMaps {
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng
   Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap
   Marker: new (options: { position: KakaoLatLng; map: KakaoMap }) => KakaoMarker
+  event: {
+    addListener: (target: KakaoMap, type: string, handler: () => void) => void
+    removeListener: (target: KakaoMap, type: string, handler: () => void) => void
+  }
   services: {
     Status: { OK: string }
     Geocoder: new () => KakaoGeocoder
