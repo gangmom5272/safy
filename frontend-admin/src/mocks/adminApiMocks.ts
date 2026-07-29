@@ -3,7 +3,7 @@
 import type { OperatorReportDetail, ReportAnalysis } from '../pages/reports/reportApi'
 import type { OperatorLiveSession } from '../pages/monitoring/monitoringApi'
 import type { AdminReport, ReportType } from '../types/admin'
-import { adminReports } from './adminMockData'
+import { adminReports, mockPhoto } from './adminMockData'
 
 type BackendCategory =
   | 'CROWD_CONGESTION' | 'ACCIDENT_RISK' | 'FLOOD_WEATHER' | 'FACILITY_ROAD' | 'OTHER'
@@ -37,8 +37,21 @@ export function mockReportDetail(reportId: number): OperatorReportDetail {
     administrativeAreaName: report.location,
     assignedControlCenter: { name: report.managerName, administrativeAreaName: report.location },
     reportedAt: report.reportedAt,
+    // 목 모드에서도 "내 처리 결과"가 보이도록 제보 상태에 맞춰 배정 결과를 흉내낸다.
+    myAssignmentStatus: report.status === 'completed'
+      ? 'COMPLETED'
+      : report.status === 'rejected' || report.status === 'cancelled' || report.status === 'reassigned'
+        ? 'CANCELLED'
+        : 'IN_PROGRESS',
+    // 갤러리·확대 보기를 확인할 수 있도록 여러 장을 내려준다.
     images: report.imageUrl
-      ? [{ reportImageId: 1, mediaAssetId: 1, displayOrder: 0, storageStatus: 'AVAILABLE', previewUrl: report.imageUrl }]
+      ? ['#334155', '#475569', '#64748b'].map((background, index) => ({
+          reportImageId: index + 1,
+          mediaAssetId: index + 1,
+          displayOrder: index,
+          storageStatus: 'AVAILABLE',
+          previewUrl: index === 0 ? report.imageUrl! : mockPhoto(`현장 이미지 ${index + 1}`, background),
+        }))
       : [],
   }
 }

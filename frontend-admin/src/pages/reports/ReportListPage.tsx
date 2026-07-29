@@ -9,7 +9,7 @@ import {
   reportTypeLabels,
 } from '../../mocks/adminMockData'
 import type { AdminReport } from '../../types/admin'
-import { getDashboardReports } from './reportApi'
+import { getMyAssignedReports } from './reportApi'
 import { createReportDetailPath } from '../../router/paths'
 import type { AiAnalysisStatus, ReportStatus, ReportType, RiskLevel } from '../../types/admin'
 import { getReportStatusTone } from '../../utils/adminStatus'
@@ -93,7 +93,7 @@ export function ReportListPage() {
 
   const loadReports = useCallback(async () => {
     try {
-      const loaded = await getDashboardReports()
+      const loaded = await getMyAssignedReports()
       setReports(loaded)
       setLoadError('')
     } catch (error) {
@@ -187,6 +187,13 @@ export function ReportListPage() {
                 <select value={draftFilters.type} onChange={(event) => setDraftFilters((current) => ({ ...current, type: event.target.value as ReportFilters['type'] }))}>
                   <option value={allValue}>전체</option>
                   {Object.entries(reportTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label>
+                처리 상태
+                <select value={draftFilters.status} onChange={(event) => setDraftFilters((current) => ({ ...current, status: event.target.value as ReportFilters['status'] }))}>
+                  <option value={allValue}>전체</option>
+                  {Object.entries(reportStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </label>
               <label>

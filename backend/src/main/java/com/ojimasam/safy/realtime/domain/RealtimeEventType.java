@@ -11,5 +11,7 @@ public enum RealtimeEventType {
 	REPORT_CLOSED,
 	REPORT_REJECTED,
 	REPORT_CANCELLED,
+	/** 담당자가 재배정을 요청해 담당자가 바뀜. 제보와 라이브 송출은 그대로 유지된다. */
+	REPORT_REASSIGNED,
 	REPORT_MESSAGE
 }

@@ -26,6 +26,7 @@ import com.ojimasam.safy.report.domain.ReportImage;
 import com.ojimasam.safy.report.domain.ReportImageRepository;
 import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
+import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
 import com.ojimasam.safy.report.domain.ReportType;
 import com.ojimasam.safy.report.domain.ReportCategory;
@@ -42,6 +43,7 @@ class ReportQueryServiceTest {
 	@Mock ReportCenterRouteRepository routeRepository;
 	@Mock ReportStatusHistoryRepository historyRepository;
 	@Mock OperatorReportAccessService operatorAccessService;
+	@Mock ReportOperatorAssignmentRepository assignmentRepository;
 
 	@Test
 	void getsOwnedReportWithTemporaryPreviewUrl() {
@@ -120,7 +122,7 @@ class ReportQueryServiceTest {
 
 	private ReportQueryService service(Instant now) {
 		return new ReportQueryService(reportRepository, reportImageRepository, mediaObjectStorage,
-				routeRepository, historyRepository, operatorAccessService,
+				routeRepository, historyRepository, operatorAccessService, assignmentRepository,
 				Clock.fixed(now, ZoneOffset.UTC));
 	}
 }

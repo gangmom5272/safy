@@ -231,6 +231,21 @@
   object-fit: cover;
 }
 
+/* 담당자 처리 결과 안내. 송출 중 화면에서 바로 읽히도록 크게 보여준다. */
+.report-live-notice {
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 14px;
+  background: rgba(10, 24, 36, 0.9);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+  white-space: pre-line;
+}
+
 .report-live-messages {
   display: grid;
   gap: 6px;

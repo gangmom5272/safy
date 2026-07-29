@@ -1,5 +1,6 @@
 package com.ojimasam.safy.report.application;
 
+import java.util.List;
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
@@ -36,6 +37,11 @@ public class OperatorReportAccessService {
 		this.membershipRepository = membershipRepository;
 	}
 
+	/**
+	 * 조회 권한을 판단한다. 담당자는 자신이 맡았던 제보라면 종결(COMPLETED/CANCELLED)된 건도
+	 * 다시 열어볼 수 있다. 종료·반려·재배정 같은 처리 액션은 별도로
+	 * {@code requireOwnedActiveAssignment} 가 진행 중 배정만 허용하므로 여기서 넓혀도 안전하다.
+	 */
 	@Transactional(readOnly = true)
 	public void requireAccess(Long userId, Long reportId) {
 		User user = userRepository.findById(userId)
@@ -45,14 +51,15 @@ public class OperatorReportAccessService {
 			throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
 		}
 
-		ReportOperatorAssignment assignment = assignmentRepository
-				.findByReport_IdAndStatusIn(reportId, ACTIVE_ASSIGNMENT_STATUSES)
-				.filter(found -> found.getOperator().getId().equals(userId))
-				.orElseThrow(() -> new BusinessException(CommonErrorCode.ACCESS_DENIED));
+		// 재배정 이력이 있으면 한 제보에 내 배정이 여러 건일 수 있어 목록으로 조회한다.
+		List<ReportOperatorAssignment> assignments =
+				assignmentRepository.findAllByReport_IdAndOperator_Id(reportId, userId);
+		if (assignments.isEmpty()) throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
+
 		boolean activeMembership = membershipRepository.findByUserIdAndIsPrimaryTrue(userId)
 				.filter(membership -> membership.getStatus() == MembershipStatus.ACTIVE)
-				.filter(membership -> membership.getControlCenterId()
-						.equals(assignment.getRoute().getControlCenter().getId()))
+				.filter(membership -> assignments.stream().anyMatch(assignment -> membership.getControlCenterId()
+						.equals(assignment.getRoute().getControlCenter().getId())))
 				.isPresent();
 		if (!activeMembership) throw new BusinessException(CommonErrorCode.ACCESS_DENIED);
 	}

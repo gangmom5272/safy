@@ -139,6 +139,8 @@ export function LiveReportPage({
   const submitInProgressRef = useRef(false)
   // 라이브 제보는 시작 시점에 제보와 스트림 룸을 만들고 종료 시점에 세션을 닫는다.
   const liveSessionRef = useRef<{ reportId: number; streamRoomId: string } | null>(null)
+  // 담당자 처리(종료·반려)로 끝났는지. LiveKit 의 일반 종료 메시지가 사유를 덮지 않도록 한다.
+  const endedByOperatorRef = useRef(false)
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle')
   const [isStarting, setIsStarting] = useState(false)
   const [isReporting, setIsReporting] = useState(false)
@@ -149,6 +151,8 @@ export function LiveReportPage({
   const [activeReportId, setActiveReportId] = useState<number | null>(null)
   const [hasReconnectableSession, setHasReconnectableSession] = useState(false)
   const [operatorMessages, setOperatorMessages] = useState<ReportMessage[]>([])
+  // 담당자 처리 결과(종료·반려·재배정) 안내. 오류가 아니라 상태 통지라 크게 따로 보여준다.
+  const [operatorNotice, setOperatorNotice] = useState('')
 
   const stopTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -223,6 +227,8 @@ export function LiveReportPage({
     setIsStarting(true)
     setOperatorMessages([])
     setSubmitError('')
+    setOperatorNotice('')
+    endedByOperatorRef.current = false
 
     let createdSession: { streamRoomId: string } | null = null
     try {
@@ -253,6 +259,9 @@ export function LiveReportPage({
         })
         room.on(RoomEvent.Disconnected, () => {
           if (!mountedRef.current) return
+          // 담당자 처리로 끝난 경우엔 SSE 핸들러가 이미 정리하고 사유를 표시했다.
+          // disconnect() 가 비동기로 이 이벤트를 발생시키므로 여기서 덮어쓰면 사유가 사라진다.
+          if (endedByOperatorRef.current) return
           roomRef.current = null
           if (streamRef.current) {
             streamRef.current.getTracks().forEach((track) => track.stop())
@@ -326,8 +335,16 @@ export function LiveReportPage({
     if (!session || signal.event.reportId !== session.reportId) return
 
     const { eventType } = signal.event
+
+    // 재배정은 담당자만 바뀌고 송출은 그대로 이어진다. 안내만 하고 세션을 건드리지 않는다.
+    if (eventType === 'REPORT_REASSIGNED') {
+      setOperatorNotice('담당자가 변경되었습니다.\n라이브는 계속 진행됩니다.')
+      return
+    }
+
     if (eventType !== 'LIVE_ENDED' && eventType !== 'REPORT_CLOSED' && eventType !== 'REPORT_REJECTED') return
 
+    endedByOperatorRef.current = true
     stopTimer()
     setIsReporting(false)
     setIsConfirmOpen(false)
@@ -341,9 +358,9 @@ export function LiveReportPage({
       return
     }
     setCameraStatus('idle')
-    setSubmitError(eventType === 'REPORT_REJECTED'
-      ? '담당자가 제보를 반려하여 라이브가 종료되었습니다.'
-      : '담당자 처리로 라이브가 종료되었습니다.')
+    setOperatorNotice(eventType === 'REPORT_REJECTED'
+      ? '담당자가 제보를 반려했습니다.\n라이브가 종료되었습니다.'
+      : '담당자가 제보를 처리했습니다.\n라이브가 종료되었습니다.')
   }), [cleanupCamera, formData, onComplete, stopTimer])
 
   const requestFinishLiveReport = () => {
@@ -462,6 +479,9 @@ export function LiveReportPage({
       </div>
 
       <div className="report-live-bottom">
+        {operatorNotice ? (
+          <p className="report-live-notice" role="alert">{operatorNotice}</p>
+        ) : null}
         {submitError ? <p className="report-error-text" role="alert">{submitError}</p> : null}
         {isReporting && operatorMessages.length ? (
           <section className="report-live-messages" aria-live="polite" aria-label="담당자 안내 메시지">
@@ -471,19 +491,24 @@ export function LiveReportPage({
             ))}
           </section>
         ) : null}
-        <ul className="report-live-summary" aria-label="제보 정보">
-          <li>
-            <span><LiveInfoIcon name="location" />{locationText}</span>
-          </li>
-          <li>
-            <span><LiveInfoIcon name="warning" />{categoryLabel}</span>
-          </li>
-        </ul>
-        <ul className="report-live-safety" aria-label="안전 안내">
-          <li><LiveInfoIcon name="camera" />현장 상황만 촬영해주세요.</li>
-          <li><LiveInfoIcon name="camera" />타인의 얼굴이 노출되지 않도록 주의해주세요.</li>
-          <li><LiveInfoIcon name="shield" />안전한 장소에서 제보해주세요.</li>
-        </ul>
+        {/* 송출이 시작되면 사전 안내는 감추고 현장 화면과 담당자 안내에 집중시킨다. */}
+        {!isReporting ? (
+          <>
+            <ul className="report-live-summary" aria-label="제보 정보">
+              <li>
+                <span><LiveInfoIcon name="location" />{locationText}</span>
+              </li>
+              <li>
+                <span><LiveInfoIcon name="warning" />{categoryLabel}</span>
+              </li>
+            </ul>
+            <ul className="report-live-safety" aria-label="안전 안내">
+              <li><LiveInfoIcon name="camera" />현장 상황만 촬영해주세요.</li>
+              <li><LiveInfoIcon name="camera" />타인의 얼굴이 노출되지 않도록 주의해주세요.</li>
+              <li><LiveInfoIcon name="shield" />안전한 장소에서 제보해주세요.</li>
+            </ul>
+          </>
+        ) : null}
         <button
           type="button"
           className={`report-live-control ${canStart ? 'ready' : ''}`}
@@ -502,11 +527,11 @@ export function LiveReportPage({
 
       {isConfirmOpen ? (
         <ConfirmReportModal
-          title="정말 이 영상으로 제보하시겠습니까?"
-          description="현재 실시간 영상 제보를 종료하고 제출합니다. 허위 또는 장난 제보는 제재 대상이 될 수 있습니다."
+          title={`${formData.category ? categoryLabel : '라이브'} 제보를 종료하시겠습니까?`}
+          description="라이브 송출이 중단되며 지금까지 전송된 영상으로 제보가 접수됩니다. 종료 후에는 다시 송출할 수 없습니다."
           isSubmitting={isSubmitting}
           cancelLabel="취소"
-          confirmLabel="제보하기"
+          confirmLabel="종료하기"
           onCancel={closeConfirmModal}
           onConfirm={confirmFinishLiveReport}
         />

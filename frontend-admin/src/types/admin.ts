@@ -16,6 +16,9 @@ export type ReportStatus =
   | 'checking'
   | 'in_progress'
   | 'completed'
+  | 'rejected'
+  | 'cancelled'
+  | 'reassigned'
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected'
 
@@ -56,6 +59,9 @@ export interface AdminReport {
   aiIndicators?: string[]
   aiCompletedAt?: string
   assignmentId?: number
+  // 담당 이력 목록에서만 채워진다. 배정이 어떻게 끝났는지(종료·반려·재배정) 구분용.
+  assignmentStatus?: 'ASSIGNED' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  completedAt?: string | null
   isLive?: boolean
   streamRoomId?: string | null
   liveStatus?: LiveStreamStatus | null

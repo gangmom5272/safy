@@ -29,6 +29,10 @@ public interface JpaReportOperatorAssignmentRepository
 	);
 
 	@Override
+	@EntityGraph(attributePaths = {"operator", "route", "route.controlCenter"})
+	java.util.List<ReportOperatorAssignment> findAllByReport_IdAndOperator_Id(Long reportId, Long operatorId);
+
+	@Override
 	@EntityGraph(attributePaths = {"report", "report.administrativeArea", "route", "route.controlCenter", "operator"})
 	org.springframework.data.domain.Page<ReportOperatorAssignment> findAllByOperator_IdAndStatusIn(
 			Long operatorId,

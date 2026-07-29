@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -145,6 +146,18 @@ public class GlobalExceptionHandler {
 			HttpServletRequest request
 	) {
 		return createResponse(CommonErrorCode.ACCESS_DENIED, request);
+	}
+
+	/**
+	 * SSE 등 비동기 응답 중 클라이언트가 먼저 끊어진 경우.
+	 * 탭 닫기·새로고침으로 늘 발생하는 정상 상황이라 ERROR 로 남기지 않는다.
+	 * 이미 커밋된 text/event-stream 응답에는 JSON 에러 바디를 쓸 수 없으므로
+	 * 반환값 없이 종료해 HttpMessageNotWritableException 도 발생시키지 않는다.
+	 */
+	@ExceptionHandler(AsyncRequestNotUsableException.class)
+	public void handleDisconnectedClient(AsyncRequestNotUsableException exception, HttpServletRequest request) {
+		log.debug("클라이언트 연결이 끊어져 비동기 응답을 중단합니다: {} {}",
+				request.getMethod(), request.getRequestURI());
 	}
 
 	@ExceptionHandler(Exception.class)

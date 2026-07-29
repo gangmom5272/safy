@@ -6,17 +6,19 @@ import { StatusBadge } from '../../components/admin/StatusBadge'
 import { RiskBadge } from '../../components/admin/RiskBadge'
 import { reportStatusLabels, reportTypeLabels } from '../../mocks/adminMockData'
 import { ROUTE_PATHS } from '../../router/paths'
-import type { AdminReport } from '../../types/admin'
+import type { AdminReport, ReportStatus } from '../../types/admin'
 import { formatAdminDate } from '../../utils/adminDate'
 import { getReportStatusTone } from '../../utils/adminStatus'
 import {
   detailToAdminReport,
   getOperatorReportDetail,
   getReportAnalysis,
+  toMyOutcome,
   type ReportImage,
   type ReportAnalysis,
 } from './reportApi'
 import { ReportActionPanel } from './ReportActionPanel'
+import { ImageLightbox } from '../../components/admin/ImageLightbox'
 
 export function ReportDetailPage() {
   const { reportId } = useParams()
@@ -27,6 +29,8 @@ export function ReportDetailPage() {
   const [report, setReport] = useState<AdminReport | null>(null)
   const [analysis, setAnalysis] = useState<ReportAnalysis | null>(null)
   const [images, setImages] = useState<ReportImage[]>([])
+  const [myOutcome, setMyOutcome] = useState<ReportStatus | null>(null)
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null)
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(isValidReportId)
 
@@ -41,6 +45,7 @@ export function ReportDetailPage() {
         if (!active) return
         setReport(detailToAdminReport(detail))
         setImages(detail.images)
+        setMyOutcome(toMyOutcome(detail))
 
         // 분석 API는 아직 준비 중이라 실패해도 상세 화면은 유지한다.
         const loadedAnalysis = await getReportAnalysis(numericReportId).catch(() => null)
@@ -71,6 +76,9 @@ export function ReportDetailPage() {
     )
   }
 
+  const previewImages = images.flatMap((image) => image.previewUrl
+    ? [{ id: image.reportImageId, url: image.previewUrl }]
+    : [])
   const riskLevel = analysis?.riskLevel ?? report.riskLevel
   const crowdCount = analysis?.crowdCount ?? null
   const summary = analysis?.summary ?? report.aiSummary
@@ -86,16 +94,22 @@ export function ReportDetailPage() {
 
       <div className="report-detail-grid report-detail-grid--first">
         <AdminSection title="제보 이미지">
-          {images.some((image) => image.previewUrl) ? (
+          {previewImages.length > 0 ? (
             <div className="report-image-gallery">
-              {images.filter((image) => image.previewUrl).map((image, index) => (
-                <img
-                  key={image.reportImageId}
-                  className="report-image"
-                  src={image.previewUrl ?? undefined}
-                  alt={`제보 #${report.id} 현장 이미지 ${index + 1}`}
-                />
-              ))}
+              {previewImages.map((image, index) => {
+                const alt = `제보 #${report.id} 현장 이미지 ${index + 1}`
+                return (
+                  <button
+                    key={image.id}
+                    type="button"
+                    className="report-image-thumb"
+                    aria-label={`${alt} 크게 보기`}
+                    onClick={() => setLightboxImage({ src: image.url, alt })}
+                  >
+                    <img className="report-image" src={image.url} alt={alt} />
+                  </button>
+                )
+              })}
             </div>
           ) : (
             <div className="report-image-placeholder" role="img" aria-label={`제보 #${report.id} 이미지 없음`}>
@@ -118,7 +132,13 @@ export function ReportDetailPage() {
             </div>
             <div className="report-summary__group">
               <dt>처리 정보</dt>
-              <dd><span>처리 상태</span><StatusBadge tone={getReportStatusTone(report.status)}>{reportStatusLabels[report.status]}</StatusBadge></dd>
+              {myOutcome && (
+                <dd>
+                  <span>내 처리 결과</span>
+                  <StatusBadge tone={getReportStatusTone(myOutcome)}>{reportStatusLabels[myOutcome]}</StatusBadge>
+                </dd>
+              )}
+              <dd><span>제보 상태</span><StatusBadge tone={getReportStatusTone(report.status)}>{reportStatusLabels[report.status]}</StatusBadge></dd>
               <dd><span>관제센터</span><strong>{report.controlCenterName || '미배정'}</strong></dd>
             </div>
             <div className="report-summary__address"><dt>주소</dt><dd>{report.location}</dd></div>
@@ -156,6 +176,13 @@ export function ReportDetailPage() {
         </div>
       </AdminSection>
 
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage.src}
+          alt={lightboxImage.alt}
+          onClose={() => setLightboxImage(null)}
+        />
+      )}
     </section>
   )
 }

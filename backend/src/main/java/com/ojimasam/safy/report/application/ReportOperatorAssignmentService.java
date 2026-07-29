@@ -2,7 +2,9 @@ package com.ojimasam.safy.report.application;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -155,8 +157,16 @@ public class ReportOperatorAssignmentService {
 	}
 
 	@Transactional(readOnly = true)
-	public Page<OperatorAssignmentResponse> listMine(Long operatorId, Pageable pageable) {
-		return assignmentRepository.findAllByOperator_IdAndStatusIn(operatorId, ACTIVE_STATUSES, pageable)
+	/**
+	 * 담당자가 맡은 제보 목록. statuses 를 주지 않으면 종결 건까지 포함한 전체 이력을 돌려준다.
+	 */
+	public Page<OperatorAssignmentResponse> listMine(Long operatorId,
+			Collection<ReportOperatorAssignmentStatus> statuses, Pageable pageable) {
+		Collection<ReportOperatorAssignmentStatus> targetStatuses =
+				statuses == null || statuses.isEmpty()
+						? EnumSet.allOf(ReportOperatorAssignmentStatus.class)
+						: statuses;
+		return assignmentRepository.findAllByOperator_IdAndStatusIn(operatorId, targetStatuses, pageable)
 				.map(OperatorAssignmentResponse::from);
 	}
 
@@ -250,6 +260,7 @@ public class ReportOperatorAssignmentService {
 		historyRepository.save(ReportStatusHistory.record(
 				report, previous, report.getStatus(), assignment.getOperator(), reason, now
 		));
+		realtimeNotifier.reportReassigned(report.getId(), report.getReporterId());
 		routeRepository.findByReport_IdAndStatus(reportId, ReportCenterRouteStatus.ACTIVE)
 				.ifPresent(route -> assignAutomatically(report, route, operatorId));
 		return OperatorAssignmentResponse.from(assignment);

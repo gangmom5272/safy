@@ -25,6 +25,9 @@ export const reportStatusLabels: Record<ReportStatus, string> = {
   checking: '확인 중',
   in_progress: '처리 중',
   completed: '처리 완료',
+  rejected: '반려',
+  cancelled: '취소',
+  reassigned: '재배정',
 }
 
 export const reviewStatusLabels: Record<ReviewStatus, string> = {
@@ -71,9 +74,20 @@ export const dashboardStats: DashboardStats = {
   highRiskAreas: 5,
 }
 
+// 목 모드에서 제보 이미지 갤러리·확대 보기를 확인할 수 있도록 하는 자리표시 이미지.
+// 외부 요청 없이 렌더되도록 data URI 로 넣는다.
+export function mockPhoto(label: string, background: string) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480">`
+    + `<rect width="640" height="480" fill="${background}"/>`
+    + `<text x="320" y="240" font-family="sans-serif" font-size="28" fill="#ffffff"`
+    + ` text-anchor="middle" dominant-baseline="middle">${label}</text></svg>`
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
+
 export const adminReports: AdminReport[] = [
   {
     id: 1,
+    imageUrl: mockPhoto('현장 이미지 1', '#334155'),
     location: '서울 마포구 홍대입구역 9번 출구',
     type: 'crowd',
     riskLevel: 'danger',
@@ -148,7 +162,7 @@ export const adminReports: AdminReport[] = [
     riskLevel: 'danger',
     riskScore: 88,
     reportedAt: '2026-07-23 12:58',
-    status: 'in_progress',
+    status: 'rejected',
     reviewStatus: 'approved',
     aiAnalysisStatus: 'detected',
     managerName: '최현장',
@@ -166,7 +180,7 @@ export const adminReports: AdminReport[] = [
     riskLevel: 'safe',
     riskScore: 22,
     reportedAt: '2026-07-23 12:30',
-    status: 'completed',
+    status: 'cancelled',
     reviewStatus: 'rejected',
     aiAnalysisStatus: 'completed',
     managerName: '오검토',

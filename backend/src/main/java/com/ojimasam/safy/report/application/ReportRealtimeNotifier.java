@@ -65,6 +65,14 @@ public class ReportRealtimeNotifier {
 		eventService.record(reporterId, RealtimeEventType.REPORT_REJECTED, reportId, null, null);
 	}
 
+	/**
+	 * 담당자가 재배정을 요청 → 제보자에게 알림.
+	 * 제보와 라이브 송출은 유지되므로 연결이 끊기지 않는다는 점을 화면에서 안내한다.
+	 */
+	public void reportReassigned(Long reportId, Long reporterId) {
+		eventService.record(reporterId, RealtimeEventType.REPORT_REASSIGNED, reportId, null, null);
+	}
+
 	/** 제보자가 제보를 취소(CANCELLED) → 배정돼 있던 담당자에게 알림(관제 타일 회수). */
 	public void reportCancelledToOperator(Long reportId, Long operatorId) {
 		eventService.record(operatorId, RealtimeEventType.REPORT_CANCELLED, reportId, null, null);

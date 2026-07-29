@@ -2281,9 +2281,69 @@ button:disabled {
   aspect-ratio: 4 / 3;
 }
 
-.report-image-gallery .report-image:first-child {
+/* 썸네일이 button 으로 감싸져 있어 그리드 아이템은 .report-image-thumb 이다. */
+.report-image-thumb:first-child {
   grid-column: 1 / -1;
+}
+
+.report-image-thumb:first-child .report-image {
   min-height: 320px;
+}
+
+.report-image-thumb {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  cursor: zoom-in;
+}
+
+.report-image-thumb:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.image-lightbox {
+  padding: 32px;
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.image-lightbox__frame {
+  position: relative;
+  display: grid;
+  max-width: min(100%, 1200px);
+  max-height: 100%;
+}
+
+.image-lightbox__image {
+  max-width: 100%;
+  max-height: calc(100vh - 64px);
+  border-radius: 8px;
+  background: var(--surface);
+  object-fit: contain;
+}
+
+.image-lightbox__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.image-lightbox__close:hover {
+  background: rgba(15, 23, 42, 0.85);
 }
 
 .report-summary {
