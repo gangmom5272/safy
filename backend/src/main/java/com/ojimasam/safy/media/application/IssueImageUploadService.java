@@ -16,12 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.media.domain.MediaAsset;
 import com.ojimasam.safy.media.domain.MediaAssetRepository;
-import com.ojimasam.safy.media.domain.MediaStorageStatus;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportType;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
+import com.ojimasam.safy.media.application.dto.IssueImageUploadCommand;
 
 @Service
 public class IssueImageUploadService {
@@ -96,7 +97,7 @@ public class IssueImageUploadService {
 
 	private void validateQuota(Long userId, Instant now) {
 		long activeUploads = mediaAssetRepository.countByOwnerUserIdAndStorageStatusAndUploadExpiresAtAfter(
-				userId, com.ojimasam.safy.media.domain.MediaStorageStatus.PENDING_UPLOAD, now
+				userId, com.ojimasam.safy.media.domain.type.MediaStorageStatus.PENDING_UPLOAD, now
 		);
 		if (activeUploads >= MAX_ACTIVE_UPLOADS_PER_USER) {
 			throw new IllegalStateException("동시에 발급할 수 있는 이미지 업로드는 최대 10개입니다.");

@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
 import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.config.SwaggerConfig;
-import com.ojimasam.safy.report.application.MyReportSummaryResponse;
-import com.ojimasam.safy.report.application.ReportAnalysisResponse;
-import com.ojimasam.safy.report.application.ReportCursorResponse;
+import com.ojimasam.safy.report.application.dto.MyReportSummaryResponse;
+import com.ojimasam.safy.report.application.dto.ReportAnalysisResponse;
+import com.ojimasam.safy.report.application.dto.ReportCursorResponse;
 import com.ojimasam.safy.report.application.ReportFeedQueryService;
-import com.ojimasam.safy.report.application.ReportWebRtcResponse;
+import com.ojimasam.safy.report.application.dto.ReportWebRtcResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

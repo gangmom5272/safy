@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
-import com.ojimasam.safy.live.application.LiveEgressResult;
+import com.ojimasam.safy.live.application.dto.LiveEgressResult;
 import com.ojimasam.safy.live.application.LiveMediaException;
 import com.ojimasam.safy.live.application.LiveWebhookEvent;
 import com.ojimasam.safy.live.application.LiveWebhookParser;

@@ -20,19 +20,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ojimasam.safy.realtime.application.RealtimeEventService;
-import com.ojimasam.safy.realtime.domain.RealtimeEventType;
+import com.ojimasam.safy.realtime.domain.type.RealtimeEventType;
 import com.ojimasam.safy.report.domain.Report;
-import com.ojimasam.safy.report.domain.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportCategory;
 import com.ojimasam.safy.report.domain.ReportMessage;
 import com.ojimasam.safy.report.domain.ReportMessageRepository;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportSubcategory;
-import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportSubcategory;
+import com.ojimasam.safy.report.domain.type.ReportType;
 import com.ojimasam.safy.user.domain.User;
 import com.ojimasam.safy.user.domain.UserRepository;
-import com.ojimasam.safy.user.domain.UserRole;
+import com.ojimasam.safy.user.domain.type.UserRole;
+import com.ojimasam.safy.report.application.dto.ReportMessageResponse;
 
 @ExtendWith(MockitoExtension.class)
 class ReportMessageServiceTest {

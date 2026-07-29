@@ -11,24 +11,24 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.common.exception.BusinessException;
-import com.ojimasam.safy.admin.application.CreateOperatorRequest;
-import com.ojimasam.safy.admin.application.OperatorResponse;
-import com.ojimasam.safy.admin.application.UpdateOperatorRequest;
+import com.ojimasam.safy.admin.application.dto.CreateOperatorRequest;
+import com.ojimasam.safy.admin.application.dto.OperatorResponse;
+import com.ojimasam.safy.admin.application.dto.UpdateOperatorRequest;
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
-import com.ojimasam.safy.admin.domain.MembershipStatus;
+import com.ojimasam.safy.admin.domain.type.MembershipStatus;
 import com.ojimasam.safy.auth.domain.AdminCredential;
-import com.ojimasam.safy.auth.domain.AuthErrorCode;
+import com.ojimasam.safy.auth.domain.type.AuthErrorCode;
 import com.ojimasam.safy.auth.domain.AdminCredentialRepository;
 import com.ojimasam.safy.auth.infrastructure.security.RefreshTokenStore;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterErrorCode;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterErrorCode;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterRepository;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterStatus;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterStatus;
 import com.ojimasam.safy.user.domain.User;
-import com.ojimasam.safy.user.domain.UserRole;
-import com.ojimasam.safy.user.domain.UserStatus;
-import com.ojimasam.safy.user.domain.UserErrorCode;
+import com.ojimasam.safy.user.domain.type.UserRole;
+import com.ojimasam.safy.user.domain.type.UserStatus;
+import com.ojimasam.safy.user.domain.type.UserErrorCode;
 import com.ojimasam.safy.user.domain.UserRepository;
 
 @Service

@@ -14,6 +14,7 @@ import com.ojimasam.safy.live.application.LiveWebhookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.ojimasam.safy.common.api.ApiResponse;
 
 /**
  * 미디어 서버(LiveKit)가 호출하는 웹훅 엔드포인트.

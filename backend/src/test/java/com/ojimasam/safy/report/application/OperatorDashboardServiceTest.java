@@ -22,19 +22,20 @@ import com.ojimasam.safy.controlcenter.domain.ControlCenter;
 import com.ojimasam.safy.live.application.StreamStatus;
 import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
-import com.ojimasam.safy.live.domain.LiveSessionStatus;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 import com.ojimasam.safy.media.application.MediaObjectStorage;
 import com.ojimasam.safy.media.domain.MediaAsset;
-import com.ojimasam.safy.media.domain.MediaStorageStatus;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportImage;
 import com.ojimasam.safy.report.domain.ReportImageRepository;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
-import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
-import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.report.domain.type.ReportType;
 import com.ojimasam.safy.user.domain.User;
+import com.ojimasam.safy.report.application.dto.OperatorDashboardTileView;
 
 @ExtendWith(MockitoExtension.class)
 class OperatorDashboardServiceTest {

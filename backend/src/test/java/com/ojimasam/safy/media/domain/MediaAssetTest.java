@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
 
 class MediaAssetTest {
 	@Test

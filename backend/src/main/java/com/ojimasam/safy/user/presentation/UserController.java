@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
-import com.ojimasam.safy.user.presentation.UpdateDisplayNameRequest;
-import com.ojimasam.safy.user.application.UserResponse;
+import com.ojimasam.safy.user.presentation.dto.UpdateDisplayNameRequest;
+import com.ojimasam.safy.user.application.dto.UserResponse;
 import com.ojimasam.safy.user.application.UserService;
 
 import jakarta.validation.Valid;

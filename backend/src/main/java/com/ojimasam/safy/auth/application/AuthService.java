@@ -6,12 +6,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.common.exception.BusinessException;
-import com.ojimasam.safy.auth.application.LoginResult;
-import com.ojimasam.safy.auth.application.TokenResponse;
+import com.ojimasam.safy.auth.application.dto.LoginResult;
+import com.ojimasam.safy.auth.application.dto.TokenResponse;
 import com.ojimasam.safy.auth.domain.AdminCredential;
 import com.ojimasam.safy.auth.domain.SocialAccount;
-import com.ojimasam.safy.auth.domain.SocialProvider;
-import com.ojimasam.safy.auth.domain.AuthErrorCode;
+import com.ojimasam.safy.auth.domain.type.SocialProvider;
+import com.ojimasam.safy.auth.domain.type.AuthErrorCode;
 import com.ojimasam.safy.auth.domain.AdminCredentialRepository;
 import com.ojimasam.safy.auth.domain.SocialAccountRepository;
 import com.ojimasam.safy.auth.infrastructure.security.JwtTokenProvider;
@@ -20,8 +20,8 @@ import com.ojimasam.safy.auth.infrastructure.security.RefreshTokenStore.RefreshT
 import com.ojimasam.safy.auth.application.SocialUserInfo;
 import com.ojimasam.safy.auth.infrastructure.security.SocialLoginCodeStore;
 import com.ojimasam.safy.user.domain.User;
-import com.ojimasam.safy.user.domain.UserStatus;
-import com.ojimasam.safy.user.domain.UserErrorCode;
+import com.ojimasam.safy.user.domain.type.UserStatus;
+import com.ojimasam.safy.user.domain.type.UserErrorCode;
 import com.ojimasam.safy.user.domain.UserRepository;
 
 @Service

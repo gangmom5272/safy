@@ -14,19 +14,19 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ojimasam.safy.administrativearea.application.ResolvedAdministrativeArea;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaRepository;
-import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaStatus;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaStatus;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterArea;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterAreaRepository;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterStatus;
-import com.ojimasam.safy.controlcenter.domain.CoverageRole;
-import com.ojimasam.safy.controlcenter.domain.CoverageStatus;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterStatus;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageRole;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageStatus;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
-import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportRoutingStatus;
+import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 
 @Service
 public class ReportRoutingTransactionService {

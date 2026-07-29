@@ -18,6 +18,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Table;
+import com.ojimasam.safy.report.domain.type.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportSubcategory;
+import com.ojimasam.safy.report.domain.type.ReportType;
 
 @Entity
 @Table(

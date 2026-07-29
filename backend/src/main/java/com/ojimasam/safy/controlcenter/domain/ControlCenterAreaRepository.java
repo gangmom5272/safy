@@ -3,6 +3,8 @@ package com.ojimasam.safy.controlcenter.domain;
 import java.util.List;
 import java.util.Optional;
 import java.time.Instant;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageRole;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageStatus;
 
 public interface ControlCenterAreaRepository {
 	ControlCenterArea save(ControlCenterArea controlCenterArea);
@@ -21,7 +23,7 @@ public interface ControlCenterAreaRepository {
 			Long administrativeAreaId,
 			Instant routedAt,
 			CoverageStatus coverageStatus,
-			com.ojimasam.safy.controlcenter.domain.ControlCenterStatus centerStatus,
+			com.ojimasam.safy.controlcenter.domain.type.ControlCenterStatus centerStatus,
 			CoverageRole primaryRole
 	);
 }

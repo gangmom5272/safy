@@ -18,6 +18,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import org.hibernate.annotations.ColumnDefault;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
+import com.ojimasam.safy.media.domain.type.MediaVariantType;
 
 @Entity
 @Table(

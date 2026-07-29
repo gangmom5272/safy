@@ -13,15 +13,16 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
-import com.ojimasam.safy.admin.domain.MembershipStatus;
+import com.ojimasam.safy.admin.domain.type.MembershipStatus;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaRepository;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterArea;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterAreaRepository;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterErrorCode;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterErrorCode;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterRepository;
-import com.ojimasam.safy.controlcenter.domain.CoverageStatus;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageStatus;
+import com.ojimasam.safy.controlcenter.application.dto.CreateControlCenterRequest;
 
 class ControlCenterServiceTest {
 	@Test
@@ -32,7 +33,7 @@ class ControlCenterServiceTest {
 		CreateControlCenterRequest request = new CreateControlCenterRequest(
 				"CC-1168000000",
 				"강남구 재난안전상황실",
-				com.ojimasam.safy.controlcenter.domain.ControlCenterType.DISTRICT,
+				com.ojimasam.safy.controlcenter.domain.type.ControlCenterType.DISTRICT,
 				null,
 				null,
 				null

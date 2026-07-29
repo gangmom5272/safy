@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ojimasam.safy.administrativearea.application.AdministrativeAreaQueryService;
-import com.ojimasam.safy.administrativearea.application.AdministrativeAreaResponse;
-import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaType;
+import com.ojimasam.safy.administrativearea.application.dto.AdministrativeAreaResponse;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaType;
 import com.ojimasam.safy.common.api.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;

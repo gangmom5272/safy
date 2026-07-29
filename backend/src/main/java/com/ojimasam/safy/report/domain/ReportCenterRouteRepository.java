@@ -1,6 +1,7 @@
 package com.ojimasam.safy.report.domain;
 
 import java.util.Optional;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 
 public interface ReportCenterRouteRepository {
 	ReportCenterRoute save(ReportCenterRoute route);

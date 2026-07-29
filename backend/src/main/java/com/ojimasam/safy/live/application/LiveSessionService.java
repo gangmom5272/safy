@@ -16,13 +16,18 @@ import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionAccessDeniedException;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
-import com.ojimasam.safy.live.domain.LiveSessionStatus;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportType;
 import com.ojimasam.safy.report.application.OperatorReportAccessService;
 import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
 import com.ojimasam.safy.report.application.ReportRealtimeNotifier;
+import com.ojimasam.safy.live.application.dto.CreateLiveSessionCommand;
+import com.ojimasam.safy.live.application.dto.LiveSessionCursorView;
+import com.ojimasam.safy.live.application.dto.LiveSessionView;
+import com.ojimasam.safy.live.application.dto.LiveTokenView;
+import com.ojimasam.safy.live.application.dto.OperatorLiveSessionView;
 
 @Service
 public class LiveSessionService {

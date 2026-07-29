@@ -17,16 +17,17 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.config.SwaggerConfig;
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
-import com.ojimasam.safy.live.application.CreateLiveSessionCommand;
+import com.ojimasam.safy.live.application.dto.CreateLiveSessionCommand;
 import com.ojimasam.safy.live.application.LiveSessionService;
-import com.ojimasam.safy.live.application.LiveSessionView;
-import com.ojimasam.safy.live.application.LiveTokenView;
+import com.ojimasam.safy.live.application.dto.LiveSessionView;
+import com.ojimasam.safy.live.application.dto.LiveTokenView;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.ojimasam.safy.live.presentation.dto.StreamTokenRequest;
 
 @RestController
 @PreAuthorize("hasRole('CITIZEN')")

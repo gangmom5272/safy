@@ -14,8 +14,9 @@ import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportImage;
 import com.ojimasam.safy.report.domain.ReportImageRepository;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportType;
 import com.ojimasam.safy.report.application.ReportRealtimeNotifier;
+import com.ojimasam.safy.media.application.dto.CompleteImageUploadCommand;
 
 @Service
 public class CompleteImageUploadService {

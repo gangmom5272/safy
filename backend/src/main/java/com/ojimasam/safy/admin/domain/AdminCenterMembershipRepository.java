@@ -6,8 +6,9 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import com.ojimasam.safy.user.domain.UserRole;
-import com.ojimasam.safy.user.domain.UserStatus;
+import com.ojimasam.safy.user.domain.type.UserRole;
+import com.ojimasam.safy.user.domain.type.UserStatus;
+import com.ojimasam.safy.admin.domain.type.MembershipStatus;
 
 public interface AdminCenterMembershipRepository {
 	AdminCenterMembership save(AdminCenterMembership membership);

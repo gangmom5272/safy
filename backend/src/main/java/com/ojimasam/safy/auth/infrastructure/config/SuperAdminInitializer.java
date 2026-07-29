@@ -12,7 +12,7 @@ import org.springframework.util.StringUtils;
 import com.ojimasam.safy.auth.domain.AdminCredential;
 import com.ojimasam.safy.auth.domain.AdminCredentialRepository;
 import com.ojimasam.safy.user.domain.User;
-import com.ojimasam.safy.user.domain.UserRole;
+import com.ojimasam.safy.user.domain.type.UserRole;
 import com.ojimasam.safy.user.domain.UserRepository;
 
 @Component

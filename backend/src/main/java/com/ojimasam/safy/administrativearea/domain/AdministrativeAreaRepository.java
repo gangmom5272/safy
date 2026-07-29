@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaStatus;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaType;
 
 public interface AdministrativeAreaRepository {
 	Optional<AdministrativeArea> findByIdAndStatus(Long id, AdministrativeAreaStatus status);

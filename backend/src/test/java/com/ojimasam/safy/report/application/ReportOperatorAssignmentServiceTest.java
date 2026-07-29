@@ -21,21 +21,22 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
-import com.ojimasam.safy.admin.domain.MembershipStatus;
+import com.ojimasam.safy.admin.domain.type.MembershipStatus;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
-import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.ReportStatusHistory;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
 import com.ojimasam.safy.user.domain.User;
-import com.ojimasam.safy.user.domain.UserRole;
-import com.ojimasam.safy.user.domain.UserStatus;
+import com.ojimasam.safy.user.domain.type.UserRole;
+import com.ojimasam.safy.user.domain.type.UserStatus;
+import com.ojimasam.safy.report.application.event.ReportTerminatedEvent;
 
 class ReportOperatorAssignmentServiceTest {
 	private static final Instant NOW = Instant.parse("2026-07-23T00:00:00Z");
@@ -172,9 +173,9 @@ class ReportOperatorAssignmentServiceTest {
 
 	private Report report(Long id) {
 		Report report = Report.create(
-				1L, com.ojimasam.safy.report.domain.ReportType.IMAGE,
-				com.ojimasam.safy.report.domain.ReportCategory.FLOOD_WEATHER,
-				com.ojimasam.safy.report.domain.ReportSubcategory.ROAD_FLOODING, "침수 제보",
+				1L, com.ojimasam.safy.report.domain.type.ReportType.IMAGE,
+				com.ojimasam.safy.report.domain.type.ReportCategory.FLOOD_WEATHER,
+				com.ojimasam.safy.report.domain.type.ReportSubcategory.ROAD_FLOODING, "침수 제보",
 				new BigDecimal("37.5"), new BigDecimal("127.0"), "서울"
 		);
 		ReflectionTestUtils.setField(report, "id", id);

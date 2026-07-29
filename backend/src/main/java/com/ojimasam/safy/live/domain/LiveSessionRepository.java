@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Pageable;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 
 public interface LiveSessionRepository {
 	LiveSession save(LiveSession session);
@@ -22,7 +23,7 @@ public interface LiveSessionRepository {
 	List<LiveSession> findAccessibleForOperator(
 			Long operatorId,
 			Collection<LiveSessionStatus> liveStatuses,
-			Collection<com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus> assignmentStatuses,
+			Collection<com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus> assignmentStatuses,
 			Instant cursor,
 			Pageable pageable
 	);

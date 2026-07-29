@@ -1,6 +1,7 @@
 package com.ojimasam.safy.live.application;
 
 import java.time.Duration;
+import com.ojimasam.safy.live.application.dto.LiveRecordingRequest;
 
 public interface LiveMediaGateway {
 	void createRoom(String roomName);

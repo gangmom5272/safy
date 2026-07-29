@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import com.ojimasam.safy.live.domain.type.StreamRecordingStatus;
 
 public interface StreamRecordingRepository {
 	StreamRecording save(StreamRecording recording);

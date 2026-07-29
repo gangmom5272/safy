@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import com.ojimasam.safy.auth.infrastructure.security.RefreshTokenStore;
 import com.ojimasam.safy.user.domain.User;
-import com.ojimasam.safy.user.domain.UserRole;
-import com.ojimasam.safy.user.domain.UserStatus;
+import com.ojimasam.safy.user.domain.type.UserRole;
+import com.ojimasam.safy.user.domain.type.UserStatus;
 import com.ojimasam.safy.user.domain.UserRepository;
 
 class UserServiceTest {

@@ -6,7 +6,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.ojimasam.safy.report.application.ReportRoutingProcessor;
-import com.ojimasam.safy.report.application.ReportRoutingRequestedEvent;
+import com.ojimasam.safy.report.application.event.ReportRoutingRequestedEvent;
 
 @Component
 public class ReportRoutingRequestedListener {

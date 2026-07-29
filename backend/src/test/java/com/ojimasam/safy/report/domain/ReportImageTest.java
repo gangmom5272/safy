@@ -8,6 +8,9 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 import com.ojimasam.safy.media.domain.MediaAsset;
+import com.ojimasam.safy.report.domain.type.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportSubcategory;
+import com.ojimasam.safy.report.domain.type.ReportType;
 
 class ReportImageTest {
 	@Test

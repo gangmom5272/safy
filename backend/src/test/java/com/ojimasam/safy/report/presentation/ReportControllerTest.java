@@ -36,19 +36,19 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import com.ojimasam.safy.report.application.CreateReportCommand;
-import com.ojimasam.safy.report.application.CreateReportResult;
+import com.ojimasam.safy.report.application.dto.CreateReportCommand;
+import com.ojimasam.safy.report.application.dto.CreateReportResult;
 import com.ojimasam.safy.report.application.CreateReportService;
-import com.ojimasam.safy.report.application.ReportDetailView;
-import com.ojimasam.safy.report.application.ReportListItemView;
+import com.ojimasam.safy.report.application.dto.ReportDetailView;
+import com.ojimasam.safy.report.application.dto.ReportListItemView;
 import com.ojimasam.safy.report.application.ReportQueryService;
 import com.ojimasam.safy.report.application.CancelReportService;
 import com.ojimasam.safy.common.config.CorsProperties;
-import com.ojimasam.safy.report.domain.ReportStatus;
-import com.ojimasam.safy.report.domain.ReportType;
-import com.ojimasam.safy.report.domain.ReportCategory;
-import com.ojimasam.safy.report.domain.ReportSubcategory;
-import com.ojimasam.safy.report.domain.ReportRoutingStatus;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportSubcategory;
+import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 
 @WebMvcTest(
 		controllers = ReportController.class,

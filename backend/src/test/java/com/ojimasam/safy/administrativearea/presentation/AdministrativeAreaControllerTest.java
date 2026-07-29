@@ -19,8 +19,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.ojimasam.safy.administrativearea.application.AdministrativeAreaQueryService;
-import com.ojimasam.safy.administrativearea.application.AdministrativeAreaResponse;
-import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaType;
+import com.ojimasam.safy.administrativearea.application.dto.AdministrativeAreaResponse;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaType;
 import com.ojimasam.safy.common.config.CorsProperties;
 
 @WebMvcTest(

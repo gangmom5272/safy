@@ -14,11 +14,12 @@ import org.springframework.data.domain.Pageable;
 
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportRoutingStatus;
-import com.ojimasam.safy.report.domain.ReportStatus;
-import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 
 import jakarta.persistence.LockModeType;
+import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 
 public interface JpaReportRepository extends JpaRepository<Report, Long>, ReportRepository {
 	@Override
@@ -49,7 +50,7 @@ public interface JpaReportRepository extends JpaRepository<Report, Long>, Report
 	@Override
 	@EntityGraph(attributePaths = "administrativeArea")
 	List<Report> findByTypeAndStatusInAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-			com.ojimasam.safy.report.domain.ReportType type,
+			com.ojimasam.safy.report.domain.type.ReportType type,
 			java.util.Collection<ReportStatus> statuses,
 			Instant cursor,
 			Pageable pageable
@@ -59,7 +60,7 @@ public interface JpaReportRepository extends JpaRepository<Report, Long>, Report
 	@EntityGraph(attributePaths = "administrativeArea")
 	List<Report> findByAdministrativeArea_IdAndTypeAndStatusInAndReportedAtBeforeOrderByReportedAtDescIdDesc(
 			Long administrativeAreaId,
-			com.ojimasam.safy.report.domain.ReportType type,
+			com.ojimasam.safy.report.domain.type.ReportType type,
 			java.util.Collection<ReportStatus> statuses,
 			Instant cursor,
 			Pageable pageable

@@ -22,7 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
-import com.ojimasam.safy.live.domain.LiveSessionStatus;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 import com.ojimasam.safy.report.application.ReportRealtimeNotifier;
 
 @ExtendWith(MockitoExtension.class)

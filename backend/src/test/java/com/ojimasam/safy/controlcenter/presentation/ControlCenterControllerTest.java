@@ -21,10 +21,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.ojimasam.safy.common.config.CorsProperties;
-import com.ojimasam.safy.controlcenter.application.ControlCenterResponse;
+import com.ojimasam.safy.controlcenter.application.dto.ControlCenterResponse;
 import com.ojimasam.safy.controlcenter.application.ControlCenterService;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterStatus;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterType;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterStatus;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterType;
 
 @WebMvcTest(
 		controllers = ControlCenterController.class,

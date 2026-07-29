@@ -13,10 +13,10 @@ import com.ojimasam.safy.common.config.SwaggerConfig;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
-import com.ojimasam.safy.media.application.IssueImageUploadCommand;
+import com.ojimasam.safy.media.application.dto.IssueImageUploadCommand;
 import com.ojimasam.safy.media.application.IssueImageUploadService;
 import com.ojimasam.safy.media.application.IssuedImageUpload;
-import com.ojimasam.safy.media.application.CompleteImageUploadCommand;
+import com.ojimasam.safy.media.application.dto.CompleteImageUploadCommand;
 import com.ojimasam.safy.media.application.CompleteImageUploadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,6 +25,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
+import com.ojimasam.safy.media.presentation.dto.IssueImageUploadRequest;
+import com.ojimasam.safy.media.presentation.dto.IssueImageUploadResponse;
 
 @RestController
 @RequestMapping("/api/v1/reports/{reportId}/images")

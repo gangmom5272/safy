@@ -10,7 +10,7 @@ import com.ojimasam.safy.live.application.LiveMediaException;
 import com.ojimasam.safy.live.application.LiveMediaGateway;
 import com.ojimasam.safy.live.application.LiveParticipantRole;
 import com.ojimasam.safy.live.application.LiveRecordingProperties;
-import com.ojimasam.safy.live.application.LiveRecordingRequest;
+import com.ojimasam.safy.live.application.dto.LiveRecordingRequest;
 import com.ojimasam.safy.live.application.OpenViduProperties;
 
 import io.livekit.server.AccessToken;

@@ -21,23 +21,25 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
-import com.ojimasam.safy.admin.domain.MembershipStatus;
+import com.ojimasam.safy.admin.domain.type.MembershipStatus;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
-import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
-import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.ReportStatusHistory;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
 import com.ojimasam.safy.user.domain.User;
-import com.ojimasam.safy.user.domain.UserRole;
-import com.ojimasam.safy.user.domain.UserStatus;
+import com.ojimasam.safy.user.domain.type.UserRole;
+import com.ojimasam.safy.user.domain.type.UserStatus;
+import com.ojimasam.safy.report.application.dto.OperatorAssignmentResponse;
+import com.ojimasam.safy.report.application.event.ReportTerminatedEvent;
 
 @Service
 public class ReportOperatorAssignmentService {
@@ -149,7 +151,7 @@ public class ReportOperatorAssignmentService {
 	@Transactional(readOnly = true)
 	public List<Long> findUnassignedReportIds(int batchSize) {
 		return reportRepository.findRoutedUnassignedIds(
-				com.ojimasam.safy.report.domain.ReportRoutingStatus.ROUTED,
+				com.ojimasam.safy.report.domain.type.ReportRoutingStatus.ROUTED,
 				ReportStatus.RECEIVED,
 				List.copyOf(ACTIVE_STATUSES),
 				PageRequest.of(0, batchSize)

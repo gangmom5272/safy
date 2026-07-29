@@ -17,11 +17,11 @@ import java.util.Set;
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
 import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.api.PageResponse;
-import com.ojimasam.safy.report.application.OperatorAssignmentResponse;
+import com.ojimasam.safy.report.application.dto.OperatorAssignmentResponse;
 import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
 import com.ojimasam.safy.report.application.ReportQueryService;
-import com.ojimasam.safy.report.application.ReportDetailView;
-import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.report.application.dto.ReportDetailView;
+import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,6 +29,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.ojimasam.safy.report.presentation.dto.OperatorReportReleaseRequest;
 
 @RestController
 @RequestMapping("/api/v1/operator/reports")

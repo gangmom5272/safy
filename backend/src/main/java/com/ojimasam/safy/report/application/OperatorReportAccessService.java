@@ -7,15 +7,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
-import com.ojimasam.safy.admin.domain.MembershipStatus;
+import com.ojimasam.safy.admin.domain.type.MembershipStatus;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
-import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.user.domain.User;
 import com.ojimasam.safy.user.domain.UserRepository;
-import com.ojimasam.safy.user.domain.UserRole;
+import com.ojimasam.safy.user.domain.type.UserRole;
 
 @Service
 public class OperatorReportAccessService {

@@ -9,20 +9,26 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
-import com.ojimasam.safy.admin.domain.MembershipStatus;
+import com.ojimasam.safy.admin.domain.type.MembershipStatus;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaRepository;
-import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaStatus;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaStatus;
 import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterArea;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterAreaRepository;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterErrorCode;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterErrorCode;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterRepository;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterStatus;
-import com.ojimasam.safy.controlcenter.domain.CoverageStatus;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterStatus;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageStatus;
+import com.ojimasam.safy.controlcenter.application.dto.AssignControlCenterAreaRequest;
+import com.ojimasam.safy.controlcenter.application.dto.ControlCenterAreaResponse;
+import com.ojimasam.safy.controlcenter.application.dto.ControlCenterResponse;
+import com.ojimasam.safy.controlcenter.application.dto.CreateControlCenterRequest;
+import com.ojimasam.safy.controlcenter.application.dto.UpdateControlCenterAreaRequest;
+import com.ojimasam.safy.controlcenter.application.dto.UpdateControlCenterRequest;
 
 @Service
 public class ControlCenterService {

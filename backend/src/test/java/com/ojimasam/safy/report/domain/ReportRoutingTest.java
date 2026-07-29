@@ -9,6 +9,11 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
+import com.ojimasam.safy.report.domain.type.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportSubcategory;
+import com.ojimasam.safy.report.domain.type.ReportType;
 
 class ReportRoutingTest {
 	@Test

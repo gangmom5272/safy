@@ -17,6 +17,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
 
 @Entity
 @Table(

@@ -2,6 +2,7 @@ package com.ojimasam.safy.administrativearea.infrastructure;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import com.ojimasam.safy.report.domain.Report;
 
 /**
  * 좌표 캐시 키를 만든다.

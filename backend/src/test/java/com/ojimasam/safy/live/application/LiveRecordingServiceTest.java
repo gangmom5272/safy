@@ -25,11 +25,13 @@ import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
 import com.ojimasam.safy.live.domain.StreamRecording;
 import com.ojimasam.safy.live.domain.StreamRecordingRepository;
-import com.ojimasam.safy.live.domain.StreamRecordingStatus;
+import com.ojimasam.safy.live.domain.type.StreamRecordingStatus;
 import com.ojimasam.safy.media.domain.MediaAsset;
 import com.ojimasam.safy.media.domain.MediaAssetRepository;
-import com.ojimasam.safy.media.domain.MediaStorageStatus;
-import com.ojimasam.safy.media.domain.MediaVariantType;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
+import com.ojimasam.safy.media.domain.type.MediaVariantType;
+import com.ojimasam.safy.live.application.dto.LiveEgressResult;
+import com.ojimasam.safy.live.application.dto.LiveRecordingRequest;
 
 @ExtendWith(MockitoExtension.class)
 class LiveRecordingServiceTest {

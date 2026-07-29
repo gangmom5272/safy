@@ -28,12 +28,13 @@ import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
-import com.ojimasam.safy.report.domain.ReportType;
-import com.ojimasam.safy.report.domain.ReportCategory;
-import com.ojimasam.safy.report.domain.ReportSubcategory;
+import com.ojimasam.safy.report.domain.type.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportSubcategory;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
-import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
+import com.ojimasam.safy.report.application.dto.ReportDetailView;
 
 @ExtendWith(MockitoExtension.class)
 class ReportQueryServiceTest {

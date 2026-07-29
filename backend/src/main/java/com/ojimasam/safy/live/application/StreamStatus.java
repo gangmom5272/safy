@@ -1,6 +1,6 @@
 package com.ojimasam.safy.live.application;
 
-import com.ojimasam.safy.live.domain.LiveSessionStatus;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 
 public enum StreamStatus {
 	CONNECTING,

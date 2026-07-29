@@ -10,7 +10,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.ojimasam.safy.realtime.domain.RealtimeEvent;
 import com.ojimasam.safy.realtime.domain.RealtimeEventRepository;
-import com.ojimasam.safy.realtime.domain.RealtimeEventType;
+import com.ojimasam.safy.realtime.domain.type.RealtimeEventType;
+import com.ojimasam.safy.realtime.application.dto.RealtimeEventView;
 
 @Service
 public class RealtimeEventService {
