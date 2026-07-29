@@ -1,7 +1,6 @@
 import { type ChangeEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
-import { mockLocations } from '../../../mocks/locations'
 import { resolveLocation } from '../home/homeApi'
 import { LocationMap } from './LocationMap'
 import { loadKakaoMaps } from './kakaoMap'
@@ -20,6 +19,14 @@ import './report-create.css'
 // 지도를 툭툭 끊어 옮기면 멈출 때마다 idle 이 오므로, 잠시 머무른 위치만 서버에 조회한다.
 // GPS 로 잡은 좌표에는 적용하지 않는다. 아래 effect 참고.
 const LOCATION_RESOLVE_DEBOUNCE_MS = 400
+// 조회에 실패했으면 실패했다고 말한다. 근처 목 지점 이름을 대신 보여주면 성공한 것처럼 보인다.
+const LOCATION_NAME_UNAVAILABLE = '위치명을 확인하지 못했습니다.'
+
+// 핀 조정은 GPS 오차를 바로잡는 수단이지 위치를 옮기는 수단이 아니다. 목격하지 않은 곳을
+// 제보하면 관제사의 출동 판단이 어긋난다. 측위가 나쁠수록 보정 여지를 넓게 준다.
+const ADJUST_RADIUS_MIN_M = 300
+const ADJUST_RADIUS_MAX_M = 1000
+const ADJUST_RADIUS_ACCURACY_FACTOR = 2
 
 interface ReportTypePageProps {
   initialFormData?: ReportFormData
@@ -35,10 +42,18 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   )
   const [content, setContent] = useState(initialFormData?.content ?? '')
   const [contentTouched, setContentTouched] = useState(false)
-  const [resolvedLocation, setResolvedLocation] = useState<{ key: string; name: string } | null>(null)
+  const [resolvedLocation, setResolvedLocation] =
+    useState<{ key: string; name: string; isSupported: boolean } | null>(null)
   const [adjustedLocation, setAdjustedLocation] = useState<ReportLocation | null>(null)
-  const { status, location, message, requestLocation } = useGeolocation()
+  const [isClamped, setIsClamped] = useState(false)
+  const { status, location, accuracy, message, requestLocation } = useGeolocation()
   const effectiveLocation = adjustedLocation ?? location
+  const adjustRadius = Math.round(
+    Math.min(
+      Math.max((accuracy ?? 0) * ADJUST_RADIUS_ACCURACY_FACTOR, ADJUST_RADIUS_MIN_M),
+      ADJUST_RADIUS_MAX_M,
+    ),
+  )
 
   useEffect(() => {
     // 지도는 좌표가 생긴 뒤에야 마운트되므로, 그냥 두면 GPS 측위가 끝난 다음에야
@@ -59,10 +74,6 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
     }
 
     let isCurrent = true
-    const mockLocationName = getNearestMockLocationName(
-      effectiveLocation.latitude,
-      effectiveLocation.longitude,
-    )
     // 지도 조작은 멈출 때마다 좌표가 쏟아지므로 머무른 위치만 조회한다.
     // 반면 GPS 확보는 단발이라 합칠 대상이 없어, 기다리면 첫 주소만 늦게 뜬다.
     const debounce = adjustedLocation ? LOCATION_RESOLVE_DEBOUNCE_MS : 0
@@ -70,11 +81,15 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
       // 서버가 좌표로 확정한 주소를 그대로 쓴다. 화면에 보이는 값과 저장되는 값이 같아야 한다.
       void resolveLocation(effectiveLocation.latitude, effectiveLocation.longitude)
         .then((area) => {
-          const name = area.address || area.areaName || mockLocationName
-          if (isCurrent) setResolvedLocation({ key: locationKey, name })
+          const name = area.address || area.areaName || LOCATION_NAME_UNAVAILABLE
+          if (isCurrent) setResolvedLocation({ key: locationKey, name, isSupported: area.resolved })
         })
         .catch(() => {
-          if (isCurrent) setResolvedLocation({ key: locationKey, name: mockLocationName })
+          // 조회 자체가 실패했으면 지원 지역인지 알 수 없다. 긴급 제보를 네트워크 문제로
+          // 막는 편이 더 나쁘므로 통과시키고, 서버가 라우팅에서 판별하게 둔다.
+          if (isCurrent) {
+            setResolvedLocation({ key: locationKey, name: LOCATION_NAME_UNAVAILABLE, isSupported: true })
+          }
         })
     }, debounce)
 
@@ -87,9 +102,9 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   const handleRequestLocation = () => {
     // GPS 를 다시 잡으면 직접 조정한 위치는 버린다.
     setAdjustedLocation(null)
+    setIsClamped(false)
     requestLocation()
   }
-
 
   const handleCategorySelect = (nextCategory: ReportCategory) => {
     setCategory(nextCategory)
@@ -123,6 +138,8 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   const hasLocation = status === 'success' && effectiveLocation
   // 지도를 옮기는 동안에는 직전 주소를 그대로 둔다. 매번 안내 문구로 돌아가면 깜빡인다.
   const locationName = resolvedLocation?.name ?? '위치명을 확인하는 중입니다.'
+  // 판별 전에는 막지 않는다. 결과가 온 뒤에만 지원 지역이 아님을 확정한다.
+  const isUnsupportedArea = resolvedLocation?.isSupported === false
   const availableTags = category ? REPORT_TAG_LABELS[category] : []
   const trimmedContentLength = content.trim().length
   const isContentValid = trimmedContentLength >= REPORT_CONTENT_MIN_LENGTH
@@ -130,7 +147,9 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
     trimmedContentLength === 0
       ? '제보 내용을 입력해주세요.'
       : `제보 내용은 공백 제외 ${REPORT_CONTENT_MIN_LENGTH}자 이상 입력해주세요.`
-  const canStart = Boolean(method && category && selectedTags.length === 1 && hasLocation && isContentValid)
+  const canStart = Boolean(
+    method && category && selectedTags.length === 1 && hasLocation && isContentValid && !isUnsupportedArea,
+  )
 
   return (
     <section className="report-create-page report-type-page" aria-labelledby="report-create-title">
@@ -183,11 +202,14 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
         <h2 id="report-location-title" className="report-form-section-title">현재 위치</h2>
         <div className="report-location-card">
           <div className="report-map-placeholder" aria-live="polite">
-          {effectiveLocation ? (
+          {effectiveLocation && location ? (
             <LocationMap
               latitude={effectiveLocation.latitude}
               longitude={effectiveLocation.longitude}
+              origin={location}
+              radiusMeters={adjustRadius}
               onCenterChange={setAdjustedLocation}
+              onClampedChange={setIsClamped}
             />
           ) : (
             <div className="report-location-map-frame" aria-hidden="true" />
@@ -203,10 +225,15 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
               <p className="report-location-name">{locationName}</p>
             ) : null}
             {hasLocation ? (
-              <p className="report-location-guide">
-                {adjustedLocation
-                  ? '직접 조정한 위치로 제보됩니다.'
-                  : '위치가 부정확하면 지도를 움직여 조정해주세요.'}
+              <p
+                className={`report-location-guide ${isUnsupportedArea || isClamped ? 'is-blocked' : ''}`}
+                aria-live="polite"
+              >
+                {isUnsupportedArea
+                  ? '서울특별시에서만 제보할 수 있습니다. 현재 위치는 지원 지역이 아닙니다.'
+                  : isClamped
+                    ? `현재 위치에서 ${adjustRadius}m 밖으로는 옮길 수 없습니다. 목격한 상황만 제보해주세요.`
+                    : `위치가 부정확하면 원 안에서 지도를 움직여 조정해주세요. (최대 ${adjustRadius}m)`}
               </p>
             ) : null}
             {status !== 'checking' ? (
@@ -344,13 +371,3 @@ function CategoryIcon({ category }: { category: ReportCategory }) {
   return <svg className="report-category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[category]}</svg>
 }
 
-function getNearestMockLocationName(latitude: number, longitude: number) {
-  const nearestLocation = mockLocations.reduce((nearest, candidate) => {
-    const nearestDistance = (nearest.latitude - latitude) ** 2 + (nearest.longitude - longitude) ** 2
-    const candidateDistance = (candidate.latitude - latitude) ** 2 + (candidate.longitude - longitude) ** 2
-    return candidateDistance < nearestDistance ? candidate : nearest
-  })
-  const distance = (nearestLocation.latitude - latitude) ** 2 + (nearestLocation.longitude - longitude) ** 2
-
-  return distance <= 0.0025 ? nearestLocation.areaName : '위치 정보를 확인할 수 없습니다.'
-}

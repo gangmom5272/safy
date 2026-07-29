@@ -1418,6 +1418,11 @@ button:focus-visible,
   line-height: 1.35;
 }
 
+.report-type-page .report-location-guide.is-blocked {
+  color: #b42318;
+  font-weight: 700;
+}
+
 .report-type-page .report-location-guide {
   color: #667085;
   font-size: 11px;
