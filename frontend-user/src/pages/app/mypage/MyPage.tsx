@@ -26,11 +26,17 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
   const clearAuthentication = useAuthStore((state) => state.clearAuthentication)
   const [view, setView] = useState<MyPageView>(initialView); const [history, setHistory] = useState<MyPageView[]>([])
   const [user, setUser] = useState<UserProfile>(mockUser); const [summary, setSummary] = useState<ReportSummary>(mockSummary)
-  const [reports, setReports] = useState<MyReport[]>([]); const [favorites, setFavorites] = useState<FavoriteLocation[]>([]); const [inquiries, setInquiries] = useState<Inquiry[]>(mockInquiries)
+  const [reports, setReports] = useState<MyReport[]>([]); const [detailReport, setDetailReport] = useState<MyReport | null>(null); const [favorites, setFavorites] = useState<FavoriteLocation[]>([]); const [inquiries, setInquiries] = useState<Inquiry[]>(mockInquiries)
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsData>(mockNotificationSettings)
   const selectedReportId = reportId ?? null; const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null); const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null)
   const [loading, setLoading] = useState(true); const [usingMock, setUsingMock] = useState(false); const [notificationUsingMock, setNotificationUsingMock] = useState(false); const [message, setMessage] = useState('')
-  const selectedReport = reports.find((item) => item.id === selectedReportId) ?? null
+  // 상세 응답은 목록보다 첨부 정보가 많다. 목록은 대표 이미지 한 장만 주고 상세는
+  // images 배열 전체를 준다. 상세를 목록 state 에 섞어 두면, 나중에 끝난 목록 조회가
+  // setReports 로 통째로 덮어써 첨부가 한 장으로 줄어든다(요청 순서에 따라 재현됨).
+  // 그래서 상세는 목록과 분리해 따로 들고, 목록 값은 상세가 오기 전까지만 쓴다.
+  const selectedReport = detailReport && detailReport.id === selectedReportId
+    ? detailReport
+    : reports.find((item) => item.id === selectedReportId) ?? null
   const go = (next: MyPageView) => { setHistory((items) => [...items, view]); setView(next); setMessage(''); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const back = () => { const previous = history.at(-1) ?? 'MAIN'; setHistory((items) => items.slice(0, -1)); setView(previous); setMessage('') }
 
@@ -49,7 +55,9 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
 
     if (signal.kind === 'event' && selectedReportId === signal.event.reportId) {
       void getMyReport(selectedReportId).then((report) => {
-        if (mounted.current) setReports((current) => [...current.filter((item) => item.id !== report.id), report])
+        if (!mounted.current) return
+        setDetailReport(report)
+        setReports((current) => [...current.filter((item) => item.id !== report.id), report])
       }).catch(() => undefined)
     }
   }), [selectedReportId])
@@ -59,6 +67,7 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
     let active = true
     void getMyReport(selectedReportId).then((report) => {
       if (!active) return
+      setDetailReport(report)
       setReports((current) => [...current.filter((item) => item.id !== report.id), report])
     }).catch((error: unknown) => {
       if (active) setMessage(error instanceof Error ? error.message : '제보 상세를 불러오지 못했습니다.')
