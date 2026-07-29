@@ -19,6 +19,19 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
+# 통합 로그 수집(S15P11A503-104). OpenVidu 스택이 이미 Loki+Grafana+Alloy를 운영 중이고,
+# Alloy는 컨테이너 이름이 아니라 docker 라벨 logging=true 로 수집 대상을 발견한다
+# (/opt/openvidu/config/config.alloy 의 discovery.docker 필터, refresh_interval 5s).
+# 따라서 이 라벨을 붙이는 것만으로 우리 서비스 로그가 기존 Grafana에 함께 들어간다.
+# OpenVidu 쪽 파일은 건드리지 않는다 — 업그레이드 시 덮어써지기 때문이다.
+#
+# Alloy의 relabel 규칙은 컨테이너 이름 하나만 Loki 라벨로 옮기므로 다른 커스텀 라벨을
+# 붙여도 조회에 쓸 수 없다. 우리 서비스는 {container=~"infra-.*"} 로 조회한다.
+# Loki 보존 기간 32일. json-file 로테이션(위)은 그대로 유지된다 — Alloy는 docker API로
+# 읽어갈 뿐이라 로컬 로그를 대체하지 않는다.
+x-loki-logging: &loki-logging
+  - "logging=true"
+
 services:
   # ==========================================
   # Spring Boot (Java 21, Spring Boot 4.1.0) - 확정
@@ -89,6 +102,7 @@ services:
       - redis
       - minio
     logging: *default-logging
+    labels: *loki-logging
     # 헬스체크: 이 이미지는 jre-alpine(busybox)이라 curl이 없고,
     # 인증 없이 200을 주는 엔드포인트도 없어 컨테이너 내 HEALTHCHECK는 신뢰도가 낮다.
     # 대신 Uptime Kuma가 backend:8080에 TCP 모니터로 가동 여부를 감시한다(MONITORING.md 참고).
@@ -185,6 +199,7 @@ services:
       - OPENVIDU_API_KEY=${OPENVIDU_API_KEY}
       - OPENVIDU_API_SECRET=${OPENVIDU_API_SECRET}
     logging: *default-logging
+    labels: *loki-logging
     # 헬스체크: FastAPI에 /health 엔드포인트가 있어 Kuma로 감시 가능하나,
     # 현재 AI는 기능 미완성으로 배포 대상이 아니고 ai/Dockerfile도 아직 없어
     # 배포 스택에서는 뜨지 않는다. Kuma에는 모니터를 등록하되 '일시정지' 상태로 두고,
@@ -230,6 +245,7 @@ services:
     depends_on:
       - backend
     logging: *default-logging
+    labels: *loki-logging
     healthcheck:
       # default.conf의 전용 /healthz(항상 200)를 busybox wget으로 확인.
       # localhost가 아니라 127.0.0.1을 쓴다. busybox wget은 localhost를 ::1로
