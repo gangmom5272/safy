@@ -47,6 +47,8 @@ export type ReportMarker = {
 }
 
 export type AreaMapData = {
+  // 지역 지도 응답에 함께 실려 오는 상황 요약. 직접 만든 지도 데이터에는 없을 수 있다.
+  status?: AreaStatus
   center: Coordinates
   zones: CongestionZone[]
   reportMarkers: ReportMarker[]
@@ -56,6 +58,7 @@ export type AreaStatus = {
   riskLevel: RiskLevel
   congestionLevel: CongestionLevel
   recentReportCount: number
+  liveReportCount: number
   weather?: {
     condition: string
     temperature?: number
@@ -101,10 +104,10 @@ export type ReportAnalysis = {
 export type ReportWebRtcInfo = {
   reportId: string
   roomId?: string
-  signalingUrl?: string
-  statusSocketUrl?: string
+  roomName?: string
   status: WebRtcStatus
-  iceServers?: RTCIceServer[]
+  // 서버가 계산한 입장 가능 여부. DISCONNECTED(재접속 대기)면 false 다.
+  joinable: boolean
 }
 
 export type ReportStatusSocketMessage = {

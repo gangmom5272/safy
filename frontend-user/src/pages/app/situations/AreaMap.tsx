@@ -40,7 +40,7 @@ export function AreaMap({ mapData, isLoading, error, variant = 'default', locati
       </div> : null}
 
       <div className="map-data-summary">
-        <><span><small>검색 위치</small><strong>{locationName || mapData.reportMarkers[0]?.locationName || '선택 지역'}</strong></span><span><small>위험 지역</small><strong>{mapData.zones.length}곳</strong></span><span><small>실시간 제보</small><strong>{mapData.reportMarkers.length}건</strong></span></>
+        <><span><small>검색 위치</small><strong>{locationName || mapData.reportMarkers[0]?.locationName || '선택 지역'}</strong></span><span><small>위험 지역</small><strong>{mapData.zones.length}곳</strong></span><span><small>실시간 제보</small><strong>{mapData.status?.liveReportCount ?? mapData.reportMarkers.length}건</strong></span></>
       </div>
 
       <div className="map-placeholder map-gesture-viewport" role="group" aria-label="지역 상황 지도" {...mapGestures.viewportProps}>
