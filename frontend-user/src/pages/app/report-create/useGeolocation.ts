@@ -4,6 +4,8 @@ import type { LocationStatus, ReportLocation } from './reportTypes'
 interface GeolocationState {
   status: LocationStatus
   location: ReportLocation | null
+  /** 측위 오차 반경(m). 핀을 얼마나 움직이게 둘지 정하는 데 쓴다. */
+  accuracy: number | null
   message: string
   requestLocation: () => void
 }
@@ -38,6 +40,7 @@ function getGeolocationErrorState(error: GeolocationPositionError): Pick<Geoloca
 export function useGeolocation(): GeolocationState {
   const [status, setStatus] = useState<LocationStatus>('idle')
   const [location, setLocation] = useState<ReportLocation | null>(null)
+  const [accuracy, setAccuracy] = useState<number | null>(null)
   const [message, setMessage] = useState('현재 위치 확인 전입니다.')
   const requestInProgressRef = useRef(false)
   const mountedRef = useRef(false)
@@ -50,6 +53,7 @@ export function useGeolocation(): GeolocationState {
     if (!navigator.geolocation) {
       setStatus('unsupported')
       setLocation(null)
+      setAccuracy(null)
       setMessage('이 브라우저는 위치 확인 기능을 지원하지 않습니다.')
       return
     }
@@ -70,6 +74,7 @@ export function useGeolocation(): GeolocationState {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         })
+        setAccuracy(position.coords.accuracy)
         setStatus('success')
         setMessage('현재 위치 확인 완료')
       },
@@ -82,6 +87,7 @@ export function useGeolocation(): GeolocationState {
 
         const errorState = getGeolocationErrorState(error)
         setLocation(null)
+        setAccuracy(null)
         setStatus(errorState.status)
         setMessage(errorState.message)
       },
@@ -99,5 +105,5 @@ export function useGeolocation(): GeolocationState {
     }
   }, [requestLocation])
 
-  return { status, location, message, requestLocation }
+  return { status, location, accuracy, message, requestLocation }
 }

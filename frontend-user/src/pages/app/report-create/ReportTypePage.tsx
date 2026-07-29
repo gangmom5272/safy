@@ -21,6 +21,12 @@ import './report-create.css'
 // GPS 로 잡은 좌표에는 적용하지 않는다. 아래 effect 참고.
 const LOCATION_RESOLVE_DEBOUNCE_MS = 400
 
+// 핀 조정은 GPS 오차를 바로잡는 수단이지 위치를 옮기는 수단이 아니다. 목격하지 않은 곳을
+// 제보하면 관제사의 출동 판단이 어긋난다. 측위가 나쁠수록 보정 여지를 넓게 준다.
+const ADJUST_RADIUS_MIN_M = 300
+const ADJUST_RADIUS_MAX_M = 1000
+const ADJUST_RADIUS_ACCURACY_FACTOR = 2
+
 interface ReportTypePageProps {
   initialFormData?: ReportFormData
   onStart?: (formData: ReportFormData) => void
@@ -37,8 +43,15 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   const [contentTouched, setContentTouched] = useState(false)
   const [resolvedLocation, setResolvedLocation] = useState<{ key: string; name: string } | null>(null)
   const [adjustedLocation, setAdjustedLocation] = useState<ReportLocation | null>(null)
-  const { status, location, message, requestLocation } = useGeolocation()
+  const [isClamped, setIsClamped] = useState(false)
+  const { status, location, accuracy, message, requestLocation } = useGeolocation()
   const effectiveLocation = adjustedLocation ?? location
+  const adjustRadius = Math.round(
+    Math.min(
+      Math.max((accuracy ?? 0) * ADJUST_RADIUS_ACCURACY_FACTOR, ADJUST_RADIUS_MIN_M),
+      ADJUST_RADIUS_MAX_M,
+    ),
+  )
 
   useEffect(() => {
     // 지도는 좌표가 생긴 뒤에야 마운트되므로, 그냥 두면 GPS 측위가 끝난 다음에야
@@ -87,6 +100,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   const handleRequestLocation = () => {
     // GPS 를 다시 잡으면 직접 조정한 위치는 버린다.
     setAdjustedLocation(null)
+    setIsClamped(false)
     requestLocation()
   }
 
@@ -183,11 +197,14 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
         <h2 id="report-location-title" className="report-form-section-title">현재 위치</h2>
         <div className="report-location-card">
           <div className="report-map-placeholder" aria-live="polite">
-          {effectiveLocation ? (
+          {effectiveLocation && location ? (
             <LocationMap
               latitude={effectiveLocation.latitude}
               longitude={effectiveLocation.longitude}
+              origin={location}
+              radiusMeters={adjustRadius}
               onCenterChange={setAdjustedLocation}
+              onClampedChange={setIsClamped}
             />
           ) : (
             <div className="report-location-map-frame" aria-hidden="true" />
@@ -203,10 +220,10 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
               <p className="report-location-name">{locationName}</p>
             ) : null}
             {hasLocation ? (
-              <p className="report-location-guide">
-                {adjustedLocation
-                  ? '직접 조정한 위치로 제보됩니다.'
-                  : '위치가 부정확하면 지도를 움직여 조정해주세요.'}
+              <p className={`report-location-guide ${isClamped ? 'is-clamped' : ''}`} aria-live="polite">
+                {isClamped
+                  ? `현재 위치에서 ${adjustRadius}m 밖으로는 옮길 수 없습니다. 목격한 상황만 제보해주세요.`
+                  : `위치가 부정확하면 원 안에서 지도를 움직여 조정해주세요. (최대 ${adjustRadius}m)`}
               </p>
             ) : null}
             {status !== 'checking' ? (

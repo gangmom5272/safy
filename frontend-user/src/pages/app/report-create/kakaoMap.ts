@@ -16,11 +16,26 @@ export interface KakaoMarker {
   setPosition: (position: KakaoLatLng) => void
 }
 
+export interface KakaoCircle {
+  setPosition: (position: KakaoLatLng) => void
+  setRadius: (radiusMeters: number) => void
+  setMap: (map: KakaoMap | null) => void
+}
+
 interface KakaoMaps {
   load: (callback: () => void) => void
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng
   Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap
   Marker: new (options: { position: KakaoLatLng; map: KakaoMap }) => KakaoMarker
+  Circle: new (options: {
+    center: KakaoLatLng
+    radius: number
+    strokeWeight: number
+    strokeColor: string
+    strokeOpacity: number
+    fillColor: string
+    fillOpacity: number
+  }) => KakaoCircle
   event: {
     addListener: (target: KakaoMap, type: string, handler: () => void) => void
     removeListener: (target: KakaoMap, type: string, handler: () => void) => void

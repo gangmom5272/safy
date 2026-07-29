@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadKakaoMaps, type KakaoMap } from './kakaoMap'
+import { loadKakaoMaps, type KakaoCircle, type KakaoMap } from './kakaoMap'
 import type { ReportLocation } from './reportTypes'
 
 // 카카오맵은 숫자가 작을수록 확대된 상태다.
@@ -10,11 +10,43 @@ const MAP_MAX_LEVEL = 6
 const CENTER_EPSILON = 0.000001
 // 카카오 기본 마커. Marker 객체는 좌표에 묶여 드래그 중 따라 움직이므로 같은 이미지를 화면 중앙에 고정해 쓴다.
 const DEFAULT_MARKER_SRC = 'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png'
+const EARTH_RADIUS_M = 6371008.8
 
 interface LocationMapProps {
   latitude: number
   longitude: number
+  /** GPS 로 잡은 실제 위치. 허용 반경의 중심이다. */
+  origin: ReportLocation
+  radiusMeters: number
   onCenterChange: (location: ReportLocation) => void
+  onClampedChange: (isClamped: boolean) => void
+}
+
+function toRadians(degrees: number) {
+  return (degrees * Math.PI) / 180
+}
+
+function distanceInMeters(from: ReportLocation, to: ReportLocation) {
+  const deltaLat = toRadians(to.latitude - from.latitude)
+  const deltaLng = toRadians(to.longitude - from.longitude)
+  const haversine =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(toRadians(from.latitude)) *
+      Math.cos(toRadians(to.latitude)) *
+      Math.sin(deltaLng / 2) ** 2
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(haversine))
+}
+
+/** 1km 이내에서는 접평면 선형 보간으로 충분하다. 오차가 1m 아래다. */
+function clampToRadius(origin: ReportLocation, target: ReportLocation, radiusMeters: number) {
+  const distance = distanceInMeters(origin, target)
+  if (distance <= radiusMeters) return null
+
+  const ratio = radiusMeters / distance
+  return {
+    latitude: origin.latitude + (target.latitude - origin.latitude) * ratio,
+    longitude: origin.longitude + (target.longitude - origin.longitude) * ratio,
+  }
 }
 
 function isSamePlace(left: ReportLocation, right: ReportLocation) {
@@ -24,16 +56,28 @@ function isSamePlace(left: ReportLocation, right: ReportLocation) {
   )
 }
 
-export function LocationMap({ latitude, longitude, onCenterChange }: LocationMapProps) {
+export function LocationMap({
+  latitude,
+  longitude,
+  origin,
+  radiusMeters,
+  onCenterChange,
+  onClampedChange,
+}: LocationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
+  const circleRef = useRef<KakaoCircle | null>(null)
   const centerRef = useRef<ReportLocation>({ latitude, longitude })
+  const boundsRef = useRef({ origin, radiusMeters })
   const onCenterChangeRef = useRef(onCenterChange)
+  const onClampedChangeRef = useRef(onClampedChange)
   const [hasFailed, setHasFailed] = useState(false)
 
   useEffect(() => {
+    boundsRef.current = { origin, radiusMeters }
     onCenterChangeRef.current = onCenterChange
-  }, [onCenterChange])
+    onClampedChangeRef.current = onClampedChange
+  }, [onCenterChange, onClampedChange, origin, radiusMeters])
 
   useEffect(() => {
     let isCurrent = true
@@ -56,6 +100,19 @@ export function LocationMap({ latitude, longitude, onCenterChange }: LocationMap
         map.setMaxLevel(MAP_MAX_LEVEL)
         mapRef.current = map
 
+        const bounds = boundsRef.current
+        const circle = new maps.Circle({
+          center: new maps.LatLng(bounds.origin.latitude, bounds.origin.longitude),
+          radius: bounds.radiusMeters,
+          strokeWeight: 2,
+          strokeColor: '#004aad',
+          strokeOpacity: 0.6,
+          fillColor: '#004aad',
+          fillOpacity: 0.06,
+        })
+        circle.setMap(map)
+        circleRef.current = circle
+
         // idle 은 지도가 멈춘 뒤 한 번만 오므로 별도 디바운스가 필요 없다.
         const handleIdle = () => {
           const nextCenter = map.getCenter()
@@ -66,8 +123,17 @@ export function LocationMap({ latitude, longitude, onCenterChange }: LocationMap
             return
           }
 
-          centerRef.current = next
-          onCenterChangeRef.current(next)
+          const current = boundsRef.current
+          const clamped = clampToRadius(current.origin, next, current.radiusMeters)
+          // 되돌리기 전에 기준을 먼저 옮겨야, setCenter 가 다시 발생시킨 idle 을 조작으로 보지 않는다.
+          centerRef.current = clamped ?? next
+
+          if (clamped) {
+            map.setCenter(new maps.LatLng(clamped.latitude, clamped.longitude))
+          }
+
+          onClampedChangeRef.current(clamped !== null)
+          onCenterChangeRef.current(centerRef.current)
         }
 
         maps.event.addListener(map, 'idle', handleIdle)
@@ -96,6 +162,16 @@ export function LocationMap({ latitude, longitude, onCenterChange }: LocationMap
     centerRef.current = { latitude, longitude }
     void loadKakaoMaps().then((maps) => map.setCenter(new maps.LatLng(latitude, longitude)))
   }, [latitude, longitude])
+
+  useEffect(() => {
+    const circle = circleRef.current
+    if (!circle) return
+
+    circle.setRadius(radiusMeters)
+    void loadKakaoMaps().then((maps) => {
+      circle.setPosition(new maps.LatLng(origin.latitude, origin.longitude))
+    })
+  }, [origin, radiusMeters])
 
   return (
     <div className="report-location-map-frame">
