@@ -118,3 +118,105 @@ def test_load_p2pnet_detector_returns_normalized_points(
     }
     assert fake_model.device == torch.device("cpu")
     assert fake_model.eval_called is True
+
+
+def test_prepare_image_tensor_applies_exif_orientation() -> None:
+    image = Image.new(
+        "RGB",
+        (
+            256,
+            128,
+        ),
+        color="white",
+    )
+
+    exif = image.getexif()
+    exif[274] = 6
+
+    image_buffer = BytesIO()
+    image.save(
+        image_buffer,
+        format="JPEG",
+        exif=exif,
+    )
+
+    def fake_transform(
+        transformed_image: Image.Image,
+    ) -> torch.Tensor:
+        return torch.zeros(
+            (
+                3,
+                transformed_image.height,
+                transformed_image.width,
+            )
+        )
+
+    (
+        image_tensor,
+        resized_width,
+        resized_height,
+    ) = p2pnet_benchmark_adapter._prepare_image_tensor(
+        image_bytes=(image_buffer.getvalue()),
+        transform=fake_transform,
+        device_object=torch.device("cpu"),
+    )
+
+    assert resized_width == 128
+    assert resized_height == 256
+    assert image_tensor.shape == (
+        1,
+        3,
+        256,
+        128,
+    )
+
+
+def test_prepare_image_tensor_limits_large_input_size() -> None:
+    image = Image.new(
+        "RGB",
+        (
+            2048,
+            1536,
+        ),
+        color="white",
+    )
+
+    image_buffer = BytesIO()
+    image.save(
+        image_buffer,
+        format="JPEG",
+    )
+
+    transformed_size: list[tuple[int, int]] = []
+
+    def fake_transform(
+        transformed_image: Image.Image,
+    ) -> torch.Tensor:
+        transformed_size.append(transformed_image.size)
+
+        return torch.zeros(
+            (
+                3,
+                1,
+                1,
+            )
+        )
+
+    (
+        _,
+        resized_width,
+        resized_height,
+    ) = p2pnet_benchmark_adapter._prepare_image_tensor(
+        image_bytes=(image_buffer.getvalue()),
+        transform=fake_transform,
+        device_object=torch.device("cpu"),
+    )
+
+    assert resized_width == 1536
+    assert resized_height == 1152
+    assert transformed_size == [
+        (
+            1536,
+            1152,
+        )
+    ]
