@@ -8,7 +8,10 @@ export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 
 export interface UserProfile { id: number; nickname: string; email: string; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }
 export interface ReportSummary { totalCount: number; receivedCount: number; inProgressCount: number; closedCount: number; rejectedCount: number }
 export interface StatusHistory { status: ReportStatus; changedAt: string; description: string }
-export interface MyReport { id: number; type: string; title: string; description: string; locationName: string; address: string; createdAt: string; status: ReportStatus; thumbnailUrl?: string | null; maskedThumbnailUrl?: string | null; mediaUrls: string[]; adminReply?: string | null; history: StatusHistory[] }
+// 제보에 붙은 첨부 파일 하나. contentType 은 서버가 준 MIME 이며, 사진·영상 구분에
+// 이 값을 먼저 쓴다. 값이 없을 때만 확장자로 추정한다.
+export interface ReportAttachment { url: string; contentType: string | null; filename: string | null }
+export interface MyReport { id: number; type: string; title: string; description: string; locationName: string; address: string; createdAt: string; status: ReportStatus; thumbnailUrl?: string | null; maskedThumbnailUrl?: string | null; attachments: ReportAttachment[]; adminReply?: string | null; history: StatusHistory[] }
 export type RiskLevel = 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER'
 export interface FavoriteLocation { id: number; areaId: number; placeName: string; alias: string; address: string; riskLevel: RiskLevel; isPrimary: boolean; latitude?: number; longitude?: number }
 export interface Faq { id: number; category: string; question: string; answer: string }

@@ -24,12 +24,64 @@
   padding: 20px;
 }
 
-.report-detail-media {
+.my-report-detail-page .report-detail-media-carousel {
+  position: relative;
+  min-width: 0;
+}
+
+/* 가로 스크롤 + scroll-snap 으로 스와이프를 만든다. 한 칸이 정확히 한 화면 폭이다. */
+.my-report-detail-page .report-detail-media-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  border-radius: 20px;
+  background: #f1f3f5;
+}
+
+.my-report-detail-page .report-detail-media-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* 원본 비율을 지키므로 높이를 고정하지 않는다. min-height 는 이미지가 로드되기 전에
+   영역이 접혀 화면이 튀는 것을 막는 최소 높이다. */
+.my-report-detail-page .report-detail-media {
+  display: grid;
+  min-width: 0;
+  min-height: 200px;
+  place-items: center;
+  scroll-snap-align: center;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* height:auto 로 원본 비율을 유지하고, 지나치게 긴 세로 사진만 max-height 로 눌러
+   준다. 이때 잘리지 않게 contain 을 쓰므로 남는 영역은 트랙 배경색이 채운다. */
+.my-report-detail-page .report-detail-media img,
+.my-report-detail-page .report-detail-media video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 68vh;
+  object-fit: contain;
+  border-radius: 20px;
+}
+
+.my-report-detail-page .report-detail-media--empty,
+.my-report-detail-page .report-detail-media-failed {
+  margin: 0;
+  padding: 0 16px;
+  text-align: center;
+}
+
+.my-report-detail-page .report-detail-media--empty {
   display: grid;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  min-width: 0;
-  overflow: hidden;
+  min-height: 200px;
   place-items: center;
   border-radius: 20px;
   color: #6b7280;
@@ -37,10 +89,72 @@
   font-size: 12px;
 }
 
-.report-detail-media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.my-report-detail-page .report-detail-media-counter {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(17, 24, 39, .66);
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* 모바일 스와이프를 방해하지 않도록 작게, 좌우 끝에만 둔다. */
+.my-report-detail-page .report-detail-media-nav {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(17, 24, 39, .5);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.my-report-detail-page .report-detail-media-nav.prev {
+  left: 8px;
+}
+
+.my-report-detail-page .report-detail-media-nav.next {
+  right: 8px;
+}
+
+.my-report-detail-page .report-detail-media-nav:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.my-report-detail-page .report-detail-media-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.my-report-detail-page .report-detail-media-dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #d1d5db;
+  cursor: pointer;
+}
+
+.my-report-detail-page .report-detail-media-dots button.active {
+  width: 18px;
+  border-radius: 999px;
+  background: #004aad;
 }
 
 .report-detail-heading {
@@ -228,7 +342,9 @@
     padding: 17px;
   }
 
-  .report-detail-media {
-    height: 190px;
+  /* 높이를 고정하면 원본 비율이 깨진다. 로딩 전 최소 높이만 줄인다. */
+  .my-report-detail-page .report-detail-media,
+  .my-report-detail-page .report-detail-media--empty {
+    min-height: 170px;
   }
 }

@@ -6,8 +6,8 @@ import { formatDateTime, formatRelativeTime } from '../../../utils/dateTime'
 import { createFavorite, patchFavorite, removeFavorite } from './mypageApi'
 import { FavoritePlaceForm } from './FavoritePlaceForm'
 import { mockFaqs, mockNotices } from './mypageMock'
-import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, ReportStatus } from './mypageTypes'
-import { APP_VERSION } from './mypageUtils'
+import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, ReportAttachment, ReportStatus } from './mypageTypes'
+import { APP_VERSION, isVideoAttachment } from './mypageUtils'
 import './favoritePlaceForm.css'
 
 // 접수 대기 중(RECEIVED)은 담당자 확인 전이라 시민이 취소할 수 있는 구간이다.
@@ -92,7 +92,109 @@ export function Reports({ reports, onBack, onOpen }: { reports: MyReport[]; onBa
 
   return <><PageHeader title="내 제보 관리" onBack={onBack} /><div className="report-filters"><div className="report-status-filters" role="tablist" aria-label="제보 상태">{reportStatusFilters.map((item) => <button type="button" role="tab" aria-selected={statusFilter === item.value} className={statusFilter === item.value ? 'active' : ''} key={item.value} onClick={() => setStatusFilter(item.value)}>{item.label}</button>)}</div><div className="report-filter-toolbar"><span>조회 기간</span><div className="report-date-filter" ref={dateMenuRef}><button type="button" className="report-date-filter__trigger" aria-haspopup="listbox" aria-expanded={dateMenuOpen} onClick={() => setDateMenuOpen((open) => !open)}><span>{selectedDateLabel}</span><span aria-hidden="true">⌄</span></button>{dateMenuOpen && <div className="report-date-filter__menu" role="listbox" aria-label="제보 기간">{reportDateFilters.map((item) => <button type="button" role="option" aria-selected={dateFilter === item.value} className={dateFilter === item.value ? 'active' : ''} key={item.value} onClick={() => { setDateFilter(item.value); setDateMenuOpen(false) }}>{item.label}</button>)}</div>}</div></div>{dateFilter === 'CUSTOM' && <div className="report-custom-dates"><label>시작일<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} /></label><span aria-hidden="true">~</span><label>종료일<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} /></label></div>}</div>{filteredReports.length ? <div className="my-report-list">{filteredReports.map((report) => <button type="button" className="my-report-card" key={report.id} onClick={() => onOpen(report.id)}><span className="report-thumb"><em className={`report-card-status report-card-status--${toStatusModifier(report.status)}`}>{statusLabel[report.status]}</em><time className="report-card-relative-date" dateTime={report.createdAt}>{formatRelativeTime(report.createdAt)}</time>{report.maskedThumbnailUrl || report.thumbnailUrl ? <img src={(report.maskedThumbnailUrl || report.thumbnailUrl) ?? ''} alt="제보 현장" /> : <span className="report-image-placeholder">이미지 준비중</span>}</span><span className="report-card-body"><small>{report.type} · {report.locationName}</small><strong>{report.title}</strong><time dateTime={report.createdAt}>{formatDateTime(report.createdAt)}</time></span></button>)}</div> : <Empty text="선택한 조건에 해당하는 제보가 없습니다." />}</>
 }
-export function ReportDetail({ report, onBack, onCancel }: { report: MyReport; onBack: () => void; onCancel?: () => void }) { return <div className="my-report-detail-page"><PageHeader title="내 제보 상세" onBack={onBack} /><span className="report-detail-media">{report.mediaUrls.length ? <img src={report.mediaUrls[0]} alt="첨부 이미지" /> : '첨부 이미지 없음'}</span><section className="report-detail-section"><div className="report-detail-heading"><h2 className="report-detail-section__title">{getReportDisplayTitle(report)}</h2><em className={`status-${toStatusModifier(report.status)}`}>{statusLabel[report.status]}</em></div><div className="mypage-card report-detail-card"><p className="report-detail-description">{report.description}</p><dl className="report-detail-info"><dt>유형</dt><dd>{getReportTypeLabel(report)}</dd><dt>주소</dt><dd>{report.address}</dd><dt>등록 시간</dt><dd>{formatDateTime(report.createdAt)}</dd></dl>{report.status === 'RECEIVED' && onCancel ? <button type="button" className="danger" onClick={onCancel}>제보 취소</button> : null}</div></section><section className="report-detail-section"><h2 className="report-detail-section__title">관리자 답변</h2><div className="mypage-card report-detail-section__card"><p>{report.adminReply ?? '아직 관리자 답변이 등록되지 않았습니다.'}</p></div></section><section className="report-detail-section"><h2 className="report-detail-section__title">처리 이력</h2><div className="mypage-card report-detail-section__card">{report.history.length ? <ol className="report-history-list">{report.history.map((item) => <li key={`${item.status}-${item.changedAt}`}><b>{statusLabel[item.status]}</b><span>{item.description}</span><time>{formatDateTime(item.changedAt)}</time></li>)}</ol> : <p>등록된 처리 이력이 없습니다.</p>}</div></section></div> }
+// 첨부는 여러 개일 수 있다. 가로 스크롤 + scroll-snap 으로 스와이프를 만들고, 현재
+// 위치는 스크롤 위치에서 계산한다. 캐러셀 라이브러리를 새로 넣지 않으려는 선택이다.
+function ReportMediaCarousel({ attachments }: { attachments: ReportAttachment[] }) {
+  const trackRef = useRef<HTMLDivElement | null>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [failedUrls, setFailedUrls] = useState<string[]>([])
+
+  if (!attachments.length) {
+    return <p className="report-detail-media report-detail-media--empty">첨부 파일 없음</p>
+  }
+
+  const moveTo = (index: number) => {
+    const track = trackRef.current
+    if (!track) return
+
+    const nextIndex = Math.min(Math.max(index, 0), attachments.length - 1)
+    track.scrollTo({ left: track.clientWidth * nextIndex, behavior: 'smooth' })
+    setActiveIndex(nextIndex)
+  }
+
+  const handleScroll = () => {
+    const track = trackRef.current
+    if (!track || !track.clientWidth) return
+
+    setActiveIndex(Math.round(track.scrollLeft / track.clientWidth))
+  }
+
+  const hasMany = attachments.length > 1
+
+  return (
+    <div className="report-detail-media-carousel">
+      <div
+        className="report-detail-media-track"
+        ref={trackRef}
+        onScroll={handleScroll}
+        role={hasMany ? 'group' : undefined}
+        aria-label={hasMany ? `첨부 파일 ${attachments.length}개` : undefined}
+      >
+        {attachments.map((attachment, index) => (
+          <div className="report-detail-media" key={attachment.url}>
+            {failedUrls.includes(attachment.url) ? (
+              <p className="report-detail-media-failed">첨부 파일을 불러오지 못했습니다.</p>
+            ) : isVideoAttachment(attachment) ? (
+              <video
+                src={attachment.url}
+                controls
+                playsInline
+                preload="metadata"
+                onError={() => setFailedUrls((urls) => [...urls, attachment.url])}
+              />
+            ) : (
+              <img
+                src={attachment.url}
+                alt={attachment.filename ?? `첨부 파일 ${index + 1}`}
+                onError={() => setFailedUrls((urls) => [...urls, attachment.url])}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {hasMany ? (
+        <>
+          <span className="report-detail-media-counter" aria-live="polite">
+            {activeIndex + 1} / {attachments.length}
+          </span>
+          <button
+            type="button"
+            className="report-detail-media-nav prev"
+            aria-label="이전 첨부 파일"
+            disabled={activeIndex === 0}
+            onClick={() => moveTo(activeIndex - 1)}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="report-detail-media-nav next"
+            aria-label="다음 첨부 파일"
+            disabled={activeIndex === attachments.length - 1}
+            onClick={() => moveTo(activeIndex + 1)}
+          >
+            ›
+          </button>
+          <div className="report-detail-media-dots">
+            {attachments.map((attachment, index) => (
+              <button
+                type="button"
+                key={attachment.url}
+                className={index === activeIndex ? 'active' : ''}
+                aria-label={`${index + 1}번째 첨부 파일 보기`}
+                aria-current={index === activeIndex}
+                onClick={() => moveTo(index)}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  )
+}
+
+export function ReportDetail({ report, onBack, onCancel }: { report: MyReport; onBack: () => void; onCancel?: () => void }) { return <div className="my-report-detail-page"><PageHeader title="내 제보 상세" onBack={onBack} /><ReportMediaCarousel attachments={report.attachments} /><section className="report-detail-section"><div className="report-detail-heading"><h2 className="report-detail-section__title">{getReportDisplayTitle(report)}</h2><em className={`status-${toStatusModifier(report.status)}`}>{statusLabel[report.status]}</em></div><div className="mypage-card report-detail-card"><p className="report-detail-description">{report.description}</p><dl className="report-detail-info"><dt>유형</dt><dd>{getReportTypeLabel(report)}</dd><dt>주소</dt><dd>{report.address}</dd><dt>등록 시간</dt><dd>{formatDateTime(report.createdAt)}</dd></dl>{report.status === 'RECEIVED' && onCancel ? <button type="button" className="danger" onClick={onCancel}>제보 취소</button> : null}</div></section><section className="report-detail-section"><h2 className="report-detail-section__title">관리자 답변</h2><div className="mypage-card report-detail-section__card"><p>{report.adminReply ?? '아직 관리자 답변이 등록되지 않았습니다.'}</p></div></section><section className="report-detail-section"><h2 className="report-detail-section__title">처리 이력</h2><div className="mypage-card report-detail-section__card">{report.history.length ? <ol className="report-history-list">{report.history.map((item) => <li key={`${item.status}-${item.changedAt}`}><b>{statusLabel[item.status]}</b><span>{item.description}</span><time>{formatDateTime(item.changedAt)}</time></li>)}</ol> : <p>등록된 처리 이력이 없습니다.</p>}</div></section></div> }
 export function Favorites({ items, onBack, onChange, onNavigate, usingMock }: { items: FavoriteLocation[]; onBack: () => void; onChange: Dispatch<SetStateAction<FavoriteLocation[]>>; onNavigate: (item: FavoriteLocation) => void; usingMock: boolean }) {
   const navigate = useNavigate()
   const { favoritePlaces, storageError, hydrate, removeFavoritePlace } = useFavoritePlacesStore()

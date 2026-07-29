@@ -12,11 +12,17 @@ import {
 } from './mypageMock'
 import type { ApiResponse, PageResponse } from '../../../api/types'
 import type { Faq, FavoriteLocation, Inquiry, MyReport, Notice, NotificationSettingsData, ReportStatus, ReportSummary, UserProfile } from './mypageTypes'
+import { normalizeAttachments } from './mypageUtils'
 
 type BackendReportStatus = 'RECEIVED' | 'ASSIGNED' | 'ACCEPTED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 'CANCELLED'
 
+// docs/api-contract.md 의 ReportImageView. 사진·영상 구분에 contentType 이 필요하고,
+// 표시 순서를 서버 기준으로 맞추려면 displayOrder 도 읽어야 한다.
 interface ReportImageView {
   previewUrl: string | null
+  contentType: string | null
+  originalFilename: string | null
+  displayOrder: number | null
 }
 
 interface ReportListItemView {
@@ -60,6 +66,8 @@ function toUiStatus(status: BackendReportStatus): ReportStatus {
   return status
 }
 
+// 목록 응답에는 대표 이미지 하나만 온다. 상세는 images 배열을 주므로 getMyReport 가
+// attachments 를 덮어쓴다.
 function toMyReport(report: ReportListItemView, history: ReportStatusHistoryResponse[] = []): MyReport {
   const previewUrl = report.representativeImage?.previewUrl ?? null
   return {
@@ -72,7 +80,7 @@ function toMyReport(report: ReportListItemView, history: ReportStatusHistoryResp
     createdAt: report.reportedAt,
     status: toUiStatus(report.status),
     thumbnailUrl: previewUrl,
-    mediaUrls: previewUrl ? [previewUrl] : [],
+    attachments: normalizeAttachments(report.representativeImage),
     history: history.map((item) => ({
       status: toUiStatus(item.toStatus),
       changedAt: item.changedAt,
@@ -121,7 +129,8 @@ export async function getMyReport(reportId: number) {
   ])
   const detail = detailResponse.data.data
   const report = toMyReport({ ...detail, representativeImage: detail.images[0] ?? null }, historyResponse.data.data)
-  report.mediaUrls = detail.images.flatMap((image) => image.previewUrl ? [image.previewUrl] : [])
+  // 상세 응답은 첨부 전체를 images 배열로 준다. 대표 이미지 하나로 만든 값을 덮어쓴다.
+  report.attachments = normalizeAttachments(detail.images)
   return report
 }
 
