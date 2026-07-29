@@ -198,6 +198,7 @@ export const mockAreaStatus: AreaStatus = {
   riskLevel: 'high',
   congestionLevel: 'crowded',
   recentReportCount: 6,
+  liveReportCount: 2,
   weather: {
     condition: '흐림',
     temperature: 28,
@@ -223,6 +224,7 @@ export const mockWebRtcInfos: ReportWebRtcInfo[] = mockReports.map((report) => (
   reportId: report.id,
   roomId: report.isWebRtc ? `mock-room-${report.id}` : undefined,
   status: report.isWebRtc ? (report.isLive ? 'waiting' : 'ended') : 'none',
+  joinable: report.isWebRtc && report.isLive,
 }))
 
 function normalize(value: string) {
@@ -355,7 +357,8 @@ export function getMockReportAnalysis(reportId: string) {
 }
 
 export function getMockWebRtcInfo(reportId: string): ReportWebRtcInfo {
-  return mockWebRtcInfos.find((info) => info.reportId === reportId) ?? { reportId, status: 'none' }
+  return mockWebRtcInfos.find((info) => info.reportId === reportId)
+    ?? { reportId, status: 'none', joinable: false }
 }
 
 export function filterMockReportsByKeyword(keyword: string): LiveReportSummary[] {
