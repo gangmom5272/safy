@@ -588,7 +588,11 @@ function MonitoringDetailView({ connection, report, onBack, onActionComplete }: 
           </aside>
 
           <AdminSection title="제보 처리">
-            <ReportActionPanel reportId={connection.reportId} onActionComplete={onActionComplete} />
+            <ReportActionPanel
+              reportId={connection.reportId}
+              assignmentStatus={reportDetail?.myAssignmentStatus ?? null}
+              onActionComplete={onActionComplete}
+            />
           </AdminSection>
         </div>
       </div>

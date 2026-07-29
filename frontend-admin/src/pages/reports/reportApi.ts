@@ -77,6 +77,8 @@ export function toAdminReport(tile: OperatorDashboardTile): AdminReport {
     id: tile.reportId,
     assignmentId: tile.assignmentId,
     location: tile.address ?? '위치 정보 없음',
+    latitude: tile.latitude,
+    longitude: tile.longitude,
     type: categoryToType[tile.category] ?? 'etc',
     // 백엔드 대시보드 타일에는 위험도 필드가 없다.
     riskLevel: null,
@@ -150,6 +152,8 @@ export function detailToAdminReport(detail: OperatorReportDetail): AdminReport {
   return {
     id: detail.reportId,
     location: detail.address ?? detail.administrativeAreaName ?? '위치 정보 없음',
+    latitude: detail.latitude,
+    longitude: detail.longitude,
     type: categoryToType[detail.category] ?? 'etc',
     riskLevel: null,
     riskScore: null,

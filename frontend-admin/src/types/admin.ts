@@ -58,6 +58,9 @@ export interface AdminReport {
   mediaStatus?: string | null
   aiIndicators?: string[]
   aiCompletedAt?: string
+  // 지도 표시용. 담당 이력 목록 응답에는 좌표가 없어 비어 있을 수 있다.
+  latitude?: number | null
+  longitude?: number | null
   assignmentId?: number
   // 담당 이력 목록에서만 채워진다. 배정이 어떻게 끝났는지(종료·반려·재배정) 구분용.
   assignmentStatus?: 'ASSIGNED' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'

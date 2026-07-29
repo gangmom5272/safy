@@ -89,6 +89,8 @@ export const adminReports: AdminReport[] = [
     id: 1,
     imageUrl: mockPhoto('현장 이미지 1', '#334155'),
     location: '서울 마포구 홍대입구역 9번 출구',
+    latitude: 37.5572,
+    longitude: 126.9254,
     type: 'crowd',
     riskLevel: 'danger',
     riskScore: 92,
@@ -107,6 +109,8 @@ export const adminReports: AdminReport[] = [
   {
     id: 2,
     location: '서울 강남구 강남역 교차로',
+    latitude: 37.4979,
+    longitude: 127.0276,
     type: 'accident',
     riskLevel: 'warning',
     riskScore: 78,
@@ -125,6 +129,8 @@ export const adminReports: AdminReport[] = [
   {
     id: 3,
     location: '부산 해운대구 해운대해수욕장',
+    latitude: 35.1587,
+    longitude: 129.1604,
     type: 'crowd',
     riskLevel: 'warning',
     riskScore: 74,
@@ -140,6 +146,8 @@ export const adminReports: AdminReport[] = [
   {
     id: 4,
     location: '대전 유성구 갑천 산책로',
+    latitude: 36.3620,
+    longitude: 127.3560,
     type: 'flood_weather',
     riskLevel: 'caution',
     riskScore: 56,
@@ -158,6 +166,8 @@ export const adminReports: AdminReport[] = [
   {
     id: 5,
     location: '인천 중구 월미도 문화거리',
+    latitude: 37.4725,
+    longitude: 126.5977,
     type: 'facility_road',
     riskLevel: 'danger',
     riskScore: 88,
@@ -176,6 +186,8 @@ export const adminReports: AdminReport[] = [
   {
     id: 6,
     location: '광주 동구 충장로',
+    latitude: 35.1490,
+    longitude: 126.9199,
     type: 'etc',
     riskLevel: 'safe',
     riskScore: 22,

@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useState, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
-import {
-  reportStatusLabels,
-  riskMarkers,
-} from '../../mocks/adminMockData'
+import { reportStatusLabels } from '../../mocks/adminMockData'
 import type { AdminReport, WebRTCConnection } from '../../types/admin'
 import { ROUTE_PATHS, createMonitoringDetailPath, createReportDetailPath } from '../../router/paths'
 import { AdminSection } from '../../components/admin/AdminSection'
 import { RiskBadge } from '../../components/admin/RiskBadge'
-import { getRiskConfig } from '../../utils/adminRisk'
+import { ReportMap } from '../../components/admin/ReportMap'
 import { formatAdminTimestamp } from '../../utils/adminDate'
 import { getDashboardReports } from '../reports/reportApi'
 import { getLiveSessions } from '../monitoring/monitoringApi'
@@ -69,22 +66,11 @@ export function DashboardPage() {
           cardClassName="dashboard-map-card"
           action={<button type="button" className="text-button" onClick={() => navigate(ROUTE_PATHS.RISK_MAP)}>전체 보기 &gt;</button>}
         >
-          <button
-            type="button"
+          <ReportMap
             className="map-preview"
-            onClick={() => navigate(ROUTE_PATHS.RISK_MAP)}
-            aria-label="위험도 지도 전체 보기"
-          >
-            {riskMarkers.map((marker) => (
-              <span
-                key={marker.id}
-                className="map-marker"
-                style={{ top: `${marker.top}%`, left: `${marker.left}%`, backgroundColor: getRiskConfig(marker.riskLevel, marker.riskScore)?.markerColor ?? '#64748B', color: getRiskConfig(marker.riskLevel, marker.riskScore)?.markerTextColor ?? '#FFFFFF' }}
-              >
-                {marker.location}
-              </span>
-            ))}
-          </button>
+            reports={reports}
+            onSelect={(report) => navigate(createReportDetailPath(report.id))}
+          />
         </AdminSection>
 
         <AdminSection title="최근 배정 제보" className="home-recent-section">

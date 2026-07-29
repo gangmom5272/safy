@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import {
   adminReports,
   dashboardStats,
-  riskMarkers,
   webrtcConnections,
 } from '../../mocks/adminMockData'
-import type { RiskLevel } from '../../types/admin'
-import { getRiskConfig, matchesRiskLevel, RISK_LEVEL_CONFIG, RISK_LEVEL_OPTIONS, RISK_LEVEL_ORDER } from '../../utils/adminRisk'
+import type { AdminReport, RiskLevel } from '../../types/admin'
+import { matchesRiskLevel, RISK_LEVEL_CONFIG, RISK_LEVEL_OPTIONS, RISK_LEVEL_ORDER } from '../../utils/adminRisk'
+import { ReportMap } from '../../components/admin/ReportMap'
+import { hasCoordinates } from '../../utils/reportGeo'
+import { createReportDetailPath } from '../../router/paths'
+import { getDashboardReports } from '../reports/reportApi'
 
 const allValue = 'all'
 const unsetValue = ''
@@ -41,9 +45,23 @@ function RefreshIcon() {
 }
 
 export function RiskMapPage() {
+  const navigate = useNavigate()
   const [draftFilters, setDraftFilters] = useState<MapFilters>(initialMapFilters)
   const [appliedFilters, setAppliedFilters] = useState<MapFilters>(initialMapFilters)
   const [activeLayers, setActiveLayers] = useState<string[]>(['Heatmap', '제보'])
+  const [reports, setReports] = useState<AdminReport[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+
+    getDashboardReports(0, 100)
+      .then((loaded) => { if (active) setReports(loaded) })
+      .catch(() => undefined)
+      .finally(() => { if (active) setIsLoading(false) })
+
+    return () => { active = false }
+  }, [])
 
   const resetFilters = () => {
     setDraftFilters(initialMapFilters)
@@ -59,12 +77,13 @@ export function RiskMapPage() {
     )
   }
 
-  const filteredMarkers = riskMarkers.filter((marker) => (
-    (!appliedFilters.region || marker.location.toLowerCase().includes(appliedFilters.region.toLowerCase())) &&
+  const filteredReports = reports.filter((report) => (
+    (!appliedFilters.region || report.location.toLowerCase().includes(appliedFilters.region.toLowerCase())) &&
     (!appliedFilters.riskLevel ||
       appliedFilters.riskLevel === allValue ||
-      matchesRiskLevel(marker.riskLevel, appliedFilters.riskLevel, marker.riskScore))
+      matchesRiskLevel(report.riskLevel, appliedFilters.riskLevel, report.riskScore))
   ))
+  const plottableCount = filteredReports.filter(hasCoordinates).length
 
   return (
     <section className="page-stack">
@@ -150,19 +169,15 @@ export function RiskMapPage() {
 
       <div className="risk-map-layout">
         <article className="admin-card">
-          <div className="map-placeholder">
+          <div className="risk-map-canvas">
             <div className="active-layer-list">
               활성 레이어: {activeLayers.length > 0 ? activeLayers.join(', ') : '없음'}
             </div>
-            {filteredMarkers.map((marker) => (
-              <span
-                key={marker.id}
-                className="map-marker"
-                style={{ top: `${marker.top}%`, left: `${marker.left}%`, backgroundColor: getRiskConfig(marker.riskLevel, marker.riskScore)?.markerColor ?? '#64748B', color: getRiskConfig(marker.riskLevel, marker.riskScore)?.markerTextColor ?? '#FFFFFF' }}
-              >
-                {marker.location}
-              </span>
-            ))}
+            <ReportMap
+              className="map-placeholder"
+              reports={filteredReports}
+              onSelect={(report) => navigate(createReportDetailPath(report.id))}
+            />
             <div className="risk-map-legend" aria-label="위험도 범례">
               {RISK_LEVEL_ORDER.map((level) => (
                 <span key={level}>
@@ -172,6 +187,9 @@ export function RiskMapPage() {
               ))}
             </div>
           </div>
+          {!isLoading && plottableCount === 0 && (
+            <p className="empty-state" role="status">지도에 표시할 좌표가 있는 제보가 없습니다.</p>
+          )}
         </article>
 
         <aside className="map-stats">
