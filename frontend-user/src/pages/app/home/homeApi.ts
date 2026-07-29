@@ -5,7 +5,7 @@ import type { AreaLocation, AreaMapData, AreaStatus, RecentReport } from './type
 
 export async function resolveLocation(latitude: number, longitude: number) {
   if (USE_MOCK_API) {
-    return mockResponse<AreaLocation>({ areaId: 1, areaName: '마포구', address: '서울 마포구 서교동 358', latitude, longitude })
+    return mockResponse<AreaLocation>({ resolved: true, areaId: 1, areaName: '마포구', address: '서울 마포구 서교동 358', latitude, longitude })
   }
 
   const { data } = await apiClient.get<ApiResponse<AreaLocation>>('/locations/resolve', { params: { latitude, longitude } })

@@ -1,7 +1,7 @@
 export type CongestionLevel = 'RELAXED' | 'NORMAL' | 'CROWDED' | 'VERY_CROWDED'
 export type RiskLevel = 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER'
 
-export interface AreaLocation { areaId: number; areaName: string; address: string | null; latitude: number; longitude: number }
+export interface AreaLocation { resolved: boolean; areaId: number | null; areaName: string | null; address: string | null; latitude: number; longitude: number }
 export interface MapZone { id: number; name: string; latitude: number; longitude: number; congestionLevel: CongestionLevel }
 export interface MapReport { id: number; latitude: number; longitude: number; riskLevel: RiskLevel }
 export interface AreaMapData { center: { latitude: number; longitude: number }; zones: MapZone[]; reports: MapReport[] }
