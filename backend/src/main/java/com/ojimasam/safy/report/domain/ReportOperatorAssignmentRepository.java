@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 
 public interface ReportOperatorAssignmentRepository {
 	ReportOperatorAssignment save(ReportOperatorAssignment assignment);

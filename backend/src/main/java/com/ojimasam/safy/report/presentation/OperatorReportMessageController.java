@@ -15,7 +15,7 @@ import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
 import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.common.config.SwaggerConfig;
-import com.ojimasam.safy.report.application.ReportMessageResponse;
+import com.ojimasam.safy.report.application.dto.ReportMessageResponse;
 import com.ojimasam.safy.report.application.ReportMessageService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.ojimasam.safy.report.presentation.dto.SendReportMessageRequest;
 
 @RestController
 @RequestMapping("/api/v1/operator/reports/{reportId}/messages")

@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
 
 public interface MediaAssetRepository {
 	MediaAsset save(MediaAsset mediaAsset);

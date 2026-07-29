@@ -26,14 +26,16 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.ojimasam.safy.live.infrastructure.JpaLiveSessionRepository;
 import com.ojimasam.safy.live.domain.LiveSession;
-import com.ojimasam.safy.live.domain.LiveSessionStatus;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.report.domain.Report;
-import com.ojimasam.safy.report.domain.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportCategory;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportSubcategory;
-import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportSubcategory;
+import com.ojimasam.safy.report.domain.type.ReportType;
 import com.ojimasam.safy.report.infrastructure.JpaReportRepository;
+import com.ojimasam.safy.live.application.dto.CreateLiveSessionCommand;
+import com.ojimasam.safy.live.application.dto.LiveSessionView;
 
 @SpringBootTest(properties = "spring.task.scheduling.enabled=false")
 @ActiveProfiles("test")

@@ -6,6 +6,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
+import com.ojimasam.safy.report.application.dto.CreateReportCommand;
+import com.ojimasam.safy.report.application.dto.CreateReportResult;
+import com.ojimasam.safy.report.application.event.ReportRoutingRequestedEvent;
 
 @Service
 public class CreateReportService {

@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.api.PageResponse;
-import com.ojimasam.safy.admin.presentation.ChangePasswordRequest;
-import com.ojimasam.safy.admin.application.CreateOperatorRequest;
-import com.ojimasam.safy.admin.application.OperatorResponse;
-import com.ojimasam.safy.admin.application.UpdateOperatorRequest;
-import com.ojimasam.safy.admin.presentation.UpdateOperatorStatusRequest;
+import com.ojimasam.safy.admin.presentation.dto.ChangePasswordRequest;
+import com.ojimasam.safy.admin.application.dto.CreateOperatorRequest;
+import com.ojimasam.safy.admin.application.dto.OperatorResponse;
+import com.ojimasam.safy.admin.application.dto.UpdateOperatorRequest;
+import com.ojimasam.safy.admin.presentation.dto.UpdateOperatorStatusRequest;
 import com.ojimasam.safy.admin.application.AdminService;
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
 

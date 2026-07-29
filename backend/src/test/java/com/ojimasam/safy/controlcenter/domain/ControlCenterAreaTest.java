@@ -9,6 +9,8 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageRole;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageStatus;
 
 class ControlCenterAreaTest {
 	@Test

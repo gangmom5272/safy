@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
-import com.ojimasam.safy.live.domain.LiveSessionStatus;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 import com.ojimasam.safy.report.application.ReportRealtimeNotifier;
 
 /**

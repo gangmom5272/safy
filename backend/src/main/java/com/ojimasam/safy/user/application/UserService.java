@@ -4,11 +4,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.common.exception.BusinessException;
-import com.ojimasam.safy.user.application.UserResponse;
+import com.ojimasam.safy.user.application.dto.UserResponse;
 import com.ojimasam.safy.user.domain.User;
-import com.ojimasam.safy.user.domain.UserRole;
-import com.ojimasam.safy.user.domain.UserStatus;
-import com.ojimasam.safy.user.domain.UserErrorCode;
+import com.ojimasam.safy.user.domain.type.UserRole;
+import com.ojimasam.safy.user.domain.type.UserStatus;
+import com.ojimasam.safy.user.domain.type.UserErrorCode;
 import com.ojimasam.safy.user.domain.UserRepository;
 import com.ojimasam.safy.auth.infrastructure.security.RefreshTokenStore;
 

@@ -6,7 +6,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.ojimasam.safy.live.application.LiveSessionService;
-import com.ojimasam.safy.report.application.ReportTerminatedEvent;
+import com.ojimasam.safy.report.application.event.ReportTerminatedEvent;
 
 /**
  * 제보가 담당자에 의해 종결(CLOSED/REJECTED)되면, 진행 중인 라이브 세션을 종료하고

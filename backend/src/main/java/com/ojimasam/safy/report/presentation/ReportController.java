@@ -22,17 +22,19 @@ import com.ojimasam.safy.common.config.SwaggerConfig;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
-import com.ojimasam.safy.report.application.CreateReportCommand;
-import com.ojimasam.safy.report.application.CreateReportResult;
+import com.ojimasam.safy.report.application.dto.CreateReportCommand;
+import com.ojimasam.safy.report.application.dto.CreateReportResult;
 import com.ojimasam.safy.report.application.CreateReportService;
-import com.ojimasam.safy.report.application.ReportDetailView;
-import com.ojimasam.safy.report.application.ReportListItemView;
-import com.ojimasam.safy.report.application.ReportStatusHistoryResponse;
+import com.ojimasam.safy.report.application.dto.ReportDetailView;
+import com.ojimasam.safy.report.application.dto.ReportListItemView;
+import com.ojimasam.safy.report.application.dto.ReportStatusHistoryResponse;
 import com.ojimasam.safy.report.application.ReportQueryService;
 import com.ojimasam.safy.report.application.CancelReportService;
 import com.ojimasam.safy.report.presentation.docs.ReportExamples;
 
 import jakarta.validation.Valid;
+import com.ojimasam.safy.report.presentation.dto.CreateReportRequest;
+import com.ojimasam.safy.report.presentation.dto.CreateReportResponse;
 
 @RestController
 @RequestMapping("/api/v1/reports")

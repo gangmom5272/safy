@@ -13,7 +13,7 @@ import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.common.config.SwaggerConfig;
 import com.ojimasam.safy.report.application.OperatorDashboardService;
-import com.ojimasam.safy.report.application.OperatorDashboardTileView;
+import com.ojimasam.safy.report.application.dto.OperatorDashboardTileView;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

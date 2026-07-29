@@ -10,6 +10,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterStatus;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterType;
 
 @Entity
 @Table(name = "control_centers")

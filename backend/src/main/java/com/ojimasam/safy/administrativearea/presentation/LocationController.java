@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ojimasam.safy.administrativearea.application.LocationQueryService;
-import com.ojimasam.safy.administrativearea.application.LocationResolveResponse;
-import com.ojimasam.safy.administrativearea.application.LocationSearchResponse;
+import com.ojimasam.safy.administrativearea.application.dto.LocationResolveResponse;
+import com.ojimasam.safy.administrativearea.application.dto.LocationSearchResponse;
 import com.ojimasam.safy.common.api.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;

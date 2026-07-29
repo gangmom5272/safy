@@ -18,6 +18,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageRole;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageStatus;
 
 @Entity
 @Table(

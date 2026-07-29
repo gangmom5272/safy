@@ -9,6 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import com.ojimasam.safy.realtime.application.dto.RealtimeEventView;
 
 @Component
 public class SseEventBroadcaster {

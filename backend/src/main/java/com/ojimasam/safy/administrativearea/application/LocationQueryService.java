@@ -8,9 +8,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaRepository;
-import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaStatus;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaStatus;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
+import com.ojimasam.safy.administrativearea.application.dto.LocationResolveResponse;
+import com.ojimasam.safy.administrativearea.application.dto.LocationSearchResponse;
 
 @Service
 @Transactional(readOnly = true)

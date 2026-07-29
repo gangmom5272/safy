@@ -7,9 +7,9 @@ import org.springframework.data.repository.query.Param;
 
 import com.ojimasam.safy.controlcenter.domain.ControlCenterArea;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterAreaRepository;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterStatus;
-import com.ojimasam.safy.controlcenter.domain.CoverageRole;
-import com.ojimasam.safy.controlcenter.domain.CoverageStatus;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterStatus;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageRole;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageStatus;
 
 import java.time.Instant;
 

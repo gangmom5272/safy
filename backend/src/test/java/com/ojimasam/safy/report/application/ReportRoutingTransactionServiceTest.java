@@ -21,19 +21,19 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.ojimasam.safy.administrativearea.application.ResolvedAdministrativeArea;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaRepository;
-import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaStatus;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaStatus;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterArea;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterAreaRepository;
-import com.ojimasam.safy.controlcenter.domain.ControlCenterStatus;
-import com.ojimasam.safy.controlcenter.domain.CoverageRole;
-import com.ojimasam.safy.controlcenter.domain.CoverageStatus;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterStatus;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageRole;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageStatus;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
-import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportRoutingStatus;
+import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 
 class ReportRoutingTransactionServiceTest {
 	private static final Instant NOW = Instant.parse("2026-07-23T00:00:00Z");
@@ -121,9 +121,9 @@ class ReportRoutingTransactionServiceTest {
 	private Report report(Long id) {
 		Report report = Report.create(
 				1L,
-				com.ojimasam.safy.report.domain.ReportType.IMAGE,
-				com.ojimasam.safy.report.domain.ReportCategory.FLOOD_WEATHER,
-				com.ojimasam.safy.report.domain.ReportSubcategory.ROAD_FLOODING,
+				com.ojimasam.safy.report.domain.type.ReportType.IMAGE,
+				com.ojimasam.safy.report.domain.type.ReportCategory.FLOOD_WEATHER,
+				com.ojimasam.safy.report.domain.type.ReportSubcategory.ROAD_FLOODING,
 				"침수 제보",
 				new BigDecimal("37.5"),
 				new BigDecimal("127.0"),

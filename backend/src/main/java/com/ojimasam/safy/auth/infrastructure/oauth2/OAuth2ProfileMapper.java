@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 import com.ojimasam.safy.auth.application.SocialUserInfo;
 import com.ojimasam.safy.common.exception.BusinessException;
-import com.ojimasam.safy.auth.domain.SocialProvider;
-import com.ojimasam.safy.auth.domain.AuthErrorCode;
+import com.ojimasam.safy.auth.domain.type.SocialProvider;
+import com.ojimasam.safy.auth.domain.type.AuthErrorCode;
 
 @Component
 public class OAuth2ProfileMapper {

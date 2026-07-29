@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import com.ojimasam.safy.live.domain.type.StreamRecordingStatus;
 
 /**
  * 라이브 세션의 원본 녹화 1건. 미디어 서버(Egress)가 스토리지에 직접 업로드하며,

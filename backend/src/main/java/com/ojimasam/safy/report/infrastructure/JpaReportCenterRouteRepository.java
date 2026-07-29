@@ -11,7 +11,7 @@ public interface JpaReportCenterRouteRepository
 	@org.springframework.data.jpa.repository.EntityGraph(attributePaths = "controlCenter")
 	java.util.Optional<ReportCenterRoute> findByReport_IdAndStatus(
 			Long reportId,
-			com.ojimasam.safy.report.domain.ReportCenterRouteStatus status
+			com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus status
 	);
 
 	@Override

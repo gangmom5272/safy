@@ -17,10 +17,10 @@ import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.config.SwaggerConfig;
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
 import com.ojimasam.safy.live.application.LiveSessionService;
-import com.ojimasam.safy.live.application.LiveTokenView;
-import com.ojimasam.safy.live.application.LiveSessionCursorView;
-import com.ojimasam.safy.live.application.OperatorLiveSessionView;
-import com.ojimasam.safy.live.domain.LiveSessionStatus;
+import com.ojimasam.safy.live.application.dto.LiveTokenView;
+import com.ojimasam.safy.live.application.dto.LiveSessionCursorView;
+import com.ojimasam.safy.live.application.dto.OperatorLiveSessionView;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 
 import java.time.Instant;
 

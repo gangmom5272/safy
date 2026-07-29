@@ -3,7 +3,7 @@ package com.ojimasam.safy.report.application;
 import org.springframework.stereotype.Service;
 
 import com.ojimasam.safy.realtime.application.RealtimeEventService;
-import com.ojimasam.safy.realtime.domain.RealtimeEventType;
+import com.ojimasam.safy.realtime.domain.type.RealtimeEventType;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
 

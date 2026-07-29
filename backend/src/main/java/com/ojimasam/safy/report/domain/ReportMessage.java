@@ -3,7 +3,7 @@ package com.ojimasam.safy.report.domain;
 import java.time.Instant;
 
 import com.ojimasam.safy.common.persistence.BaseEntity;
-import com.ojimasam.safy.user.domain.UserRole;
+import com.ojimasam.safy.user.domain.type.UserRole;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

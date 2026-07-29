@@ -14,10 +14,12 @@ import org.springframework.data.repository.query.Param;
 
 import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
-import com.ojimasam.safy.live.domain.LiveSessionStatus;
-import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
+import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 
 import jakarta.persistence.LockModeType;
+import com.ojimasam.safy.admin.domain.AdminCenterMembership;
+import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 
 public interface JpaLiveSessionRepository extends JpaRepository<LiveSession, UUID>, LiveSessionRepository {
 	@Override
@@ -42,7 +44,7 @@ public interface JpaLiveSessionRepository extends JpaRepository<LiveSession, UUI
 					from AdminCenterMembership membership
 					where membership.user.id = :operatorId
 					  and membership.isPrimary = true
-					  and membership.status = com.ojimasam.safy.admin.domain.MembershipStatus.ACTIVE
+					  and membership.status = com.ojimasam.safy.admin.domain.type.MembershipStatus.ACTIVE
 					  and membership.controlCenter.id = assignment.route.controlCenter.id
 				  )
 			  )

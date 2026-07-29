@@ -7,7 +7,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 import com.ojimasam.safy.user.domain.User;
-import com.ojimasam.safy.user.domain.UserRole;
+import com.ojimasam.safy.user.domain.type.UserRole;
 
 class AdminCredentialTest {
 	@Test

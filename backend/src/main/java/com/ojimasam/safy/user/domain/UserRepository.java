@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.util.Collection;
 import java.util.Optional;
+import com.ojimasam.safy.user.domain.type.UserRole;
 
 public interface UserRepository {
 	User save(User user);

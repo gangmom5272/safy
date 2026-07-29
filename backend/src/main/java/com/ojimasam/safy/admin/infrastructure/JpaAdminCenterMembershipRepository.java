@@ -8,9 +8,9 @@ import org.springframework.data.repository.query.Param;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
-import com.ojimasam.safy.admin.domain.MembershipStatus;
-import com.ojimasam.safy.user.domain.UserRole;
-import com.ojimasam.safy.user.domain.UserStatus;
+import com.ojimasam.safy.admin.domain.type.MembershipStatus;
+import com.ojimasam.safy.user.domain.type.UserRole;
+import com.ojimasam.safy.user.domain.type.UserStatus;
 
 import jakarta.persistence.LockModeType;
 
@@ -24,7 +24,7 @@ public interface JpaAdminCenterMembershipRepository
 	@EntityGraph(attributePaths = {"user", "controlCenter"})
 	org.springframework.data.domain.Page<AdminCenterMembership> findAllByControlCenter_IdAndStatus(
 			Long controlCenterId,
-			com.ojimasam.safy.admin.domain.MembershipStatus status,
+			com.ojimasam.safy.admin.domain.type.MembershipStatus status,
 			org.springframework.data.domain.Pageable pageable
 	);
 

@@ -13,6 +13,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 
 @Entity
 @Table(name = "live_sessions")

@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.auth.infrastructure.config.AuthProperties;
-import com.ojimasam.safy.auth.presentation.AdminLoginRequest;
-import com.ojimasam.safy.auth.application.LoginResult;
-import com.ojimasam.safy.auth.presentation.SocialCodeExchangeRequest;
-import com.ojimasam.safy.auth.application.TokenResponse;
-import com.ojimasam.safy.auth.domain.AuthErrorCode;
+import com.ojimasam.safy.auth.presentation.dto.AdminLoginRequest;
+import com.ojimasam.safy.auth.application.dto.LoginResult;
+import com.ojimasam.safy.auth.presentation.dto.SocialCodeExchangeRequest;
+import com.ojimasam.safy.auth.application.dto.TokenResponse;
+import com.ojimasam.safy.auth.domain.type.AuthErrorCode;
 import com.ojimasam.safy.auth.application.AuthService;
 import com.ojimasam.safy.auth.infrastructure.security.LogoutAccessTokenService;
 

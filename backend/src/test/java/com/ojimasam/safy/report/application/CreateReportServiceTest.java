@@ -18,10 +18,13 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportStatus;
-import com.ojimasam.safy.report.domain.ReportType;
-import com.ojimasam.safy.report.domain.ReportCategory;
-import com.ojimasam.safy.report.domain.ReportSubcategory;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportSubcategory;
+import com.ojimasam.safy.report.application.dto.CreateReportCommand;
+import com.ojimasam.safy.report.application.dto.CreateReportResult;
+import com.ojimasam.safy.report.application.event.ReportRoutingRequestedEvent;
 
 @ExtendWith(MockitoExtension.class)
 class CreateReportServiceTest {

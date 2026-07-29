@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.realtime.application.RealtimeEventService;
-import com.ojimasam.safy.realtime.domain.RealtimeEventType;
+import com.ojimasam.safy.realtime.domain.type.RealtimeEventType;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportMessage;
 import com.ojimasam.safy.report.domain.ReportMessageRepository;
@@ -19,7 +19,8 @@ import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
 import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.user.domain.User;
 import com.ojimasam.safy.user.domain.UserRepository;
-import com.ojimasam.safy.user.domain.UserRole;
+import com.ojimasam.safy.user.domain.type.UserRole;
+import com.ojimasam.safy.report.application.dto.ReportMessageResponse;
 
 @Service
 public class ReportMessageService {

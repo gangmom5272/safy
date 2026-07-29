@@ -15,7 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.ojimasam.safy.media.domain.MediaAsset;
 import com.ojimasam.safy.media.domain.MediaAssetRepository;
-import com.ojimasam.safy.media.domain.MediaStorageStatus;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
 
 @ExtendWith(MockitoExtension.class)
 class ExpiredMediaCleanupServiceTest {

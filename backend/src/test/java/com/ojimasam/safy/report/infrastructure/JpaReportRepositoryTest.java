@@ -12,7 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.ojimasam.safy.common.config.JpaAuditingConfig;
 import com.ojimasam.safy.report.domain.Report;
-import com.ojimasam.safy.report.domain.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -26,9 +26,9 @@ class JpaReportRepositoryTest {
 		Report saved = reportRepository.saveAndFlush(
 				Report.create(
 						1L,
-						com.ojimasam.safy.report.domain.ReportType.IMAGE,
-						com.ojimasam.safy.report.domain.ReportCategory.CROWD_CONGESTION,
-						com.ojimasam.safy.report.domain.ReportSubcategory.EXIT_CONGESTION,
+						com.ojimasam.safy.report.domain.type.ReportType.IMAGE,
+						com.ojimasam.safy.report.domain.type.ReportCategory.CROWD_CONGESTION,
+						com.ojimasam.safy.report.domain.type.ReportSubcategory.EXIT_CONGESTION,
 						"출구 주변이 혼잡합니다.",
 						new BigDecimal("37.5665000"),
 						new BigDecimal("126.9780000"),
@@ -40,9 +40,9 @@ class JpaReportRepositoryTest {
 
 		assertThat(found.getReporterId()).isEqualTo(1L);
 		assertThat(found.getCategory()).isEqualTo(
-				com.ojimasam.safy.report.domain.ReportCategory.CROWD_CONGESTION);
+				com.ojimasam.safy.report.domain.type.ReportCategory.CROWD_CONGESTION);
 		assertThat(found.getSubcategory()).isEqualTo(
-				com.ojimasam.safy.report.domain.ReportSubcategory.EXIT_CONGESTION);
+				com.ojimasam.safy.report.domain.type.ReportSubcategory.EXIT_CONGESTION);
 		assertThat(found.getLatitude()).isEqualByComparingTo("37.5665000");
 		assertThat(found.getLongitude()).isEqualByComparingTo("126.9780000");
 		assertThat(found.getStatus()).isEqualTo(ReportStatus.RECEIVED);

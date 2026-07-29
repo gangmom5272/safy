@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
+import com.ojimasam.safy.live.domain.type.LiveSessionStatus;
 
 class LiveSessionTest {
 	private final Instant now = Instant.parse("2026-07-22T03:00:00Z");

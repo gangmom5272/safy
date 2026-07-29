@@ -21,12 +21,13 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
-import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
+import com.ojimasam.safy.report.application.event.ReportTerminatedEvent;
 
 @ExtendWith(MockitoExtension.class)
 class CancelReportServiceTest {
@@ -77,9 +78,9 @@ class CancelReportServiceTest {
 	}
 
 	private Report report() {
-		Report report = Report.create(1L, com.ojimasam.safy.report.domain.ReportType.IMAGE,
-				com.ojimasam.safy.report.domain.ReportCategory.OTHER,
-				com.ojimasam.safy.report.domain.ReportSubcategory.OTHER_SITUATION, "기존 내용",
+		Report report = Report.create(1L, com.ojimasam.safy.report.domain.type.ReportType.IMAGE,
+				com.ojimasam.safy.report.domain.type.ReportCategory.OTHER,
+				com.ojimasam.safy.report.domain.type.ReportSubcategory.OTHER_SITUATION, "기존 내용",
 				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
 		ReflectionTestUtils.setField(report, "id", 42L);
 		return report;

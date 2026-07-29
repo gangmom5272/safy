@@ -13,11 +13,12 @@ import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
-import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
-import com.ojimasam.safy.report.domain.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.ReportStatusHistory;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
+import com.ojimasam.safy.report.application.event.ReportTerminatedEvent;
 
 @Service
 public class CancelReportService {

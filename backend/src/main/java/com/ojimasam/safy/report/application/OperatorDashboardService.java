@@ -20,13 +20,16 @@ import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
 import com.ojimasam.safy.media.application.MediaObjectStorage;
 import com.ojimasam.safy.media.domain.MediaAsset;
-import com.ojimasam.safy.media.domain.MediaStorageStatus;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportImage;
 import com.ojimasam.safy.report.domain.ReportImageRepository;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
-import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportType;
+import com.ojimasam.safy.report.application.dto.DashboardImageView;
+import com.ojimasam.safy.report.application.dto.DashboardLiveView;
+import com.ojimasam.safy.report.application.dto.OperatorDashboardTileView;
 
 @Service
 public class OperatorDashboardService {

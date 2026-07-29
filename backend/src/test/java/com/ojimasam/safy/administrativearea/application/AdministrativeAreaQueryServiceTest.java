@@ -13,10 +13,11 @@ import org.junit.jupiter.api.Test;
 
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaRepository;
-import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaStatus;
-import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaType;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaStatus;
+import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaType;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
+import com.ojimasam.safy.administrativearea.application.dto.AdministrativeAreaResponse;
 
 class AdministrativeAreaQueryServiceTest {
 	@Test

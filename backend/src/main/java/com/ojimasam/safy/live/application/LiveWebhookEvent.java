@@ -1,4 +1,5 @@
 package com.ojimasam.safy.live.application;
+import com.ojimasam.safy.live.application.dto.LiveEgressResult;
 
 /**
  * 미디어 서버가 보낸 웹훅을 서명 검증까지 마친 뒤 도메인이 이해하는 형태로 정규화한 이벤트.

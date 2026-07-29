@@ -19,8 +19,13 @@ import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportStatus;
-import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportType;
+import com.ojimasam.safy.report.application.dto.MyReportSummaryResponse;
+import com.ojimasam.safy.report.application.dto.ReportAnalysisResponse;
+import com.ojimasam.safy.report.application.dto.ReportCursorResponse;
+import com.ojimasam.safy.report.application.dto.ReportFeedItemResponse;
+import com.ojimasam.safy.report.application.dto.ReportWebRtcResponse;
 
 @Service
 @Transactional(readOnly = true)

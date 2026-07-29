@@ -21,18 +21,23 @@ import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.media.application.MediaObjectStorage;
 import com.ojimasam.safy.media.domain.MediaAsset;
-import com.ojimasam.safy.media.domain.MediaStorageStatus;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportImage;
 import com.ojimasam.safy.report.domain.ReportImageRepository;
 import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
-import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
-import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
+import com.ojimasam.safy.report.application.dto.AssignedControlCenterView;
+import com.ojimasam.safy.report.application.dto.ReportDetailView;
+import com.ojimasam.safy.report.application.dto.ReportImageView;
+import com.ojimasam.safy.report.application.dto.ReportListItemView;
+import com.ojimasam.safy.report.application.dto.ReportStatusHistoryResponse;
 
 @Service
 public class ReportQueryService {

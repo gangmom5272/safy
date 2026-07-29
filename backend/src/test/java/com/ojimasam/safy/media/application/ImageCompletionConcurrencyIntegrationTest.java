@@ -24,15 +24,16 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.media.domain.MediaAsset;
 import com.ojimasam.safy.media.domain.MediaAssetRepository;
-import com.ojimasam.safy.media.domain.MediaStorageStatus;
+import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
 import com.ojimasam.safy.media.infrastructure.JpaMediaAssetRepository;
 import com.ojimasam.safy.report.domain.Report;
-import com.ojimasam.safy.report.domain.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportCategory;
 import com.ojimasam.safy.report.domain.ReportRepository;
-import com.ojimasam.safy.report.domain.ReportSubcategory;
-import com.ojimasam.safy.report.domain.ReportType;
+import com.ojimasam.safy.report.domain.type.ReportSubcategory;
+import com.ojimasam.safy.report.domain.type.ReportType;
 import com.ojimasam.safy.report.infrastructure.JpaReportImageRepository;
 import com.ojimasam.safy.report.infrastructure.JpaReportRepository;
+import com.ojimasam.safy.media.application.dto.CompleteImageUploadCommand;
 
 @SpringBootTest(properties = "spring.task.scheduling.enabled=false")
 @ActiveProfiles("test")
