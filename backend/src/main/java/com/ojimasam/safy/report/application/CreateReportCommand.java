@@ -13,7 +13,6 @@ public record CreateReportCommand(
 		ReportSubcategory subcategory,
 		String description,
 		BigDecimal latitude,
-		BigDecimal longitude,
-		String address
+		BigDecimal longitude
 ) {
 }

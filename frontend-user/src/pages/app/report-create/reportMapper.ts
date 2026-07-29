@@ -61,6 +61,5 @@ export function buildCreateReportRequest(formData: ReportFormData): CreateReport
     description: formData.content,
     latitude: formData.location.latitude,
     longitude: formData.location.longitude,
-    address: null,
   }
 }

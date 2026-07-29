@@ -1,7 +1,7 @@
 import type { AreaLocation, AreaMapData, AreaStatus, RecentReport } from './types'
 
 export const USE_HOME_MOCK_FALLBACK = true
-export const mockLocation: AreaLocation = { areaId: 1, areaName: '홍대입구역', latitude: 37.5572, longitude: 126.9254 }
+export const mockLocation: AreaLocation = { areaId: 1, areaName: '홍대입구역', address: '서울 마포구 양화로 160', latitude: 37.5572, longitude: 126.9254 }
 export const mockMap: AreaMapData = {
   center: { latitude: 37.5572, longitude: 126.9254 },
   zones: [

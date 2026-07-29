@@ -176,7 +176,9 @@ export function MediaReportPage({
     const fallbackLocationName = getNearestMockLocationName(latitude, longitude)
     void resolveLocation(latitude, longitude)
       .then((resolvedLocation) => {
-        if (isCurrent) setLocationName(resolvedLocation.areaName || fallbackLocationName)
+        if (isCurrent) {
+          setLocationName(resolvedLocation.address || resolvedLocation.areaName || fallbackLocationName)
+        }
       })
       .catch(() => {
         if (isCurrent) setLocationName(fallbackLocationName)

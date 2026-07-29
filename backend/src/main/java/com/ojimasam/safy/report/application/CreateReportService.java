@@ -19,9 +19,10 @@ public class CreateReportService {
 
 	@Transactional
 	public CreateReportResult create(CreateReportCommand command) {
+		// 주소는 라우팅 단계에서 서버가 좌표로 확정해 채운다.
 		Report report = reportRepository.save(Report.create(
 				command.reporterId(), command.type(), command.category(), command.subcategory(), command.description(),
-				command.latitude(), command.longitude(), command.address()
+				command.latitude(), command.longitude(), null
 		));
 		eventPublisher.publishEvent(new ReportRoutingRequestedEvent(report.getId()));
 		return CreateReportResult.from(report);

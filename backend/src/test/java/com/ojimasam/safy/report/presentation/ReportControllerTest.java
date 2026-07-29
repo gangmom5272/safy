@@ -147,8 +147,7 @@ class ReportControllerTest {
 								  "subcategory": "ROAD_FLOODING",
 								  "description": "도로가 침수됐습니다.",
 								  "latitude": 37.5665,
-								  "longitude": 126.978,
-								  "address": "서울특별시 중구"
+								  "longitude": 126.978
 								}
 								""")
 						.with(authenticatedUser(1L)))
@@ -183,8 +182,7 @@ class ReportControllerTest {
 				  "subcategory": "EXIT_CONGESTION",
 				  "description": "%s",
 				  "latitude": 37.5665,
-				  "longitude": 126.978,
-				  "address": "서울특별시 중구"
+				  "longitude": 126.978
 				}
 				""".formatted(reportType, description);
 	}
