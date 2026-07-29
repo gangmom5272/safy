@@ -49,10 +49,14 @@ interface MyReportSummaryResponse {
   closedCount: number
 }
 
+// 시민 취소(PATCH /reports/{id}/cancel)는 백엔드에서 RECEIVED·ASSIGNED 에서만 허용된다.
+// ASSIGNED 는 서버가 관제센터로 자동 배정만 한 상태이고 담당자는 아직 확인하지 않았으므로
+// 접수 대기(RECEIVED)로 묶는다. 담당자가 확인해 IN_PROGRESS 로 넘어가면 취소할 수 없으므로
+// 여기서 가른다. 이렇게 두면 UI 상태가 취소 가능 구간과 그대로 일치한다.
+// ACCEPTED 는 수동 수락 단계가 폐지되며 남은 레거시 값이라 IN_PROGRESS 와 같게 취급한다.
 function toUiStatus(status: BackendReportStatus): ReportStatus {
-  if (status === 'RECEIVED') return 'RECEIVED'
-  if (status === 'ASSIGNED' || status === 'ACCEPTED' || status === 'IN_PROGRESS') return 'CHECKING'
-  if (status === 'CLOSED') return 'COMPLETED'
+  if (status === 'RECEIVED' || status === 'ASSIGNED') return 'RECEIVED'
+  if (status === 'ACCEPTED') return 'IN_PROGRESS'
   return status
 }
 
@@ -96,7 +100,9 @@ export async function getReportSummary(): Promise<ReportSummary> {
 
   const response = await apiClient.get<ApiResponse<MyReportSummaryResponse>>('/reports/me/summary')
   const summary = response.data.data
-  return { totalCount: summary.totalCount, receivedCount: summary.activeCount, checkingCount: 0, completedCount: summary.closedCount, rejectedCount: 0 }
+  // 서버는 totalCount·activeCount·closedCount 만 준다. 진행중/반려 세부 건수는 알 수 없어
+  // 0 으로 둔다. 제보 목록을 이미 받아온 화면은 목록에서 직접 세는 쪽을 쓴다.
+  return { totalCount: summary.totalCount, receivedCount: summary.activeCount, inProgressCount: 0, closedCount: summary.closedCount, rejectedCount: 0 }
 }
 
 export async function getMyReports() {

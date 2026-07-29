@@ -79,7 +79,7 @@
   background: #f1f3f5;
 }
 
-.report-detail-heading .status-checking {
+.report-detail-heading .status-in-progress {
   color: #b45309;
   background: #fff1dc;
 }
@@ -89,7 +89,7 @@
   background: #fee4e2;
 }
 
-.report-detail-heading .status-completed {
+.report-detail-heading .status-closed {
   color: #047857;
   background: #dcfce7;
 }

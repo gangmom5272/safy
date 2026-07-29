@@ -1,7 +1,12 @@
-export type ReportStatus = 'RECEIVED' | 'CHECKING' | 'COMPLETED' | 'REJECTED' | 'CANCELLED'
+// 백엔드 ReportStatus 7종을 화면에 필요한 5종으로 줄인 값이다. 이름은 백엔드 enum 에
+// 있는 것만 써서 대조하기 쉽게 한다. 합쳐지는 규칙은 mypageApi 의 toUiStatus 에 있다.
+//   RECEIVED    ← RECEIVED, ASSIGNED        (담당자 확인 전 = 시민 취소 가능)
+//   IN_PROGRESS ← ACCEPTED(레거시), IN_PROGRESS
+//   CLOSED      ← CLOSED
+export type ReportStatus = 'RECEIVED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 'CANCELLED'
 export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 'FAVORITES' | 'SUPPORT' | 'FAQ' | 'NOTICES' | 'NOTICE_DETAIL' | 'INQUIRY_FORM' | 'INQUIRIES' | 'INQUIRY_DETAIL' | 'GUIDE' | 'SETTINGS' | 'PROFILE_EDIT' | 'ACCOUNT' | 'PRIVACY' | 'NOTIFICATION_SETTINGS'
 export interface UserProfile { id: number; nickname: string; email: string; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }
-export interface ReportSummary { totalCount: number; receivedCount: number; checkingCount: number; completedCount: number; rejectedCount: number }
+export interface ReportSummary { totalCount: number; receivedCount: number; inProgressCount: number; closedCount: number; rejectedCount: number }
 export interface StatusHistory { status: ReportStatus; changedAt: string; description: string }
 export interface MyReport { id: number; type: string; title: string; description: string; locationName: string; address: string; createdAt: string; status: ReportStatus; thumbnailUrl?: string | null; maskedThumbnailUrl?: string | null; mediaUrls: string[]; adminReply?: string | null; history: StatusHistory[] }
 export type RiskLevel = 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER'

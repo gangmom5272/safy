@@ -1085,12 +1085,28 @@ button:focus-visible,
 }
 
 .report-complete-page .report-summary-list {
+  grid-template-columns: 1fr 1fr;
   gap: 0;
   padding: 0 18px;
   border: 1px solid #e3e8ef;
   border-radius: 16px;
   background: #f8fafc;
   text-align: left;
+}
+
+/* 항목은 기본적으로 한 줄을 다 쓴다. */
+.report-complete-page .report-summary-list > div {
+  grid-column: 1 / -1;
+}
+
+/* 제보 방식·유형은 값이 짧아 나란히 두고 카드 높이를 줄인다. */
+.report-complete-page .report-summary-list > .report-summary-half {
+  grid-column: auto;
+}
+
+/* 두 항목의 구분선이 끊기지 않도록 열 간격 대신 안쪽 여백을 준다. */
+.report-complete-page .report-summary-list > .report-summary-half + .report-summary-half {
+  padding-left: 14px;
 }
 
 .report-complete-page .report-summary-list div {

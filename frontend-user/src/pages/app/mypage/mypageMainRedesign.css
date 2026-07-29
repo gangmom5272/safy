@@ -808,12 +808,17 @@
   white-space: nowrap;
 }
 
-.report-card-status--review {
+.report-card-status--received {
   color: #004aad;
   background: rgba(232, 241, 255, .94);
 }
 
-.report-card-status--completed {
+.report-card-status--in-progress {
+  color: #b45309;
+  background: rgba(255, 241, 220, .94);
+}
+
+.report-card-status--closed {
   color: #047857;
   background: rgba(220, 252, 231, .94);
 }

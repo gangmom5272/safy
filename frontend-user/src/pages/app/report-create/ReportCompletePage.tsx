@@ -71,11 +71,11 @@ export function ReportCompletePage({ formData = fallbackFormData, onRestart }: R
         </div>
         <dl className="report-summary-list">
           {formData.reportId ? <div><dt>제보 번호</dt><dd>#{formData.reportId}</dd></div> : null}
-          <div>
+          <div className="report-summary-half">
             <dt><SummaryIcon name="method" />제보 방식</dt>
             <dd>{methodLabel}</dd>
           </div>
-          <div>
+          <div className="report-summary-half">
             <dt><SummaryIcon name="category" />제보 유형</dt>
             <dd>{categoryLabel}</dd>
           </div>
@@ -89,7 +89,7 @@ export function ReportCompletePage({ formData = fallbackFormData, onRestart }: R
           </div>
         </dl>
         <div className="report-complete-actions">
-          <button type="button" className="report-primary-button" onClick={() => moveTo('/app/situations')}>상황 확인으로 이동</button>
+          <button type="button" className="report-primary-button" onClick={() => moveTo('/app/mypage/reports')}>내 제보 관리에서 확인하기</button>
           <button type="button" className="report-complete-home-button" onClick={() => moveTo('/app')}>홈으로 돌아가기</button>
         </div>
       </div>

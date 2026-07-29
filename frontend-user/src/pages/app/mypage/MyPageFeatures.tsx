@@ -10,17 +10,24 @@ import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, ReportSta
 import { APP_VERSION } from './mypageUtils'
 import './favoritePlaceForm.css'
 
-const statusLabel: Record<ReportStatus, string> = { RECEIVED: '검토중', CHECKING: '처리중', COMPLETED: '처리완료', REJECTED: '반려됨', CANCELLED: '취소됨' }
-type ReportDisplayStatus = 'ALL' | 'REVIEW' | 'COMPLETED' | 'REJECTED' | 'CANCELLED'
+// 접수 대기 중(RECEIVED)은 담당자 확인 전이라 시민이 취소할 수 있는 구간이다.
+const statusLabel: Record<ReportStatus, string> = { RECEIVED: '접수 대기 중', IN_PROGRESS: '처리중', CLOSED: '처리완료', REJECTED: '반려됨', CANCELLED: '취소됨' }
+type ReportDisplayStatus = 'ALL' | ReportStatus
 type ReportDateFilter = 'ALL' | '7_DAYS' | '1_MONTH' | '3_MONTHS' | 'CUSTOM'
 
 const reportStatusFilters: { value: ReportDisplayStatus; label: string }[] = [
   { value: 'ALL', label: '전체' },
-  { value: 'REVIEW', label: '검토중' },
-  { value: 'COMPLETED', label: '채택됨' },
+  { value: 'RECEIVED', label: '접수 대기 중' },
+  { value: 'IN_PROGRESS', label: '처리중' },
+  { value: 'CLOSED', label: '처리완료' },
   { value: 'REJECTED', label: '반려됨' },
   { value: 'CANCELLED', label: '취소됨' },
 ]
+
+// 상태값을 CSS 클래스로 쓸 때는 다른 클래스와 같은 kebab-case 로 맞춘다(IN_PROGRESS → in-progress).
+function toStatusModifier(status: ReportStatus) {
+  return status.toLowerCase().replace('_', '-')
+}
 const reportDateFilters: { value: ReportDateFilter; label: string }[] = [
   { value: 'ALL', label: '전체 기간' },
   { value: '7_DAYS', label: '최근 7일' },
@@ -29,9 +36,6 @@ const reportDateFilters: { value: ReportDateFilter; label: string }[] = [
   { value: 'CUSTOM', label: '직접 설정' },
 ]
 
-function getDisplayStatus(status: ReportStatus): Exclude<ReportDisplayStatus, 'ALL'> {
-  return status === 'RECEIVED' || status === 'CHECKING' ? 'REVIEW' : status
-}
 const reportTypeRules = [
   { pattern: /인파|crowd/i, label: '인파 밀집', titleTerms: ['인파 과밀', '인파 밀집'] },
   { pattern: /교통|traffic/i, label: '교통 혼잡', titleTerms: ['교통 혼잡', '교통 체증'] },
@@ -66,7 +70,7 @@ export function Reports({ reports, onBack, onOpen }: { reports: MyReport[]; onBa
   }, [dateMenuOpen])
 
   const filteredReports = useMemo(() => reports.filter((report) => {
-    if (statusFilter !== 'ALL' && getDisplayStatus(report.status) !== statusFilter) return false
+    if (statusFilter !== 'ALL' && report.status !== statusFilter) return false
     if (dateFilter === 'ALL') return true
 
     const createdAt = new Date(report.createdAt)
@@ -86,9 +90,9 @@ export function Reports({ reports, onBack, onOpen }: { reports: MyReport[]; onBa
 
   const selectedDateLabel = reportDateFilters.find((item) => item.value === dateFilter)?.label ?? '전체 기간'
 
-  return <><PageHeader title="내 제보 관리" onBack={onBack} /><div className="report-filters"><div className="report-status-filters" role="tablist" aria-label="제보 상태">{reportStatusFilters.map((item) => <button type="button" role="tab" aria-selected={statusFilter === item.value} className={statusFilter === item.value ? 'active' : ''} key={item.value} onClick={() => setStatusFilter(item.value)}>{item.label}</button>)}</div><div className="report-filter-toolbar"><span>조회 기간</span><div className="report-date-filter" ref={dateMenuRef}><button type="button" className="report-date-filter__trigger" aria-haspopup="listbox" aria-expanded={dateMenuOpen} onClick={() => setDateMenuOpen((open) => !open)}><span>{selectedDateLabel}</span><span aria-hidden="true">⌄</span></button>{dateMenuOpen && <div className="report-date-filter__menu" role="listbox" aria-label="제보 기간">{reportDateFilters.map((item) => <button type="button" role="option" aria-selected={dateFilter === item.value} className={dateFilter === item.value ? 'active' : ''} key={item.value} onClick={() => { setDateFilter(item.value); setDateMenuOpen(false) }}>{item.label}</button>)}</div>}</div></div>{dateFilter === 'CUSTOM' && <div className="report-custom-dates"><label>시작일<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} /></label><span aria-hidden="true">~</span><label>종료일<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} /></label></div>}</div>{filteredReports.length ? <div className="my-report-list">{filteredReports.map((report) => { const displayStatus = getDisplayStatus(report.status); return <button type="button" className="my-report-card" key={report.id} onClick={() => onOpen(report.id)}><span className="report-thumb"><em className={`report-card-status report-card-status--${displayStatus.toLowerCase()}`}>{statusLabel[report.status]}</em><time className="report-card-relative-date" dateTime={report.createdAt}>{formatRelativeTime(report.createdAt)}</time>{report.maskedThumbnailUrl || report.thumbnailUrl ? <img src={(report.maskedThumbnailUrl || report.thumbnailUrl) ?? ''} alt="제보 현장" /> : <span className="report-image-placeholder">이미지 준비중</span>}</span><span className="report-card-body"><small>{report.type} · {report.locationName}</small><strong>{report.title}</strong><time dateTime={report.createdAt}>{formatDateTime(report.createdAt)}</time></span></button> })}</div> : <Empty text="선택한 조건에 해당하는 제보가 없습니다." />}</>
+  return <><PageHeader title="내 제보 관리" onBack={onBack} /><div className="report-filters"><div className="report-status-filters" role="tablist" aria-label="제보 상태">{reportStatusFilters.map((item) => <button type="button" role="tab" aria-selected={statusFilter === item.value} className={statusFilter === item.value ? 'active' : ''} key={item.value} onClick={() => setStatusFilter(item.value)}>{item.label}</button>)}</div><div className="report-filter-toolbar"><span>조회 기간</span><div className="report-date-filter" ref={dateMenuRef}><button type="button" className="report-date-filter__trigger" aria-haspopup="listbox" aria-expanded={dateMenuOpen} onClick={() => setDateMenuOpen((open) => !open)}><span>{selectedDateLabel}</span><span aria-hidden="true">⌄</span></button>{dateMenuOpen && <div className="report-date-filter__menu" role="listbox" aria-label="제보 기간">{reportDateFilters.map((item) => <button type="button" role="option" aria-selected={dateFilter === item.value} className={dateFilter === item.value ? 'active' : ''} key={item.value} onClick={() => { setDateFilter(item.value); setDateMenuOpen(false) }}>{item.label}</button>)}</div>}</div></div>{dateFilter === 'CUSTOM' && <div className="report-custom-dates"><label>시작일<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} /></label><span aria-hidden="true">~</span><label>종료일<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} /></label></div>}</div>{filteredReports.length ? <div className="my-report-list">{filteredReports.map((report) => <button type="button" className="my-report-card" key={report.id} onClick={() => onOpen(report.id)}><span className="report-thumb"><em className={`report-card-status report-card-status--${toStatusModifier(report.status)}`}>{statusLabel[report.status]}</em><time className="report-card-relative-date" dateTime={report.createdAt}>{formatRelativeTime(report.createdAt)}</time>{report.maskedThumbnailUrl || report.thumbnailUrl ? <img src={(report.maskedThumbnailUrl || report.thumbnailUrl) ?? ''} alt="제보 현장" /> : <span className="report-image-placeholder">이미지 준비중</span>}</span><span className="report-card-body"><small>{report.type} · {report.locationName}</small><strong>{report.title}</strong><time dateTime={report.createdAt}>{formatDateTime(report.createdAt)}</time></span></button>)}</div> : <Empty text="선택한 조건에 해당하는 제보가 없습니다." />}</>
 }
-export function ReportDetail({ report, onBack, onCancel }: { report: MyReport; onBack: () => void; onCancel?: () => void }) { return <div className="my-report-detail-page"><PageHeader title="내 제보 상세" onBack={onBack} /><span className="report-detail-media">{report.mediaUrls.length ? <img src={report.mediaUrls[0]} alt="첨부 이미지" /> : '첨부 이미지 없음'}</span><section className="report-detail-section"><div className="report-detail-heading"><h2 className="report-detail-section__title">{getReportDisplayTitle(report)}</h2><em className={`status-${report.status.toLowerCase()}`}>{statusLabel[report.status]}</em></div><div className="mypage-card report-detail-card"><p className="report-detail-description">{report.description}</p><dl className="report-detail-info"><dt>유형</dt><dd>{getReportTypeLabel(report)}</dd><dt>주소</dt><dd>{report.address}</dd><dt>등록 시간</dt><dd>{formatDateTime(report.createdAt)}</dd></dl>{(report.status === 'RECEIVED' || report.status === 'CHECKING') && onCancel ? <button type="button" className="danger" onClick={onCancel}>제보 취소</button> : null}</div></section><section className="report-detail-section"><h2 className="report-detail-section__title">관리자 답변</h2><div className="mypage-card report-detail-section__card"><p>{report.adminReply ?? '아직 관리자 답변이 등록되지 않았습니다.'}</p></div></section><section className="report-detail-section"><h2 className="report-detail-section__title">처리 이력</h2><div className="mypage-card report-detail-section__card">{report.history.length ? <ol className="report-history-list">{report.history.map((item) => <li key={`${item.status}-${item.changedAt}`}><b>{statusLabel[item.status]}</b><span>{item.description}</span><time>{formatDateTime(item.changedAt)}</time></li>)}</ol> : <p>등록된 처리 이력이 없습니다.</p>}</div></section></div> }
+export function ReportDetail({ report, onBack, onCancel }: { report: MyReport; onBack: () => void; onCancel?: () => void }) { return <div className="my-report-detail-page"><PageHeader title="내 제보 상세" onBack={onBack} /><span className="report-detail-media">{report.mediaUrls.length ? <img src={report.mediaUrls[0]} alt="첨부 이미지" /> : '첨부 이미지 없음'}</span><section className="report-detail-section"><div className="report-detail-heading"><h2 className="report-detail-section__title">{getReportDisplayTitle(report)}</h2><em className={`status-${toStatusModifier(report.status)}`}>{statusLabel[report.status]}</em></div><div className="mypage-card report-detail-card"><p className="report-detail-description">{report.description}</p><dl className="report-detail-info"><dt>유형</dt><dd>{getReportTypeLabel(report)}</dd><dt>주소</dt><dd>{report.address}</dd><dt>등록 시간</dt><dd>{formatDateTime(report.createdAt)}</dd></dl>{report.status === 'RECEIVED' && onCancel ? <button type="button" className="danger" onClick={onCancel}>제보 취소</button> : null}</div></section><section className="report-detail-section"><h2 className="report-detail-section__title">관리자 답변</h2><div className="mypage-card report-detail-section__card"><p>{report.adminReply ?? '아직 관리자 답변이 등록되지 않았습니다.'}</p></div></section><section className="report-detail-section"><h2 className="report-detail-section__title">처리 이력</h2><div className="mypage-card report-detail-section__card">{report.history.length ? <ol className="report-history-list">{report.history.map((item) => <li key={`${item.status}-${item.changedAt}`}><b>{statusLabel[item.status]}</b><span>{item.description}</span><time>{formatDateTime(item.changedAt)}</time></li>)}</ol> : <p>등록된 처리 이력이 없습니다.</p>}</div></section></div> }
 export function Favorites({ items, onBack, onChange, onNavigate, usingMock }: { items: FavoriteLocation[]; onBack: () => void; onChange: Dispatch<SetStateAction<FavoriteLocation[]>>; onNavigate: (item: FavoriteLocation) => void; usingMock: boolean }) {
   const navigate = useNavigate()
   const { favoritePlaces, storageError, hydrate, removeFavoritePlace } = useFavoritePlacesStore()
