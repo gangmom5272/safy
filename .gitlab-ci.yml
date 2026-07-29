@@ -86,6 +86,24 @@ deploy:
   image: alpine:3.20
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
+  # develop에 MR이 연달아 머지되면 파이프라인이 동시에 돌고, 아래 rsync --delete가
+  # 서로를 덮어쓴다. 늦게 끝난 쪽이 이기므로 커밋이 더 오래된 배포가 최신 배포를
+  # 되돌릴 수 있다.
+  #
+  # 2026-07-29 실측 사고:
+  #   c361526(02:12:24 완료)이 742951b(02:11:09 완료)보다 1분 늦게 끝났다.
+  #   c361526은 742951b의 조상이라 그 시점 소스에는 뒤 커밋의 infra/ 변경이 없었고,
+  #   rsync --delete가 서버의 docker-compose.yml을 되감아 변경이 사라졌다.
+  #   backend/infra는 무조건 --delete로 동기화되는데 frontend dist는 빌드 잡이
+  #   changes 조건부라 아티팩트가 있을 때만 갱신된다. 그래서 infra만 되감겼다.
+  #
+  # resource_group은 이 잡을 프로젝트 전역에서 한 번에 하나만 실행하게 만든다.
+  # 동시 rsync는 이걸로 사라진다.
+  #
+  # 주의: 실행 '순서'까지 보장하려면 resource group의 process_mode를 oldest_first로
+  # 바꿔야 한다(기본값 unordered). 이건 .gitlab-ci.yml이 아니라 API로 설정한다:
+  #   PUT /projects/:id/resource_groups/production  {"process_mode":"oldest_first"}
+  resource_group: production
   before_script:
     - apk add --no-cache openssh-client rsync
     - mkdir -p ~/.ssh
