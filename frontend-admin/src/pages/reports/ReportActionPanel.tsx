@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AdminModal } from '../../components/admin/AdminModal'
-import { completeReport, reassignReport, rejectReport } from './reportApi'
+import { completeReport, reassignReport, rejectReport, type AssignmentStatus } from './reportApi'
 
 type OperatorAction = 'complete' | 'reject' | 'reassign'
 
@@ -18,10 +18,14 @@ const REASON_REQUIRED: Record<OperatorAction, boolean> = {
 
 interface ReportActionPanelProps {
   reportId: number
+  /** 조회한 담당자 본인의 배정 상태. 진행 중일 때만 처리 버튼을 연다. */
+  assignmentStatus: AssignmentStatus | null
   onActionComplete: () => void
 }
 
-export function ReportActionPanel({ reportId, onActionComplete }: ReportActionPanelProps) {
+const ACTIONABLE_STATUSES: AssignmentStatus[] = ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS']
+
+export function ReportActionPanel({ reportId, assignmentStatus, onActionComplete }: ReportActionPanelProps) {
   const [action, setAction] = useState<OperatorAction | null>(null)
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -59,6 +63,18 @@ export function ReportActionPanel({ reportId, onActionComplete }: ReportActionPa
       setActionError(error instanceof Error ? error.message : '처리하지 못했습니다.')
       setIsSubmitting(false)
     }
+  }
+
+  // 종결된 배정이거나 배정이 없는 계정(SUPER_ADMIN)은 처리 API 가 404 를 돌려주므로
+  // 버튼을 아예 노출하지 않는다.
+  if (!assignmentStatus || !ACTIONABLE_STATUSES.includes(assignmentStatus)) {
+    return (
+      <p className="report-action-closed" role="status">
+        {assignmentStatus
+          ? '이미 대응이 끝난 제보입니다. 더 이상 처리할 수 없습니다.'
+          : '이 제보에 배정된 담당자만 처리할 수 있습니다.'}
+      </p>
+    )
   }
 
   return (

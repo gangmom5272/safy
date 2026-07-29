@@ -14,6 +14,7 @@ import {
   getOperatorReportDetail,
   getReportAnalysis,
   toMyOutcome,
+  type AssignmentStatus,
   type ReportImage,
   type ReportAnalysis,
 } from './reportApi'
@@ -30,6 +31,7 @@ export function ReportDetailPage() {
   const [analysis, setAnalysis] = useState<ReportAnalysis | null>(null)
   const [images, setImages] = useState<ReportImage[]>([])
   const [myOutcome, setMyOutcome] = useState<ReportStatus | null>(null)
+  const [myAssignmentStatus, setMyAssignmentStatus] = useState<AssignmentStatus | null>(null)
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null)
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(isValidReportId)
@@ -46,6 +48,7 @@ export function ReportDetailPage() {
         setReport(detailToAdminReport(detail))
         setImages(detail.images)
         setMyOutcome(toMyOutcome(detail))
+        setMyAssignmentStatus(detail.myAssignmentStatus)
 
         // 분석 API는 아직 준비 중이라 실패해도 상세 화면은 유지한다.
         const loadedAnalysis = await getReportAnalysis(numericReportId).catch(() => null)
@@ -154,6 +157,7 @@ export function ReportDetailPage() {
         <AdminSection title="제보 처리">
           <ReportActionPanel
             reportId={numericReportId}
+            assignmentStatus={myAssignmentStatus}
             onActionComplete={() => navigate(ROUTE_PATHS.REPORTS, { replace: true })}
           />
         </AdminSection>
