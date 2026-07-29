@@ -506,3 +506,495 @@ compose가 `image: safy-backend:${DEPLOY_TAG:-latest}`인데 서버에 safy-back
   않아 통합 주차에 드리프트 위험이 있다.
 - **제보 생성 E2E·presign 실검증**: 시민 계정이 필요해 위 9번 해결 후 가능.
 - **배포·복구 런북(티켓 49)**: 이 저널과 별개로 팀원이 따라할 절차서 미작성.
+
+## 2026-07-28 (화) 오후 — 시민 앱 통합: baseURL·OAuth2 프록시·CI 변수
+
+**목표**: 오전 9절에서 원인만 규명한 시민 앱 미연결을 실제로 뚫어 소셜로그인 E2E를 완주한다.
+
+**진행**
+
+- **`frontend-user/.env` 추적 해제 + 코드 폴백**: `.env`가 커밋돼 있어 CI 빌드가 개발용 주소를
+  번들에 구웠다. `.env`를 추적에서 빼고 `api/client.ts`에 폴백을 뒀다 —
+  `import.meta.env.DEV`면 `http://localhost:8080/api/v1`, 빌드 결과물이면 `/api/v1`.
+  `api/realtime.ts`와 `pages/auth/LoginPage.tsx`가 이 값을 공유하도록 정리했다.
+  빌드 결과물이 상대경로를 쓰면 nginx와 같은 출처가 되어 주소를 아예 몰라도 된다.
+
+- **nginx에 OAuth2 경로 프록시 추가**: `/oauth2/authorization/{provider}`(로그인 시작)와
+  `/login/oauth2/code/{provider}`(제공자 콜백)는 둘 다 `/api/` 밖이라 별도 프록시가 필요하다.
+  없으면 SPA 폴백으로 흘러가 `index.html`이 반환되고 화면에 앱의 404가 뜬다(실측).
+  `/login/oauth2/`는 SPA의 `/login` 라우트보다 긴 접두어라 우선 매칭된다.
+
+- **`Host $host` → `$http_host`**: `$host`는 포트를 버린다. Spring Security는 이 Host로
+  OAuth2 `redirect_uri`를 만드는데 포트가 빠지면 `http://도메인/login/oauth2/code/kakao`가
+  되어 콜백이 80번(OpenVidu Caddy)으로 가버린다. 실측으로 확인했다.
+
+- **CI 변수 함정 — 지도가 무조건 실패하던 이유**: 팀원이 추가한 `VITE_KAKAO_MAP_JS_KEY`가
+  GitLab CI/CD 변수에 없어서 CI 빌드 번들에 키가 비어 있었다. Vite는 빌드 시점에 값을 굽기
+  때문에 서버에서는 고칠 수 없다. CI/CD Variables에 등록(Protect 미체크)해 해결.
+  **새 `VITE_` 변수는 코드 머지만으로는 동작하지 않는다.** 변수 등록 후에는
+  `frontend-user` 잡 → `deploy` 잡 순서로 재실행해야 한다. deploy만 재실행하면 옛 아티팩트를
+  다시 올린다.
+
+- **소셜로그인 E2E 완주**: 카카오 로그인 → 시민 계정 생성 → 앱 진입까지 배포 환경에서
+  PC·모바일 모두 성공. `users` 5명. 오전 8절에서 "시민 계정이 없어 불가"로 남겨둔 검증의
+  선행 조건이 해소됐다.
+
+**HTTPS가 3건을 동시에 막고 있다는 것을 확인**
+
+| 막힌 것 | 이유 |
+|---|---|
+| 위치 권한 | 브라우저가 Geolocation을 보안 컨텍스트에서만 허용한다. `http://localhost`는 예외지만 `http://도메인:8091`은 아니다. **좌표가 없으면 lat/lng가 `@NotNull`이라 제보 생성 자체가 불가** |
+| 구글 로그인 | 구글은 localhost 외 `http://` redirect URI를 콘솔 등록조차 거부한다 |
+| MinIO presign | https 페이지에서 http 업로드 주소는 mixed content로 차단된다 |
+
+세 개가 원인이 하나라서 HTTPS 전환을 다음 날 최우선으로 잡았다.
+
+---
+
+# 2026-07-29 (수) — HTTPS 진입점 전환 · MinIO presign https · 배포 레이스 규명
+
+**오늘의 원칙**: 제안 전에 실측한다. 오늘 계획이 두 번 뒤집혔는데 둘 다 검증 없이 단정한
+탓이었고, 프로브 2분으로 판명됐다(12절 참고).
+
+**완료 기준**: `https://i15a503.p.ssafy.io/` 에서 카카오 로그인 → 위치 권한 허용 →
+제보 1건 생성(`reports` 0 → 1). 달성했다.
+
+## 1. HTTPS 진입점 — 자체 서명 인증서를 만들지 않았다
+
+주간계획에는 "자체 서명 인증서"로 적어뒀지만, **OpenVidu 스택의 Caddy가 이미 443에서 도메인
+정식 인증서(Let's Encrypt)를 쓰고 있었다**. 자체 서명은 브라우저 경고가 남고 구글 OAuth도
+통과하지 못한다. Caddy를 경유하는 쪽이 낫다.
+
+더 나아가 **OpenVidu가 이 용도의 확장 지점을 이미 갖고 있었다.**
+`/opt/openvidu/config/caddy.yaml` 마지막 라우트:
+
+```yaml
+# Custom User Application
+# If an app is deployed at CUSTOM_APP_INTERNAL_PORT, it will be served at /*
+- dial: "127.0.0.1:${openvidu.CUSTOM_APP_INTERNAL_PORT:-6080}"
+```
+
+`MEET_BASE_PATH=/meet` 이라 이 catch-all이 **이미 활성 상태**였다. 6080이 비어 있어서 Caddy가
+502를 내고, 502를 `/meet`으로 302시키는 에러 라우트가 그걸 삼키고 있었다. 실측:
+
+```
+https://…/            → 302 https://…/meet/
+https://…/healthz     → 302 https://…/meet/healthz
+https://…/api/v1/areas → 302 https://…/meet/api/v1/areas
+```
+
+**즉 6080에 리스너를 두는 것만으로 도메인 루트가 우리 앱이 된다.** 방법을 두 개 비교했다.
+
+| | `openvidu.env`의 `CUSTOM_APP_INTERNAL_PORT`를 8091로 변경 | **nginx가 6080도 리스닝** |
+|---|---|---|
+| OpenVidu 스택 재시작 | 필요(`down`+`up`, 라이브 WebRTC 중단) | 불필요 |
+| OpenVidu 업그레이드 | 값이 덮어써짐 | 무관 |
+| git 추적 | 안 됨(서버 드리프트) | 됨 |
+| Caddy 설정 파일 수정 | — | 없음 |
+
+후자를 택했다. compose의 nginx에 `127.0.0.1:6080:80` 한 줄이 전부다. `127.0.0.1` 바인딩이라
+6080은 인터넷에서 닿지 않고 같은 호스트의 Caddy만 쓴다.
+
+**배포 전에 임시 리스너로 실증했다.** 6080에 헤더를 그대로 되돌려주는 파이썬 프로세스를
+10초간 띄웠다. `/`와 `/app/report` 둘 다 그 프로브에 도달했고, 그 시간 동안 OpenVidu 경로는
+`/meet` 301 · `/dashboard` 200 · `/health/caddy` 200 · `/grafana` 302로 정상이었다.
+설정 파일만 읽고 추론한 상태로 배포하지 않은 것이 이 작업에서 가장 잘한 판단이다.
+
+경로 충돌도 확인했다. Caddy가 점유한 접두어는 `/meet`, `/dashboard`, `/grafana`,
+`/minio-console`, `/openvidu/*`, `/whip`, `/twirp`, `/rtc`, `/agent`, `/health/caddy` 뿐이고,
+우리 앱의 `/app/*`, `/admin/*`, `/login`, `/signup`, `/oauth/callback`, `/api/*`와 겹치지
+않는다. 어드민이 `/admin`인 것이 다행이다 — `/dashboard`로 옮기면 OpenVidu 화면에 가려진다.
+
+프론트는 수정이 필요 없었다. 배포 번들이 `baseURL`로 상대경로를 쓰기 때문이다(7/28 오후 작업의
+결과다). `frontend-user`는 `` var el=`/api/v1` ``, `frontend-admin`은 `` var $c=`/api/v1` ``,
+양쪽 모두 `i15a503`·`8091` 리터럴 0건.
+
+## 2. Caddy는 TLS를 layer4에서 종료한다 — 이 사실이 계획 하나를 폐기시켰다
+
+임시 리스너가 받은 헤더:
+
+```
+Host: i15a503.p.ssafy.io
+Via: 1.1 Caddy
+X-Forwarded-Host: i15a503.p.ssafy.io
+X-Forwarded-Proto: http          ← https가 아니다
+X-Forwarded-For: 127.0.0.1       ← 실 클라이언트 IP가 아니다
+```
+
+`caddy.yaml`의 구조를 보면 이유가 명확하다. Caddy는 `layer4` 앱에서 TLS를 종료하고 **평문으로**
+`127.0.0.1:5656`(tcp-demux) → `127.0.0.1:7880`(http 서버)로 넘긴다. HTTP 서버가 보는 연결은
+localhost에서 온 평문 http이므로 `X-Forwarded-Proto`에 `http`를 쓴다.
+
+**파급 1 — 계획 폐기.** 원래는 nginx가 `X-Forwarded-Proto`를 통과시키고 백엔드에
+`server.forward-headers-strategy: FRAMEWORK`를 넣어 Spring이 https를 인식하게 하려 했다.
+그런데 통과시킬 값 자체가 `http`이므로 **효과가 0이다.** 백엔드 파일을 건드리는 계획을 버렸다.
+
+제대로 하려면 nginx가 `X-Forwarded-Proto`를 **정적으로** `https`로 박아야 하는데, 8091과
+6080이 컨테이너 내부에선 둘 다 포트 80이라 구분할 수 없다. 컨테이너 포트를 나누거나 8091을
+폐기해야 하는 별건 작업이다.
+
+**파급 2 — 실 클라이언트 IP 소실.** layer4 프록시가 PROXY protocol 없이 dial하므로 뒤에서는
+전부 `127.0.0.1`로 보인다. 전환 전 nginx 로그에는 `211.234.192.138` 같은 실 IP가 찍혔지만
+전환 후에는 사라졌다. 접근로그·남용추적·레이트리밋에 영향이 있다. 복구하려면 Caddy 설정을
+고쳐야 해서 별건으로 남긴다.
+
+**결과적으로 `redirect_uri`는 http로 생성된다.** 배포 전에 8091에 `Host: i15a503.p.ssafy.io`를
+실어 보내 실측했다:
+
+```
+Host: i15a503.p.ssafy.io      → redirect_uri=http://i15a503.p.ssafy.io/login/oauth2/code/kakao
+Host: i15a503.p.ssafy.io:8091 → redirect_uri=http://i15a503.p.ssafy.io:8091/login/oauth2/code/kakao
+```
+
+카카오는 http 등록을 허용하고, 콜백이 80번으로 와도 Caddy가 443으로 301시키므로 로그인은
+완주한다. **구글은 이 상태로는 안 된다** — 구글 OAuth 작업 시 `redirect_uri`를 명시 지정하는
+방식으로 함께 정리해야 한다.
+
+같은 요청에서 `code_challenge_method=S256`을 확인했다. **PKCE가 켜져 있어** authorization
+code가 평문 한 홉을 지나가도 `code_verifier` 없이는 교환할 수 없다. 이 사실이 "http 콜백을
+감수한다"는 판단의 근거가 됐다. HSTS 헤더는 없어서 브라우저가 자동 업그레이드하지도 않는다.
+
+## 3. 동시 배포 레이스 — 늦게 끝난 파이프라인이 이긴다
+
+배포가 성공했는데 6080이 붙지 않았다. nginx는 1분 전에 재생성됐는데 포트가 없었다.
+
+```
+git 조상관계: 68739eb ─┬─ e09c696(내 104) ──► 742951b  (develop HEAD, 전부 포함)
+                       └─ 8edee96(팀원 117) ──► c361526  (742951b의 조상)
+
+배포 완료:   742951bd  02:11:09Z
+             c361526c  02:12:24Z   ← 1분 늦게 끝났고, 이쪽이 이겼다
+```
+
+`c361526` 시점 소스에는 뒤 커밋의 `infra/` 변경이 **물리적으로 없다.** 두 파이프라인이 동시에
+돌면서 늦게 끝난 쪽의 `rsync --delete`가 서버의 `docker-compose.yml`을 되감았다.
+`env.example`도 같이 되돌아갔다(`AUTH_ACCESS_TOKEN_TTL` 0건으로 확인).
+
+증상이 헷갈린 이유는 **동기화 방식의 비대칭**이다.
+
+| 대상 | 방식 | 결과 |
+|---|---|---|
+| `backend`, `infra` | 항상 `rsync --delete` | 그 커밋 시점으로 되감김 |
+| `frontend-*/dist` | 빌드 잡이 `changes:` 조건부 → 아티팩트 있을 때만 | 갱신 안 돼서 멀쩡했다 |
+
+`infra`만 되감기고 프론트는 정상이라 "배포가 실패한 것"처럼 보이지 않았다.
+
+조치: `deploy` 잡에 `resource_group: production`을 넣어 프로젝트 전역에서 한 번에 하나만
+실행하게 했다. **다만 이건 상호배제만 주고 실행 순서는 보장하지 않는다.** resource group의
+기본 `process_mode`가 `unordered`이고, 순서까지 잡으려면 API 설정이 필요하다:
+
+```
+PUT /projects/:id/resource_groups/production   {"process_mode": "oldest_first"}
+```
+
+이건 `.gitlab-ci.yml`에 담을 수 없어 주석에 절차만 남겼다.
+
+**운영 함정 하나 더**: 과거 파이프라인의 `deploy` 잡을 재실행하면 **그 커밋 시점으로 되감긴다.**
+여러 MR이 몰리는 중에는 재실행 대신 develop HEAD에서 신규 실행해야 한다. `resource_group`은
+동시 실행은 막지만 사람이 옛 파이프라인을 수동 재실행하는 것까지 막아주지 않는다.
+
+**같은 날 실전 검증됨**: `f92a0b16`(06:11:29Z)과 `aeacc69a`(06:11:56Z)가 27초 간격으로
+순차 실행됐고, 뒤 커밋이 앞 커밋의 자손이라 되감김이 없었다.
+
+## 4. MinIO presign을 https로 — nginx가 TLS를 종단한다
+
+HTTPS 전환 후 이미지 제보가 조용히 실패했다. 화면상 제보는 등록되는데 "첨부 이미지 없음"이다.
+
+```
+① presign 발급   POST /api/v1/reports/1/images/presigned-upload → 200
+② DB            media_assets.storage_status = PENDING_UPLOAD (file_size 비어있음)
+③ MinIO          /data/safy-reports → 완전히 비어있음
+```
+
+presign은 정상 발급됐는데 **PUT이 도달한 흔적이 아예 없다.** 앱은 https, presign 대상은
+`http://i15a503.p.ssafy.io:9200` → 브라우저가 요청을 **보내기 전에** 막았다.
+
+**MinIO 자체에 TLS를 붙이지 않았다.** 그러면 내부 통신(`backend → minio:9000`)까지 https가
+되는데 인증서는 `i15a503.p.ssafy.io`용이라 호스트명 `minio`와 맞지 않아 검증에 실패한다.
+도커 네트워크 alias로 우회할 수 있지만 불필요하게 복잡하다.
+
+대신 nginx가 앞에서 종단한다. 이걸 가능하게 한 것은 **백엔드가 `MinioClient`를 두 개로
+나눠둔 구조**다.
+
+```java
+minioClient    ← minio.endpoint         내부 통신 (bucketExists/statObject/removeObject)
+presignClient  ← minio.public-endpoint  presign URL 문자열 생성만, 네트워크 통신 없음
+```
+
+`getPresignedObjectUrl()`은 순수 계산이라 공개 주소만 바꾸면 되고 **내부 구간은 평문 그대로
+둘 수 있다.** 이 분리가 없었으면 인증서나 네트워크까지 손봐야 했다.
+
+```
+브라우저 ──https──► 호스트 9200 (nginx, 컨테이너 9443 TLS) ──평문──► minio:9000
+```
+
+**포트는 9200을 그대로 쓴다.** AWS 콘솔 권한이 없어 새 포트를 열 수 없으므로 이미 열린 포트를
+재사용해야 한다. `minio`의 직접 `9200:9000` 바인딩은 제거했다 — 양쪽에서 바인딩하면 충돌한다.
+
+**서명 호환이 이 작업의 핵심이다.** presigned URL은 host와 경로를 함께 서명하므로 MinIO가 같은
+값으로 재계산해야 일치한다.
+
+- `Host`를 `$http_host`로 넘긴다 — `$host`는 포트를 버려서 `:9200`이 빠진다(7/28 오후에 같은
+  변수로 OAuth가 깨졌던 것과 동일한 함정이다)
+- `proxy_pass` 뒤에 경로를 붙이지 않는다 — 붙이면 접두어가 잘려 서명이 깨진다
+
+`client_max_body_size 20m`을 명시했다. 이미지가 장당 10MB·최대 5장인데 **nginx 기본값은 1MB**라
+그대로 두면 업로드가 413으로 죽는다.
+
+**인증서는 Caddy가 관리하는 것을 읽기 전용으로 공유한다.**
+
+```
+/opt/openvidu/data/caddy_data/certificates/acme-.../i15a503.p.ssafy.io/
+  i15a503.p.ssafy.io.crt   4828B  -rw------- root:root
+  i15a503.p.ssafy.io.key    227B  -rw------- root:root   (디렉터리도 drwx------)
+```
+
+**파일이 아니라 디렉터리를 마운트한다.** 갱신 시 파일이 교체되면 파일 단위 바인드 마운트는
+옛 inode를 계속 가리켜 새 인증서가 보이지 않는다. 갱신 후에는 nginx reload가 필요하다.
+컨테이너의 root가 600 파일을 읽을 수 있어 권한 문제는 없었다.
+
+**배포 전 격리 검증**(임시 컨테이너 + `127.0.0.1:19443`, 운영 nginx 무접촉). 인증서 마운트가
+실패하면 nginx가 기동하지 못해 앱 전체(6080·8091)가 죽으므로 먼저 확인했다.
+
+```
+nginx -t                       → 성공, 컨테이너 안에서 인증서 읽기 가능
+GET /minio/health/live         → 200, ssl_verify_result=0
+GET /safy-reports/nonexistent  → MinIO가 BucketName=safy-reports, Key=nonexistent,
+                                 Resource=/safy-reports/nonexistent 로 정확히 파싱
+```
+
+마지막 항목이 **경로 무손실 = 서명 호환 조건 충족**의 증거다. 배포 후에는 `mc`로 실제
+presigned GET을 만들어 200과 내용 일치까지 확인했다. 브라우저에서도 갤러리 업로드 7건이
+`AVAILABLE`로 전이했고 그중 2.9MB 건이 `client_max_body_size` 설정을 증명한다.
+
+이 작업은 시민 앱의 업로드와 **어드민의 이미지 조회를 동시에** 풀었다. 어드민도 같은
+`MINIO_PUBLIC_ENDPOINT` 기준으로 presigned GET을 받기 때문이다.
+
+## 5. `ddl-auto: update`는 CHECK 제약을 갱신하지 않는다
+
+팀원이 `realtime-event-type-constraint.sql` seed를 추가했다. 적재 전 실측:
+
+```
+CHECK 제약: 5개  (REPORT_ASSIGNED, IMAGE_READY, LIVE_READY, LIVE_ACTIVE, REPORT_MESSAGE)
+enum:      12개
+```
+
+Hibernate의 `ddl-auto: update`는 컬럼·테이블은 추가하지만 **기존 CHECK 제약은 절대 수정하지
+않는다.** 테이블이 처음 만들어진 뒤 enum에 값이 추가되면 제약만 옛 상태로 남아, 새 이벤트를
+INSERT하는 순간 제약 위반으로 트랜잭션이 롤백된다. `REPORT_REASSIGNED`를 쓰는 코드는 이미
+배포돼 있었으므로 재배정·업무종료·반려·취소가 전부 500이 날 상태였다.
+
+적재해서 12개로 맞췄다. 값을 넓히기만 하므로 안전하고 멱등하다.
+7/27 이후 유지 중인 `dev`/`ddl-auto: update` 스톱갭이 실제로 물어뜯은 첫 사례다.
+
+## 6. `AUTH_COOKIE_SECURE`와 8091의 역할 이전
+
+`AuthController`의 쿠키 빌더는 세 속성을 각각 다른 위협에 대응시킨다.
+
+```java
+ResponseCookie.from("SAFY_REFRESH_TOKEN", value)
+    .httpOnly(true)                        // JS가 못 읽음   → XSS      이미 켜짐
+    .secure(properties.cookieSecure())     // http에 안 붙음 → 도청     꺼져 있었음
+    .sameSite("Lax")                       // 타사이트 차단  → CSRF     이미 켜짐
+    .path("/api/v1/auth").maxAge(14일)
+```
+
+액세스 토큰은 프론트의 메모리 변수(`let accessToken: string | null = null`)라 새로고침하면
+사라진다. 그러면 `POST /auth/token/refresh`가 이 쿠키로 재발급받는다. **즉 이 쿠키 하나가
+14일짜리 세션 전체다.** 전환 전 nginx 로그에 http로 오간 refresh 요청이 74건 있었고 그중
+200 응답도 있었다 — 유효한 리프레시 토큰이 평문으로 왕복한 기록이다.
+
+`true`로 켰다. 8091에서는 두 단계 모두 막힌다 — Spring이 http 응답에 `Secure` 쿠키를 보내면
+브라우저가 **저장을 거부**하고, https에서 받은 쿠키도 http 요청에 **실리지 않는다.**
+증상은 "로그인은 되는 것처럼 보이는데 새로고침하면 로그아웃"이다.
+
+**팀원 접속 불가 문의가 실제로 발생했다.** 원인이 셋으로 갈릴 수 있어 분기해서 판단했다.
+
+| 증상 | 원인 |
+|---|---|
+| 로그인 화면 자체가 안 뜸 | 배포 중 순단 |
+| 화면은 뜨는데 로그인 실패(401) | **계정이 없음** — 어드민 로그인 가능 계정은 `superadmin` 하나뿐 |
+| 로그인 후 이동·새로고침에서 튕김 | **8091 주소 사용** |
+
+세 번째였다. nginx 로그의 referer가 `http://i15a503.p.ssafy.io:8091/admin/login`이었다.
+`curl`로는 8091도 200이 나오는데, **API는 정상이고 쿠키를 버리는 건 브라우저**라서 CLI로는
+잡히지 않고 브라우저에서만 드러난다.
+
+주소가 바뀌었다는 것을 팀에 공지해야 한다. 8091은 포트를 닫지는 않았고 `healthz`·디버그용으로
+남긴다. 실제로 닫는 것은 Kuma 모니터 대상 확인 후 별건이다.
+
+```
+시민 앱   https://i15a503.p.ssafy.io/app
+어드민    https://i15a503.p.ssafy.io/admin/login
+healthz   http://i15a503.p.ssafy.io:8091/healthz   (디버그용 유지)
+```
+
+## 7. 카카오 콘솔 구조
+
+두 번 헤맸다. 기록해둘 만하다.
+
+- **JavaScript SDK 도메인은 origin 단위(스킴+호스트+포트)로 검사하고 경로는 보지 않는다.**
+  그래서 `https://i15a503.p.ssafy.io` 한 줄이 시민 앱(`/app`)과 어드민(`/admin`)을 둘 다
+  커버한다. 반대로 `http://…:8091`은 https를 커버하지 못해 별도 항목이 필요하다.
+  어드민도 카카오맵을 쓰는데(`components/admin/ReportMap.tsx`) 같은 JS 키(`1c288b60…`)라
+  추가 등록이 필요 없었다.
+- **로그인 Redirect URI는 REST API 키 쪽에 있다.** `카카오 로그인 > 일반`에는 없고,
+  `앱 설정 > 플랫폼 키 > Default Rest API Key`의 "카카오 로그인 리다이렉트 URI"다.
+  백엔드가 `client_id`로 REST 키를 쓰므로 카카오는 그 키에 등록된 목록과 비교한다.
+  JS 키 페이지의 같은 이름 필드가 비어 있어도 로그인이 동작하는 이유다.
+- `카카오 로그인 > 고급`의 "리다이렉트 URI"는 **로그아웃** 리다이렉트다. 이름이 같아
+  혼동했다. 도움말 문구를 읽어야 구분된다.
+
+전환 중에는 기존 `http://…:8091/...` 항목을 지우지 않고 **추가만** 했다. 롤백 경로를 남겨두는
+편이 안전하고, 우리 서버 자신의 주소라 화이트리스트에 남겨도 위협이 아니다.
+
+## 8. 무중단 배포는 지금 하지 않는다
+
+실측 다운타임:
+
+```
+backend 부팅        13.1초 (Started SafyApplication in 13.124 seconds)
+502 발생 구간       배포 시점 기준 약 15초
+502 총 27건 — 대부분이 /api/v1/realtime/events
+```
+
+이미지 빌드는 컨테이너 교체 전에 끝나므로 실제 끊김은 재생성 + Spring 부팅 = **약 15초**다.
+502 건수는 SSE 클라이언트가 3초마다 재연결해서 부풀어 있다.
+
+무중단의 전제조건이 두 개 없다.
+
+1. **헬스 엔드포인트가 없다.** 인증 없이 200을 주는 엔드포인트가 없어 Kuma도 TCP 포트 열림으로만
+   감시한다. 포트가 열렸다는 건 Spring이 다 뜬 것과 다르다. 이 상태로 롤링을 하면 준비 안 된
+   인스턴스로 트래픽이 가서 오히려 에러가 늘어난다.
+2. **`ddl-auto: update` 스톱갭이다.** 두 버전이 동시에 뜨면 스키마 충돌이 가능하다.
+   5절이 정확히 그 계열의 사고다.
+
+우리 배포는 OpenVidu 스택을 건드리지 않으므로 **진행 중인 WebRTC 세션은 살아남는다.**
+가장 아까울 부분이 이미 안전하다.
+
+전제조건 없이 롤링부터 붙이면 순서가 거꾸로다. 헬스 엔드포인트(백엔드 요청 필요)와 배포 알림이
+먼저다. 배포 알림은 Kuma에 Mattermost가 이미 붙어 있어 비용이 작고, 오늘 팀원 혼선을 직접
+막는다.
+
+## 9. CI 캐시 오설정 — `npm ci`와 `node_modules`는 같이 쓸 수 없다
+
+프론트 변경의 MR→배포가 10분 이상 걸린다는 관측에서 시작했다. 빌드 자체는 로컬에서 3.41초다.
+
+```
+frontend-user:
+  cache:
+    paths:
+      - frontend-user/node_modules   # ← 캐시 대상
+  script:
+    - npm ci                          # ← node_modules를 지우고 시작한다
+```
+
+`npm ci`는 설계상 기존 `node_modules`를 **삭제한 뒤** 설치한다. 그래서 매 실행마다 캐시를
+내려받아 압축을 풀고, `npm ci`가 그걸 전부 지우고, 네트워크에서 다시 설치하고, 캐시를 다시
+올린다. **이득이 0인데 양쪽에서 시간만 쓴다.** `node_modules` 대신 npm의 다운로드 캐시
+(`.npm`)를 캐시하고 `--prefer-offline`을 붙이는 것이 맞다.
+
+큐도 크다. 파이프라인 `#158575`(deploy 잡 하나)가 **실행 73초, 대기 119초**였다. 스테이지가
+`test` → `deploy` 순차라 잡마다 큐를 따로 서므로 프론트 변경은 큐를 두 번 낸다. 공용 러너라
+이 부분은 통제 밖이고, 그래서 프론트 변경의 하한은 4~5분이다.
+
+`changes:` 조건부 규칙 덕분에 `infra/`만 바꾼 배포는 `test` 스테이지가 통째로 스킵되어 머지
+10초 뒤에 배포가 시작된다. 같은 규칙이 3절의 비대칭 원인이기도 하다.
+
+**개선 폭은 측정하지 못했다.** GitLab 잡 로그의 `npm ci` 구간 시간을 봐야 판단할 수 있다.
+30초면 손댈 가치가 있고 5초면 큐가 지배적이라 무의미하다.
+
+## 10. 관제 흐름이 OPERATOR 계정 부재로 전면 정지 상태다
+
+제보 18건이 쌓였는데:
+
+```
+report_operator_assignments = 0
+realtime_events             = 0
+role별 사용자                CITIZEN 6 / SUPER_ADMIN 1 / OPERATOR 0
+어드민 로그인 가능 계정        superadmin 하나
+```
+
+담당자가 없어 배정이 안 되고, 배정이 없으니 이벤트가 발생하지 않는다. 결과적으로
+관제 대시보드가 빈 목록이고, 5절에서 넓혀둔 CHECK 제약은 아직 한 번도 쓰이지 않았으며,
+**SSE 검증도 불가능하다**(관측할 이벤트가 없다).
+
+팀원이 어드민을 쓰려면 `superadmin` 하나를 공유해야 하는 상태다.
+팀원이 추가한 `operator-accounts.sql`(관제센터 25곳 × 2명 = 50계정)이 이걸 푸는데,
+비밀번호가 `Operator1234!` 공통이고 파일 주석에 "운영 환경에서 실행하지 마세요"가 적혀 있다.
+서버가 이제 https로 정식 노출된 상태라 **적재 여부는 팀 결정이 필요하다.**
+
+이 하나가 티켓 95(WebRTC·Egress 검증), SSE 원인 규명, 관제 대시보드를 동시에 막고 있다.
+
+## 11. 카메라 미리보기 검은 화면 (프론트, 별건)
+
+인프라 원인이 아님을 먼저 배제했다. 응답 헤더에 `Permissions-Policy`·`Feature-Policy`·CSP가
+전부 없고 https 보안 컨텍스트도 정상이라 `getUserMedia`를 막는 요소가 없다.
+
+원인은 React ref 타이밍이었다. `<video>`는 `cameraStatus === 'ready'`일 때만 렌더되는데
+`srcObject` 대입이 그 상태 변경 **이전**(아직 `'connecting'`)에 일어난다. 그 시점
+`videoRef.current`는 반드시 `null`이라 대입이 조용히 스킵되고, 이어서 `<video>`가 마운트되지만
+`srcObject`가 비어 있다. 첫 촬영에서 100% 재현된다. `capturePhoto`의 `video.videoWidth === 0`
+검사에 걸려 "카메라 화면이 아직 준비되지 않았습니다"가 뜬다.
+
+`retakePhoto`는 `capturedPhoto`만 지우고 스트림은 유지하므로 `다시 촬영`도 같은 이유로
+깨져 있었다. 엘리먼트가 마운트된 뒤에 붙이는 `useEffect` 하나로 두 경로를 함께 고쳤다.
+
+같은 폴더의 `LiveReportPage`는 `<video>`를 조건 밖에서 항상 렌더하고 패널을 위에 덮는 구조라
+이 버그가 없다. **정답 패턴이 이미 옆 파일에 있었다.**
+
+## 12. 오늘 배운 점
+
+- **제안 전에 실측한다.** 오늘 계획이 두 번 뒤집혔다. `forward-headers-strategy`가 필요하다고
+  단정했는데 Caddy가 주는 `X-Forwarded-Proto`가 `http`여서 무의미했고(2절), SSE가 60초
+  타임아웃으로 끊긴다고 인과를 만들었는데 `@EnableScheduling`과 15초 heartbeat가 있어
+  성립하지 않았다. **둘 다 프로브 2분에 판명됐다.** 설정 파일을 읽고 세운 가설을 발견처럼
+  말하면 계획 전체가 그 위에 쌓인다.
+- **성공 기준을 먼저 쓴다.** "제보 1건 생성"을 세 번째 응답에서야 정했다. 처음에 썼다면
+  operator seed·SSE·CORS는 "이거 없으면 기준이 실패하나?"에서 즉시 탈락했을 것이다.
+  범위가 먼저 부풀고 기준이 나중에 따라오면 순서가 거꾸로다.
+- **같은 함정이 다른 옷을 입고 다시 온다.** `$host`가 포트를 버리는 문제는 7/28 오후에 OAuth
+  `redirect_uri`를 깨뜨렸고, 오늘 MinIO presign 서명에서 똑같이 나타났다. 프록시가 Host를
+  어떻게 넘기는지는 **서명·리다이렉트가 걸린 모든 경로에서 확인해야 한다.**
+- **되돌리기의 층위를 구분해야 한다.** `rollback.sh`는 backend 이미지만 되돌린다.
+  `docker-compose.yml`·`nginx/*.conf`는 git → rsync로 오므로 그 스크립트로 되돌릴 수 없고,
+  프론트 `dist`는 서버에서 버전 관리조차 안 된다.
+- **`--delete` 동기화는 시간 여행이다.** 과거 파이프라인 재실행이나 동시 실행은 서버를 그
+  커밋 시점으로 되감는다. 배포 파이프라인에 동시성 가드가 없으면 커밋 순서와 배포 결과 순서가
+  달라진다.
+- **아키텍처가 해결 가능성을 결정한다.** 백엔드가 `MinioClient`를 내부용·presign용으로
+  나눠둔 덕분에 내부는 평문, 외부만 https로 갈 수 있었다. 합쳐져 있었으면 인증서
+  호스트명 문제를 정면으로 풀어야 했다.
+- **미완성 기능이 기본 선택지면 위험하다.** 제보 화면의 기본 선택이 "실시간 영상 제보"인데
+  해당 티켓(94)은 미할당·Low다. 시민이 처음 만나는 경로다.
+
+## 13. 후속 / 미결
+
+- **OPERATOR 계정 seed 적재 여부(팀 결정)**: 10절. 티켓 95·SSE 검증·관제 대시보드가 여기에
+  걸려 있다. 공개 비밀번호 50계정을 https로 노출된 서버에 넣는 판단이 필요하다.
+- **비밀 교체**: `MINIO_ACCESS_KEY`가 여전히 기본값 `minioadmin`이고 presigned URL의
+  `X-Amz-Credential`에 그대로 노출된다. 카카오 클라이언트 시크릿도 화면 공유 중 노출됐다.
+  `.env` 편집 + 재기동을 한 번에 묶으면 비용이 작다. MinIO 키는 minio·backend를 **동시에**
+  재기동해야 한다.
+- **헬스 엔드포인트(백엔드)**: 8절. 무중단·롤링의 전제이면서 Kuma를 TCP에서 HTTP 감시로
+  바꾸는 즉시 효과도 있다.
+- **배포 알림**: Kuma에 Mattermost가 이미 연결돼 있다. 배포 시작·종료를 알리면 6절의
+  혼선이 재발하지 않는다.
+- **CI 캐시 개선**: 9절. `npm ci` 구간 시간 측정이 선행 조건이다.
+- **8091 폐기**: Kuma 모니터 대상과 팀 북마크 확인 후. 폐기 시 카카오 콘솔의
+  `http://…:8091` 항목 두 개(JS SDK 도메인 / REST 키 리다이렉트 URI)도 함께 정리한다.
+- **SSE 원인 규명**: nginx 로그에 짧은 재연결이 보이지만 원인을 특정하지 못했다. heartbeat가
+  15초이므로 `proxy_read_timeout` 60초 가설은 성립하지 않는다. 401 재발급과 페이지 이동이
+  더 그럴듯하다. 10절이 풀려야 관측이 가능하다.
+- **X-Forwarded-For 실 IP 복구**: 2절. Caddy layer4에 PROXY protocol이 필요해 OpenVidu 설정
+  수정을 감수해야 한다.
+- **구글 OAuth**: GCP 콘솔 접근 권한이 없다. `redirect_uri` 명시 지정 방식과 함께 처리한다.
+- **인증서 갱신 시 nginx reload**: 4절. Caddy가 갱신해도 nginx는 기존 인증서를 물고 있다.
+  런북 항목.
+- **`resource_group` process_mode**: 3절. API 설정이라 저장소에 담기지 않는다.
+- **AI·DATA 배포**: Dockerfile이 아직 없다. AI 학습·테스트가 7/31까지 예정이라 배포는
+  8/1~8/3이 현실적이고, 그 뒤 부하 측정(티켓 106)과 대응 여유가 필요하다. 컨테이너화 뼈대는
+  AI 코드가 바뀌어도 미리 잡아둘 수 있어 임계 경로에서 뺄 수 있다.
+- **배포·복구 런북(티켓 49)**: 여전히 미작성. 오늘만으로도 진입점·MinIO 위치·9200 소유·8091
+  의미가 바뀌었고 8091 폐기·비밀 교체·헬스 엔드포인트·AI 배포가 예정돼 있다. **절차서는
+  현재 상태를 기술하므로 스택이 멈춘 뒤에 쓰는 것이 맞다.** 이 저널(시점 기록)과 역할이 다르다.
