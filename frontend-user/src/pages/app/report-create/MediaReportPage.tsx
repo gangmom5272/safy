@@ -512,6 +512,24 @@ export function MediaReportPage({
     capturedPhotoRef.current = capturedPhoto
   }, [capturedPhoto])
 
+  // <video>는 cameraStatus === 'ready' 일 때만 렌더된다. 그래서 스트림을 받은
+  // 직후(아직 'connecting')에 srcObject를 대입하면 videoRef.current가 null이라
+  // 조용히 건너뛰어지고 미리보기가 검은 화면으로 남는다. 엘리먼트가 마운트된
+  // 뒤에 붙여야 한다.
+  // capturedPhoto를 의존성에 넣는 이유: '다시 촬영'으로 미리보기를 지우면
+  // <video>가 다시 마운트되는데(스트림은 유지된다) 그때도 새로 붙여야 한다.
+  useEffect(() => {
+    if (cameraStatus !== 'ready' || capturedPhoto) {
+      return
+    }
+
+    if (!videoRef.current || !streamRef.current) {
+      return
+    }
+
+    videoRef.current.srcObject = streamRef.current
+  }, [cameraStatus, capturedPhoto])
+
   const categoryLabel = formData.category ? REPORT_CATEGORY_LABELS[formData.category] : '선택 없음'
   const cameraMessage = getCameraMessage(cameraStatus)
 
