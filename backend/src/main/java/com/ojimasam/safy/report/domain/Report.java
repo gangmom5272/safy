@@ -237,6 +237,15 @@ public class Report extends BaseEntity {
 		}
 	}
 
+	/**
+	 * 좌표로 확정한 상세 주소를 반영한다. 라우팅 성공 여부와 무관하게 남길 수 있어야 하므로
+	 * routingStatus 를 따지지 않는다. 빈 값으로 기존 주소를 지우지는 않는다.
+	 */
+	public void applyResolvedAddress(String resolvedAddress) {
+		if (resolvedAddress == null || resolvedAddress.isBlank()) return;
+		this.address = resolvedAddress;
+	}
+
 	public void completeRouting(AdministrativeArea administrativeArea) {
 		if (administrativeArea == null) throw new IllegalArgumentException("행정구역은 필수입니다.");
 		if (routingStatus != ReportRoutingStatus.PENDING) return;

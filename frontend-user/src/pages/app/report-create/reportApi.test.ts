@@ -24,7 +24,6 @@ test('report form is converted to an API create request', () => {
     description: '현장에 인파가 많아 이동하기 어렵습니다.',
     latitude: 37.5,
     longitude: 127,
-    address: null,
   })
 })
 

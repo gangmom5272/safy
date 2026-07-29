@@ -4,7 +4,7 @@ import { PageHeader } from '../../../components/common/PageHeader'
 import { mockLocations } from '../../../mocks/locations'
 import { resolveLocation } from '../home/homeApi'
 import { LocationMap } from './LocationMap'
-import { resolveAddress } from './kakaoMap'
+import { loadKakaoMaps } from './kakaoMap'
 import {
   DEFAULT_REPORT_METHOD,
   REPORT_CONTENT_MAX_LENGTH,
@@ -16,6 +16,10 @@ import {
 import type { ReportCategory, ReportFormData, ReportLocation, ReportMethod, ReportTag } from './reportTypes'
 import { useGeolocation } from './useGeolocation'
 import './report-create.css'
+
+// 지도를 툭툭 끊어 옮기면 멈출 때마다 idle 이 오므로, 잠시 머무른 위치만 서버에 조회한다.
+// GPS 로 잡은 좌표에는 적용하지 않는다. 아래 effect 참고.
+const LOCATION_RESOLVE_DEBOUNCE_MS = 400
 
 interface ReportTypePageProps {
   initialFormData?: ReportFormData
@@ -37,6 +41,13 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
   const effectiveLocation = adjustedLocation ?? location
 
   useEffect(() => {
+    // 지도는 좌표가 생긴 뒤에야 마운트되므로, 그냥 두면 GPS 측위가 끝난 다음에야
+    // SDK 를 받기 시작한다. 측위를 기다리는 동안 미리 받아둔다.
+    // 실패는 지도를 그릴 때 LocationMap 이 처리한다.
+    void loadKakaoMaps().catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
     if (status !== 'success' || !effectiveLocation) {
       return
     }
@@ -52,24 +63,26 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
       effectiveLocation.latitude,
       effectiveLocation.longitude,
     )
-    // 상세 주소를 우선 쓰고, 실패하면 기존 행정구역명으로 물러난다.
-    void resolveAddress(effectiveLocation.latitude, effectiveLocation.longitude)
-      .catch(() =>
-        resolveLocation(effectiveLocation.latitude, effectiveLocation.longitude).then(
-          (area) => area.areaName,
-        ),
-      )
-      .then((name) => {
-        if (isCurrent) setResolvedLocation({ key: locationKey, name: name || mockLocationName })
-      })
-      .catch(() => {
-        if (isCurrent) setResolvedLocation({ key: locationKey, name: mockLocationName })
-      })
+    // 지도 조작은 멈출 때마다 좌표가 쏟아지므로 머무른 위치만 조회한다.
+    // 반면 GPS 확보는 단발이라 합칠 대상이 없어, 기다리면 첫 주소만 늦게 뜬다.
+    const debounce = adjustedLocation ? LOCATION_RESOLVE_DEBOUNCE_MS : 0
+    const resolveTimer = window.setTimeout(() => {
+      // 서버가 좌표로 확정한 주소를 그대로 쓴다. 화면에 보이는 값과 저장되는 값이 같아야 한다.
+      void resolveLocation(effectiveLocation.latitude, effectiveLocation.longitude)
+        .then((area) => {
+          const name = area.address || area.areaName || mockLocationName
+          if (isCurrent) setResolvedLocation({ key: locationKey, name })
+        })
+        .catch(() => {
+          if (isCurrent) setResolvedLocation({ key: locationKey, name: mockLocationName })
+        })
+    }, debounce)
 
     return () => {
       isCurrent = false
+      window.clearTimeout(resolveTimer)
     }
-  }, [effectiveLocation, resolvedLocation, status])
+  }, [adjustedLocation, effectiveLocation, resolvedLocation, status])
 
   const handleRequestLocation = () => {
     // GPS 를 다시 잡으면 직접 조정한 위치는 버린다.
@@ -108,12 +121,8 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
 
   const ctaLabel = method === 'live' ? '실시간 영상 제보 시작하기' : '사진·영상 제보 등록하기'
   const hasLocation = status === 'success' && effectiveLocation
-  const locationKey = effectiveLocation
-    ? `${effectiveLocation.latitude}:${effectiveLocation.longitude}`
-    : ''
-  const locationName = resolvedLocation?.key === locationKey
-    ? resolvedLocation.name
-    : '위치명을 확인하는 중입니다.'
+  // 지도를 옮기는 동안에는 직전 주소를 그대로 둔다. 매번 안내 문구로 돌아가면 깜빡인다.
+  const locationName = resolvedLocation?.name ?? '위치명을 확인하는 중입니다.'
   const availableTags = category ? REPORT_TAG_LABELS[category] : []
   const trimmedContentLength = content.trim().length
   const isContentValid = trimmedContentLength >= REPORT_CONTENT_MIN_LENGTH

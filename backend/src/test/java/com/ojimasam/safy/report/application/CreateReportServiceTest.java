@@ -40,7 +40,7 @@ class CreateReportServiceTest {
 		CreateReportResult result = service.create(new CreateReportCommand(
 				1L, ReportType.LIVE, ReportCategory.CROWD_CONGESTION, ReportSubcategory.EXIT_CONGESTION,
 				"출구 주변이 혼잡합니다.",
-				new BigDecimal("37.5665000"), new BigDecimal("126.9780000"), "서울특별시 중구"
+				new BigDecimal("37.5665000"), new BigDecimal("126.9780000")
 		));
 
 		ArgumentCaptor<Report> captor = ArgumentCaptor.forClass(Report.class);

@@ -136,7 +136,7 @@ public class ReportController {
 		try {
 			CreateReportResult result = createReportService.create(new CreateReportCommand(
 					reporterId, request.reportType(), request.category(), request.subcategory(), request.description(),
-					request.latitude(), request.longitude(), request.address()
+					request.latitude(), request.longitude()
 			));
 			return ResponseEntity.created(URI.create("/api/v1/reports/" + result.reportId()))
 					.body(ApiResponse.success(CreateReportResponse.from(result)));

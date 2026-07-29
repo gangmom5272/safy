@@ -16,31 +16,45 @@ import com.ojimasam.safy.common.exception.CommonErrorCode;
 @Transactional(readOnly = true)
 public class LocationQueryService {
 	private final AdministrativeAreaResolver resolver;
+	private final AddressResolver addressResolver;
 	private final AdministrativeAreaRepository administrativeAreaRepository;
 
 	public LocationQueryService(
 			AdministrativeAreaResolver resolver,
+			AddressResolver addressResolver,
 			AdministrativeAreaRepository administrativeAreaRepository
 	) {
 		this.resolver = resolver;
+		this.addressResolver = addressResolver;
 		this.administrativeAreaRepository = administrativeAreaRepository;
 	}
 
 	public LocationResolveResponse resolve(BigDecimal latitude, BigDecimal longitude) {
+		String address = resolveAddressQuietly(latitude, longitude);
 		try {
 			return resolver.resolve(latitude, longitude)
 					.flatMap(resolved -> administrativeAreaRepository.findByCodeAndStatus(
 							resolved.code(),
 							AdministrativeAreaStatus.ACTIVE
 					))
-					.map(area -> LocationResolveResponse.resolved(area, latitude, longitude))
+					.map(area -> LocationResolveResponse.resolved(area, address, latitude, longitude))
 					.orElseGet(() -> LocationResolveResponse.unresolved(
+							address,
 							latitude,
 							longitude,
 							"지원 행정구역을 찾을 수 없습니다."
 					));
 		} catch (AdministrativeAreaResolutionException exception) {
-			return LocationResolveResponse.unresolved(latitude, longitude, exception.getMessage());
+			return LocationResolveResponse.unresolved(address, latitude, longitude, exception.getMessage());
+		}
+	}
+
+	/** 주소는 부가 정보라, 조회에 실패해도 행정구역 판별 결과는 그대로 내려준다. */
+	private String resolveAddressQuietly(BigDecimal latitude, BigDecimal longitude) {
+		try {
+			return addressResolver.resolve(latitude, longitude).orElse(null);
+		} catch (AddressResolutionException exception) {
+			return null;
 		}
 	}
 

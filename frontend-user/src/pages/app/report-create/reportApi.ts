@@ -18,7 +18,6 @@ export interface CreateReportRequest {
   description: string
   latitude: number
   longitude: number
-  address: string | null
 }
 
 export interface CreateReportResponse {

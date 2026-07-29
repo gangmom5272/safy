@@ -16,20 +16,6 @@ export interface KakaoMarker {
   setPosition: (position: KakaoLatLng) => void
 }
 
-// 카카오 응답 필드명이라 snake_case 를 그대로 둔다.
-interface KakaoAddressResult {
-  road_address: { address_name: string } | null
-  address: { address_name: string } | null
-}
-
-interface KakaoGeocoder {
-  coord2Address: (
-    longitude: number,
-    latitude: number,
-    callback: (result: KakaoAddressResult[], status: string) => void,
-  ) => void
-}
-
 interface KakaoMaps {
   load: (callback: () => void) => void
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng
@@ -38,10 +24,6 @@ interface KakaoMaps {
   event: {
     addListener: (target: KakaoMap, type: string, handler: () => void) => void
     removeListener: (target: KakaoMap, type: string, handler: () => void) => void
-  }
-  services: {
-    Status: { OK: string }
-    Geocoder: new () => KakaoGeocoder
   }
 }
 
@@ -67,7 +49,7 @@ export function loadKakaoMaps(): Promise<KakaoMaps> {
   const pending = new Promise<KakaoMaps>((resolve, reject) => {
     const script = document.createElement('script')
     script.async = true
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false&libraries=services`
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`
     script.onload = () => {
       const kakao = window.kakao
 
@@ -90,23 +72,4 @@ export function loadKakaoMaps(): Promise<KakaoMaps> {
   loadPromise = pending
 
   return pending
-}
-
-export async function resolveAddress(latitude: number, longitude: number): Promise<string> {
-  const maps = await loadKakaoMaps()
-
-  return new Promise<string>((resolve, reject) => {
-    new maps.services.Geocoder().coord2Address(longitude, latitude, (result, status) => {
-      const found = status === maps.services.Status.OK ? result[0] : undefined
-      // 신축 도로 등 도로명 주소가 없는 좌표가 있어 지번 주소로 보완한다.
-      const addressName = found?.road_address?.address_name ?? found?.address?.address_name
-
-      if (!addressName) {
-        reject(new Error('현재 위치의 주소를 찾지 못했습니다.'))
-        return
-      }
-
-      resolve(addressName)
-    })
-  })
 }

@@ -76,7 +76,8 @@ public class ReportRoutingTransactionService {
 				.map(report -> new ReportRoutingTarget(
 						report.getId(),
 						report.getLatitude(),
-						report.getLongitude()
+						report.getLongitude(),
+						report.getAddress() != null && !report.getAddress().isBlank()
 				));
 	}
 
@@ -136,6 +137,16 @@ public class ReportRoutingTransactionService {
 				now
 		));
 		assignmentService.assignAutomatically(report, route);
+	}
+
+	/**
+	 * 라우팅 성공 여부와 분리해 주소만 저장한다.
+	 * 서울 밖 좌표처럼 라우팅이 불가능한 제보에도 주소는 남겨 관제사가 위치를 읽을 수 있게 한다.
+	 */
+	@Transactional
+	public void applyResolvedAddress(Long reportId, String address) {
+		reportRepository.findByIdForUpdate(reportId)
+				.ifPresent(report -> report.applyResolvedAddress(address));
 	}
 
 	@Transactional

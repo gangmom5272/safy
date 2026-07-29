@@ -35,9 +35,6 @@ public record CreateReportRequest(
 		@NotNull(message = "경도는 필수입니다.")
 		@DecimalMin(value = "-180", message = "경도는 -180 이상이어야 합니다.")
 		@DecimalMax(value = "180", message = "경도는 180 이하여야 합니다.")
-		BigDecimal longitude,
-
-		@Size(max = 500, message = "주소는 500자 이하여야 합니다.")
-		String address
+		BigDecimal longitude
 ) {
 }
