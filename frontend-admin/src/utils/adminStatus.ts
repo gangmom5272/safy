@@ -21,6 +21,9 @@ const reportToneMap: Record<ReportStatus, StatusTone> = {
   checking: 'primary',
   in_progress: 'warning',
   completed: 'success',
+  rejected: 'danger',
+  cancelled: 'neutral',
+  reassigned: 'primary',
 }
 
 const reviewToneMap: Record<ReviewStatus, StatusTone> = {

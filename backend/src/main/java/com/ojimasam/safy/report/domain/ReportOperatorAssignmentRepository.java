@@ -17,6 +17,12 @@ public interface ReportOperatorAssignmentRepository {
 			Collection<ReportOperatorAssignmentStatus> statuses
 	);
 
+	/**
+	 * 재배정이 있었다면 한 제보에 담당자별 배정 이력이 여러 건 남는다.
+	 * 종결 건까지 포함해 조회 권한을 판단할 때 사용한다.
+	 */
+	List<ReportOperatorAssignment> findAllByReport_IdAndOperator_Id(Long reportId, Long operatorId);
+
 	long countByOperator_IdAndStatusIn(
 			Long operatorId,
 			Collection<ReportOperatorAssignmentStatus> statuses

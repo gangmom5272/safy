@@ -14,6 +14,7 @@ export type RealtimeEventType =
   | 'REPORT_CLOSED'
   | 'REPORT_REJECTED'
   | 'REPORT_CANCELLED'
+  | 'REPORT_REASSIGNED'
   | 'REPORT_MESSAGE'
 
 export interface RealtimeEvent {

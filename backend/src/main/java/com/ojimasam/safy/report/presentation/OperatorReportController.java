@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Set;
 
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
 import com.ojimasam.safy.common.api.ApiResponse;
@@ -18,8 +21,10 @@ import com.ojimasam.safy.report.application.OperatorAssignmentResponse;
 import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
 import com.ojimasam.safy.report.application.ReportQueryService;
 import com.ojimasam.safy.report.application.ReportDetailView;
+import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -54,14 +59,17 @@ public class OperatorReportController {
 	@GetMapping("/me")
 	@PreAuthorize("hasRole('OPERATOR')")
 	@Operation(summary = "내 배정 제보 목록 조회",
-			description = "현재 담당자에게 배정되어 진행 중(ASSIGNED/IN_PROGRESS)인 제보를 조회합니다.")
+			description = "현재 담당자가 맡은 제보를 조회합니다. status 를 지정하지 않으면 "
+					+ "종료·반려·재배정으로 종결된 건까지 포함한 전체 담당 이력을 반환합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "배정 제보 목록 조회 성공")
 	public ApiResponse<PageResponse<OperatorAssignmentResponse>> listMine(
 			@AuthenticationPrincipal Jwt jwt,
+			@Parameter(description = "배정 상태 필터. 생략하면 전체 이력을 조회합니다.")
+			@RequestParam(required = false) Set<ReportOperatorAssignmentStatus> status,
 			Pageable pageable
 	) {
 		return ApiResponse.success(PageResponse.from(
-				assignmentService.listMine(CurrentUser.id(jwt), pageable)
+				assignmentService.listMine(CurrentUser.id(jwt), status, pageable)
 		));
 	}
 

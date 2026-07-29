@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,9 @@ import com.ojimasam.safy.report.domain.ReportImageRepository;
 import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
+import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
+import com.ojimasam.safy.report.domain.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 
@@ -40,6 +44,7 @@ public class ReportQueryService {
 	private final ReportCenterRouteRepository routeRepository;
 	private final ReportStatusHistoryRepository historyRepository;
 	private final OperatorReportAccessService operatorAccessService;
+	private final ReportOperatorAssignmentRepository assignmentRepository;
 	private final Clock clock;
 
 	@Autowired
@@ -49,20 +54,24 @@ public class ReportQueryService {
 			MediaObjectStorage storage,
 			ReportCenterRouteRepository routeRepository,
 			ReportStatusHistoryRepository historyRepository,
-			OperatorReportAccessService operatorAccessService
+			OperatorReportAccessService operatorAccessService,
+			ReportOperatorAssignmentRepository assignmentRepository
 	) {
-		this(reports, images, storage, routeRepository, historyRepository, operatorAccessService, Clock.systemUTC());
+		this(reports, images, storage, routeRepository, historyRepository, operatorAccessService,
+				assignmentRepository, Clock.systemUTC());
 	}
 
 	ReportQueryService(ReportRepository reports, ReportImageRepository images, MediaObjectStorage storage,
 			ReportCenterRouteRepository routeRepository, ReportStatusHistoryRepository historyRepository,
-			OperatorReportAccessService operatorAccessService, Clock clock) {
+			OperatorReportAccessService operatorAccessService,
+			ReportOperatorAssignmentRepository assignmentRepository, Clock clock) {
 		this.reportRepository = reports;
 		this.reportImageRepository = images;
 		this.mediaObjectStorage = storage;
 		this.routeRepository = routeRepository;
 		this.historyRepository = historyRepository;
 		this.operatorAccessService = operatorAccessService;
+		this.assignmentRepository = assignmentRepository;
 		this.clock = clock;
 	}
 
@@ -78,10 +87,22 @@ public class ReportQueryService {
 		operatorAccessService.requireAccess(operatorId, reportId);
 		Report report = reportRepository.findOneById(reportId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
-		return detail(report);
+		return detail(report, myAssignmentStatus(operatorId, reportId));
+	}
+
+	/** 재배정 이력이 있으면 배정이 여러 건 남으므로 가장 최근 것을 내 처리 결과로 본다. */
+	private ReportOperatorAssignmentStatus myAssignmentStatus(Long operatorId, Long reportId) {
+		return assignmentRepository.findAllByReport_IdAndOperator_Id(reportId, operatorId).stream()
+				.max(Comparator.comparing(ReportOperatorAssignment::getAssignedAt))
+				.map(ReportOperatorAssignment::getStatus)
+				.orElse(null);
 	}
 
 	private ReportDetailView detail(Report report) {
+		return detail(report, null);
+	}
+
+	private ReportDetailView detail(Report report, ReportOperatorAssignmentStatus myAssignmentStatus) {
 		Long reportId = report.getId();
 		Instant expiresAt = clock.instant().plus(PREVIEW_URL_EXPIRY);
 		List<ReportImageView> images = reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(reportId)
@@ -101,7 +122,8 @@ public class ReportQueryService {
 				report.getAddress(), report.getStatus(), report.getRoutingStatus(),
 				area == null ? null : area.getId(), area == null ? null : area.getCode(), area == null ? null : area.getName(),
 				assignedCenter,
-				report.getReportedAt(), report.getCreatedAt(), report.getUpdatedAt(), images
+				report.getReportedAt(), report.getCreatedAt(), report.getUpdatedAt(), images,
+				myAssignmentStatus
 		);
 	}
 
