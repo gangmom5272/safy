@@ -192,11 +192,22 @@ services:
   # Nginx (reverse proxy + 정적 파일 서빙) - 확정
   # ==========================================
   # 주의: 80/443은 OpenVidu 스택의 Caddy가 이미 점유 중이라(실서버 실측, 2026-07-23)
-  # 8091로 노출한다. 도메인 루트(https://i15a503.p.ssafy.io/)로 바로 붙게 하려면
-  # Caddy 쪽에 리버스프록시 라우팅을 추가해야 하며, 이는 47과 별개 작업이다.
+  # 이 nginx는 호스트의 80/443을 쓸 수 없다. 대신 Caddy가 넘겨주는 6080을 받는다.
   nginx:
     image: nginx:alpine
     ports:
+      # 정식 진입점. OpenVidu Caddy(443, 도메인 정식 인증서)가 여기로 넘겨준다.
+      # OpenVidu는 MEET_BASE_PATH(/meet)에 속하지 않는 모든 경로를
+      # CUSTOM_APP_INTERNAL_PORT(기본 6080)로 리버스프록시하도록 이미 설정돼 있다
+      # (openvidu/config/caddy.yaml의 "Custom User Application" 라우트).
+      # 즉 6080에 리스너를 두는 것만으로 https://i15a503.p.ssafy.io/ 가 이 앱을 서빙한다.
+      # 실측(2026-07-29): 6080이 비어 있으면 Caddy가 502를 내고 /meet으로 302시킨다.
+      # Caddy·OpenVidu 설정 파일은 건드리지 않는다 — 업그레이드 시 덮어써진다.
+      # 127.0.0.1 바인딩: 같은 호스트의 Caddy만 쓰므로 인터넷에 열 이유가 없다.
+      - "127.0.0.1:6080:80"
+      # 디버그·헬스체크용 평문 진입점. TLS가 없어 로그인 세션은 유지되지 않는다
+      # (AUTH_COOKIE_SECURE=true면 리프레시 쿠키가 http 요청에 실리지 않는다).
+      # 팀이 쓰는 주소는 위 https 쪽이다.
       - "8091:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
