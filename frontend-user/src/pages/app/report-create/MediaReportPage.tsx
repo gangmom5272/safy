@@ -1,6 +1,5 @@
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { PageHeader } from '../../../components/common/PageHeader'
-import { mockLocations } from '../../../mocks/locations'
 import { resolveLocation } from '../home/homeApi'
 import { ConfirmReportModal } from './ConfirmReportModal'
 import {
@@ -13,6 +12,9 @@ import { createReport } from './reportApi'
 import { buildCreateReportRequest } from './reportMapper'
 import { uploadImage } from './mediaApi'
 import './report-create.css'
+
+// 조회에 실패했으면 실패했다고 말한다. 근처 목 지점 이름을 대신 보여주면 성공한 것처럼 보인다.
+const LOCATION_NAME_UNAVAILABLE = '위치명을 확인하지 못했습니다.'
 
 type PhotoSource = 'camera' | 'gallery'
 
@@ -173,15 +175,14 @@ export function MediaReportPage({
 
     let isCurrent = true
     const { latitude, longitude } = formData.location
-    const fallbackLocationName = getNearestMockLocationName(latitude, longitude)
     void resolveLocation(latitude, longitude)
       .then((resolvedLocation) => {
         if (isCurrent) {
-          setLocationName(resolvedLocation.address || resolvedLocation.areaName || fallbackLocationName)
+          setLocationName(resolvedLocation.address || resolvedLocation.areaName || LOCATION_NAME_UNAVAILABLE)
         }
       })
       .catch(() => {
-        if (isCurrent) setLocationName(fallbackLocationName)
+        if (isCurrent) setLocationName(LOCATION_NAME_UNAVAILABLE)
       })
 
     return () => {
@@ -670,12 +671,3 @@ function MediaIcon({ name }: { name: 'back' | 'location' | 'message' | 'camera' 
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-function getNearestMockLocationName(latitude: number, longitude: number) {
-  const nearestLocation = mockLocations.reduce((nearest, candidate) => {
-    const nearestDistance = (nearest.latitude - latitude) ** 2 + (nearest.longitude - longitude) ** 2
-    const candidateDistance = (candidate.latitude - latitude) ** 2 + (candidate.longitude - longitude) ** 2
-    return candidateDistance < nearestDistance ? candidate : nearest
-  })
-  const distance = (nearestLocation.latitude - latitude) ** 2 + (nearestLocation.longitude - longitude) ** 2
-  return distance <= 0.0025 ? nearestLocation.areaName : '위치 정보를 확인할 수 없습니다.'
-}

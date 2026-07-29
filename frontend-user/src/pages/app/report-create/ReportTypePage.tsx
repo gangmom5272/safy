@@ -1,7 +1,6 @@
 import { type ChangeEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
-import { mockLocations } from '../../../mocks/locations'
 import { resolveLocation } from '../home/homeApi'
 import { LocationMap } from './LocationMap'
 import { loadKakaoMaps } from './kakaoMap'
@@ -20,6 +19,8 @@ import './report-create.css'
 // 지도를 툭툭 끊어 옮기면 멈출 때마다 idle 이 오므로, 잠시 머무른 위치만 서버에 조회한다.
 // GPS 로 잡은 좌표에는 적용하지 않는다. 아래 effect 참고.
 const LOCATION_RESOLVE_DEBOUNCE_MS = 400
+// 조회에 실패했으면 실패했다고 말한다. 근처 목 지점 이름을 대신 보여주면 성공한 것처럼 보인다.
+const LOCATION_NAME_UNAVAILABLE = '위치명을 확인하지 못했습니다.'
 
 // 핀 조정은 GPS 오차를 바로잡는 수단이지 위치를 옮기는 수단이 아니다. 목격하지 않은 곳을
 // 제보하면 관제사의 출동 판단이 어긋난다. 측위가 나쁠수록 보정 여지를 넓게 준다.
@@ -73,10 +74,6 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
     }
 
     let isCurrent = true
-    const mockLocationName = getNearestMockLocationName(
-      effectiveLocation.latitude,
-      effectiveLocation.longitude,
-    )
     // 지도 조작은 멈출 때마다 좌표가 쏟아지므로 머무른 위치만 조회한다.
     // 반면 GPS 확보는 단발이라 합칠 대상이 없어, 기다리면 첫 주소만 늦게 뜬다.
     const debounce = adjustedLocation ? LOCATION_RESOLVE_DEBOUNCE_MS : 0
@@ -84,13 +81,15 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
       // 서버가 좌표로 확정한 주소를 그대로 쓴다. 화면에 보이는 값과 저장되는 값이 같아야 한다.
       void resolveLocation(effectiveLocation.latitude, effectiveLocation.longitude)
         .then((area) => {
-          const name = area.address || area.areaName || mockLocationName
+          const name = area.address || area.areaName || LOCATION_NAME_UNAVAILABLE
           if (isCurrent) setResolvedLocation({ key: locationKey, name, isSupported: area.resolved })
         })
         .catch(() => {
           // 조회 자체가 실패했으면 지원 지역인지 알 수 없다. 긴급 제보를 네트워크 문제로
           // 막는 편이 더 나쁘므로 통과시키고, 서버가 라우팅에서 판별하게 둔다.
-          if (isCurrent) setResolvedLocation({ key: locationKey, name: mockLocationName, isSupported: true })
+          if (isCurrent) {
+            setResolvedLocation({ key: locationKey, name: LOCATION_NAME_UNAVAILABLE, isSupported: true })
+          }
         })
     }, debounce)
 
@@ -106,7 +105,6 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
     setIsClamped(false)
     requestLocation()
   }
-
 
   const handleCategorySelect = (nextCategory: ReportCategory) => {
     setCategory(nextCategory)
@@ -373,13 +371,3 @@ function CategoryIcon({ category }: { category: ReportCategory }) {
   return <svg className="report-category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[category]}</svg>
 }
 
-function getNearestMockLocationName(latitude: number, longitude: number) {
-  const nearestLocation = mockLocations.reduce((nearest, candidate) => {
-    const nearestDistance = (nearest.latitude - latitude) ** 2 + (nearest.longitude - longitude) ** 2
-    const candidateDistance = (candidate.latitude - latitude) ** 2 + (candidate.longitude - longitude) ** 2
-    return candidateDistance < nearestDistance ? candidate : nearest
-  })
-  const distance = (nearestLocation.latitude - latitude) ** 2 + (nearestLocation.longitude - longitude) ** 2
-
-  return distance <= 0.0025 ? nearestLocation.areaName : '위치 정보를 확인할 수 없습니다.'
-}
