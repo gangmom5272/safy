@@ -7,10 +7,13 @@ from pathlib import Path
 from time import perf_counter
 from types import SimpleNamespace
 
+
 import torch
 import torchvision.transforms as transforms
-from PIL import Image
+from PIL import Image, ImageOps
 
+P2PNET_MAX_INPUT_SIDE = 1536
+P2PNET_INPUT_SIZE_MULTIPLE = 128
 
 CountPredictor = Callable[[bytes], int]
 
@@ -162,16 +165,32 @@ def _prepare_image_tensor(
     with Image.open(
         BytesIO(image_bytes),
     ) as source_image:
-        image = source_image.convert("RGB")
+        oriented_image = ImageOps.exif_transpose(source_image)
+        image = oriented_image.convert("RGB")
 
     width, height = image.size
+
+    resize_scale = min(
+        1.0,
+        (P2PNET_MAX_INPUT_SIDE / max(width, height)),
+    )
+
+    scaled_width = max(
+        1,
+        int(width * resize_scale),
+    )
+    scaled_height = max(
+        1,
+        int(height * resize_scale),
+    )
+
     resized_width = max(
-        128,
-        width // 128 * 128,
+        P2PNET_INPUT_SIZE_MULTIPLE,
+        (scaled_width // P2PNET_INPUT_SIZE_MULTIPLE * P2PNET_INPUT_SIZE_MULTIPLE),
     )
     resized_height = max(
-        128,
-        height // 128 * 128,
+        P2PNET_INPUT_SIZE_MULTIPLE,
+        (scaled_height // P2PNET_INPUT_SIZE_MULTIPLE * P2PNET_INPUT_SIZE_MULTIPLE),
     )
 
     resized_image = image.resize(
