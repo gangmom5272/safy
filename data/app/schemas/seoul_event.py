@@ -58,3 +58,21 @@ class SeoulEvent(BaseModel):
     detail_url: str | None
     details: str | None
     source: Literal["seoul-citydata"] = "seoul-citydata"
+
+
+class SeoulEventCollectionFailure(BaseModel):
+    area: str
+    error: str
+
+
+class SeoulEventBatch(BaseModel):
+    status: Literal[
+        "SUCCESS",
+        "PARTIAL_SUCCESS",
+        "FAILED",
+    ]
+    requested_count: int
+    success_count: int
+    failure_count: int
+    items: list[SeoulEvent]
+    failures: list[SeoulEventCollectionFailure]
