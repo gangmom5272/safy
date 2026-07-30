@@ -1,5 +1,4 @@
 import asyncio
-import json
 from collections.abc import Awaitable
 from datetime import datetime, timezone
 from typing import TypeVar
@@ -64,13 +63,15 @@ def build_collection_run(
     error_code: str | None = None,
     error_message: str | None = None,
 ) -> CollectionRun:
-    error_details = None
+    error_details: dict[str, object] | None = None
 
     if failures:
-        error_details = json.dumps(
-            [failure.model_dump() for failure in failures],
-            ensure_ascii=False,
-        )
+        error_details = {
+            "failures": [
+                failure.model_dump()
+                for failure in failures
+            ]
+        }
 
     return CollectionRun(
         external_run_id=f"{source}:{uuid4()}",
@@ -236,12 +237,13 @@ async def collect_seoul_events(
     response_model=DisasterMessageCollectionResponse,
 )
 async def collect_disaster_messages(
-    request: DisasterMessageCollectionRequest,
+    request: DisasterMessageCollectionRequest | None = None,
     pipeline: DisasterMessagePipeline = Depends(
         get_disaster_message_pipeline
     ),
     settings: Settings = Depends(get_settings),
 ) -> DisasterMessageCollectionResponse:
+    request = request or DisasterMessageCollectionRequest()
     started_at = datetime.now(timezone.utc)
     source = "safetydata.go.kr"
 

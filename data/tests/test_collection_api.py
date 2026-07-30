@@ -8,8 +8,10 @@ from app.api.dependencies import (
     get_seoul_congestion_pipeline,
     get_seoul_event_pipeline,
 )
+from app.api.routes.collections import build_collection_run
 from app.core.config import Settings, get_settings
 from app.main import app
+from app.schemas.collection import CollectionFailure
 from app.schemas.seoul_congestion import (
     SeoulCongestion,
     SeoulCongestionBatch,
@@ -106,7 +108,7 @@ class FakeDisasterMessagePipeline:
         assert page_no == 1
         assert num_of_rows == 100
         assert start_date is None
-        assert region == "서울특별시"
+        assert region is None
 
         return [
             {
@@ -190,7 +192,6 @@ def test_collect_disaster_messages() -> None:
     try:
         response = TestClient(app).post(
             "/api/v1/collections/disaster-messages",
-            json={"region": " 서울특별시 "},
         )
     finally:
         app.dependency_overrides.clear()
@@ -200,6 +201,31 @@ def test_collect_disaster_messages() -> None:
     assert payload["collection_run"]["status"] == "SUCCESS"
     assert payload["items"][0]["external_id"] == "205355"
     assert payload["items"][0]["regions"] == ["서울특별시"]
+
+
+def test_collection_run_keeps_error_details_as_json() -> None:
+    collection_run = build_collection_run(
+        source="seoul-citydata-ppltn",
+        started_at=datetime.now(timezone.utc),
+        status="PARTIAL_SUCCESS",
+        success_count=1,
+        failure_count=1,
+        failures=[
+            CollectionFailure(
+                area="POI077",
+                error="요청 시간 초과",
+            )
+        ],
+    )
+
+    assert collection_run.error_details == {
+        "failures": [
+            {
+                "area": "POI077",
+                "error": "요청 시간 초과",
+            }
+        ]
+    }
 
 
 def test_collect_seoul_congestions_handles_timeout() -> None:

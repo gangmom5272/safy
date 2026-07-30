@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -18,7 +18,7 @@ CollectionStatus = Literal[
 class AreaCollectionRequest(BaseModel):
     area_codes: list[str] = Field(
         min_length=1,
-        max_length=121,
+        max_length=200,
     )
     max_concurrency: int = Field(
         default=15,
@@ -84,7 +84,7 @@ class CollectionRun(BaseModel):
     failure_count: int
     error_code: str | None = None
     error_message: str | None = None
-    error_details: str | None = None
+    error_details: dict[str, Any] | None = None
 
 
 class CollectionFailure(BaseModel):
