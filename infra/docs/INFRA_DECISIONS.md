@@ -1003,8 +1003,8 @@ role별 사용자                CITIZEN 6 / SUPER_ADMIN 1 / OPERATOR 0
 
 # 2026-07-30 (목) — 통합 로그 수집(티켓 104 종료) · WebRTC/Egress 원인 규명
 
-> 이 절이 인용하는 서버 로그·DB 타임스탬프는 UTC 원문 그대로 적었다. 서버 시계가
-> `2026-07-29T…Z`로 찍히므로 날짜 표기가 이 절의 제목과 하루 어긋나 보일 수 있다.
+> 1~3절(통합 로그)은 7/29 오후 작업이고 배포는 `2026-07-29T07:11Z`다. 4절부터가 7/30이다.
+> 인용한 타임스탬프는 전부 UTC 원문이라 KST 기준 날짜와 다르게 보일 수 있다.
 
 ## 1. 통합 로그 수집은 라벨 하나로 끝났다 (`caa2d7d`, 티켓 104)
 
@@ -1114,6 +1114,44 @@ webhook:
 
 서명 키는 이미 일치한다(`OPENVIDU_API_KEY` = LiveKit `webhook.api_key` = `APIEMCZ9q73NLEV`).
 URL만 추가하면 검증까지 통과한다.
+
+### 5.1 등록하기 전에 경로 전체를 시뮬레이션으로 검증했다
+
+"URL만 추가하면 된다"는 것도 가설이므로, LiveKit 설정을 바꾸기 전에 서명된 웹훅을 직접
+만들어 쏴봤다. 서버에서 `OPENVIDU_API_SECRET`으로 HS256 JWT를 만들어(`iss`=api key,
+`sha256`=본문 해시) `http://127.0.0.1:6080/api/v1/live/webhooks/livekit`에 POST했다.
+
+DB를 건드리지 않도록 대상은 이미 `ENDED`인 세션으로 골랐다. `markReconnected`는
+`DISCONNECTED`가 아니면 false를 반환하고 아무것도 바꾸지 않으며(`LiveSession:111`),
+`startForSession`은 저장 전에 게이트웨이를 먼저 호출하므로 그 호출이 실패하면 행이
+생기지 않는다.
+
+```
+정상 서명        → HTTP 204
+변조 서명(대조군) → HTTP 403  COMMON_013 웹훅 서명 검증에 실패했습니다
+
+backend  : Failed to start recording for live session 9804e9ca-…
+           LiveMediaException: Egress start failed: HTTP 404
+           at LiveRecordingService.startForSession(LiveRecordingService.java:75)
+openvidu : API Egress.StartParticipantEgress
+           {"room":"report-9804e9ca-…","identity":"reporter-6",
+            "status":"404","error":"requested room does not exist"}
+
+DB       : status=ENDED 유지, stream_recordings=0 유지
+```
+
+404는 19시간 전에 끝난 방이라 나온 의도된 결과다. 그 앞 단계가 전부 통과했다는 것이
+핵심이다 — nginx 라우팅, 서명 검증, protobuf JSON 파싱과 타입 인식, `findByRoomName`,
+`isReporter`, `startForSession`의 Egress API 호출까지. 예외는 잡혀서 500이 아니라 204가
+나갔고 트랜잭션도 롤백되지 않았다.
+
+대조군을 하나 더 시도했다가 무효로 판정한 것도 적어둔다. 알 수 없는 필드를 넣은 본문으로
+파서가 거부하는지 보려 했으나 204가 나왔다. `WebhookReceiver`가 unknown field를 무시하기
+때문이라 파서 동작의 증거로 쓸 수 없다. 타입 인식은 대신 `startForSession` 도달 자체로
+증명됐다 — `UNSUPPORTED`로 파싱됐다면 그 앞에서 return 했을 것이다.
+
+미검증으로 남은 것은 하나다. **LiveKit이 `urls` 배열의 두 대상 모두에 실제로 전송하는지**는
+등록해봐야 확인된다. 문서상 배열이므로 전송하는 것이 맞지만 실측은 아니다.
 
 ## 6. OpenVidu 설정 파일은 이중 구조다 — 렌더링본을 고쳐야 적용된다
 
