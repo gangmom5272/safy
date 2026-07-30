@@ -19,6 +19,7 @@ class FakeRunnerResult:
     failure_codes: list[str] = field(
         default_factory=list,
     )
+    low_confidence_signal: bool | None = None
 
 
 def build_config(
@@ -108,6 +109,31 @@ def test_shadow_analysis_records_model_differences() -> None:
     assert records[0]["automaticFallback"] == "DISABLED"
     assert "personConfidences" not in records[0]["official"]
     assert factory_calls == 1
+
+
+def test_shadow_analysis_records_low_confidence_signal() -> None:
+    records: list[dict] = []
+
+    def runner_factory(_):
+        return lambda _: FakeRunnerResult(low_confidence_signal=True)
+
+    service = P2PNetShadowAnalysisService(
+        config=build_config(),
+        runner_factory=runner_factory,
+        record_sink=records.append,
+    )
+
+    record = asyncio.run(
+        service.analyze_and_log(
+            image_bytes=b"frame",
+            official=build_official_snapshot(),
+        )
+    )
+
+    assert record is not None
+    assert record.shadow.low_confidence_signal is True
+    assert records[0]["shadow"]["lowConfidenceSignal"] is True
+    assert records[0]["official"]["lowConfidenceSignal"] is None
 
 
 def test_shadow_failure_does_not_change_official_result() -> None:

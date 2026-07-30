@@ -35,6 +35,7 @@ class ModelAnalysisSnapshot:
     local_peak_congestion_score: float | None
     processing_time_ms: int
     failure_codes: list[str]
+    low_confidence_signal: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -151,6 +152,7 @@ class ShadowRunnerResult(Protocol):
     local_peak_congestion_score: float | None
     processing_time_ms: int
     failure_codes: list[str]
+    low_confidence_signal: bool | None
 
 
 ShadowRunner = Callable[[bytes], ShadowRunnerResult]
@@ -240,6 +242,7 @@ class P2PNetShadowAnalysisService:
             local_peak_congestion_score=(result.local_peak_congestion_score),
             processing_time_ms=result.processing_time_ms,
             failure_codes=list(result.failure_codes),
+            low_confidence_signal=result.low_confidence_signal,
         )
 
     def _get_runner(self) -> ShadowRunner:
@@ -352,6 +355,7 @@ def _snapshot_to_dict(
         "localPeakCongestionScore": values["local_peak_congestion_score"],
         "processingTimeMs": values["processing_time_ms"],
         "failureCodes": values["failure_codes"],
+        "lowConfidenceSignal": values["low_confidence_signal"],
     }
 
 

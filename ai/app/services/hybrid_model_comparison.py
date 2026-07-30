@@ -15,6 +15,7 @@ from app.services.model_evaluation import (
 from app.services.p2pnet_benchmark_adapter import (
     load_p2pnet_detector,
 )
+from app.services.p2pnet_confidence_signal import determine_low_confidence_signal
 from app.services.p2pnet_congestion import analyze_p2pnet_congestion
 from app.services.person_detector import detect_people
 
@@ -37,6 +38,7 @@ class AnalysisMetrics:
     visual_congestion_score: float
     local_peak_congestion_score: float
     processing_time_ms: int
+    low_confidence_signal: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,7 @@ class ModelRunResult:
     local_peak_congestion_score: float | None
     processing_time_ms: int
     failure_codes: list[str]
+    low_confidence_signal: bool | None = None
 
     @property
     def model_key(self) -> str:
@@ -91,6 +94,7 @@ class ModelRunner:
             local_peak_congestion_score=metrics.local_peak_congestion_score,
             processing_time_ms=metrics.processing_time_ms,
             failure_codes=[],
+            low_confidence_signal=metrics.low_confidence_signal,
         )
 
 
@@ -205,6 +209,9 @@ def build_p2pnet_runner(
             visual_congestion_score=result.visual_congestion_score,
             local_peak_congestion_score=result.local_peak_congestion_score,
             processing_time_ms=result.processing_time_ms,
+            low_confidence_signal=determine_low_confidence_signal(
+                confidences=result.confidences,
+            ),
         )
 
     return ModelRunner(
@@ -390,6 +397,7 @@ def _model_result_to_dict(
         "localPeakCongestionScore": result.local_peak_congestion_score,
         "processingTimeMs": result.processing_time_ms,
         "failureCodes": result.failure_codes,
+        "lowConfidenceSignal": result.low_confidence_signal,
     }
 
 
