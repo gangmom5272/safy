@@ -1,4 +1,4 @@
-import type { FavoriteLocation, ReportAttachment } from './mypageTypes'
+import type { FavoriteLocation, MyReport, ReportAttachment, ReportCategoryCode } from './mypageTypes'
 
 export const APP_VERSION = '1.0.0'
 
@@ -57,6 +57,42 @@ export function isVideoAttachment(attachment: ReportAttachment) {
   }
 
   return VIDEO_EXTENSION_PATTERN.test(attachment.url)
+}
+
+// 백엔드 ReportCategory enum → 화면 라벨. 서버는 enum 이름만 주고 한글 라벨은 프론트에만
+// 있다(제보 등록 화면의 REPORT_CATEGORY_LABELS 와 같은 표를 마이페이지에서도 쓴다).
+const REPORT_CATEGORY_LABELS: Record<ReportCategoryCode, string> = {
+  CROWD_CONGESTION: '인파 밀집',
+  ACCIDENT_RISK: '사고·위험',
+  FLOOD_WEATHER: '침수·기상',
+  FACILITY_ROAD: '시설물·도로',
+  OTHER: '기타',
+}
+
+// 서버에 카테고리가 추가돼 모르는 값이 와도 화면이 비지 않게 기본 라벨을 준다.
+export function getReportCategoryLabel(category: ReportCategoryCode | null | undefined) {
+  if (!category) return '카테고리 없음'
+
+  return REPORT_CATEGORY_LABELS[category] ?? '기타'
+}
+
+// 유형은 실제 첨부를 먼저 본다. 사진이 여러 장이어도 이미지 하나로 표시하고, 첨부가 비어
+// 있는 라이브 제보는 원본 유형(reportType)으로 판단한다.
+export function getReportMediaTypeLabel(report: Pick<MyReport, 'reportType' | 'attachments'>) {
+  if (report.attachments.some(isVideoAttachment)) return '영상'
+  if (report.attachments.length) return '이미지'
+
+  return report.reportType === 'LIVE' ? '영상' : '이미지'
+}
+
+// 백엔드에는 사용자 표시용 접수 번호가 따로 없고 제보 PK(Long)만 있다. 그 값을 접수 번호로
+// 쓰고, 쓸 수 없는 값이면 번호를 임의로 만들지 않고 확인 불가로 표시한다.
+export function formatReceiptNumber(reportId: number | null | undefined) {
+  if (typeof reportId !== 'number' || !Number.isSafeInteger(reportId) || reportId <= 0) {
+    return '접수 번호 확인 불가'
+  }
+
+  return `접수 번호 #${reportId}`
 }
 
 export function buildFavoriteSituationUrl(location: FavoriteLocation) {
