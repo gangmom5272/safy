@@ -375,13 +375,19 @@ AWS 콘솔 권한: 없음
   여부를 인프라 담당자가 판단한다.
 - P2PNet 실패는 전체 AI/API 실패가 아니다. YOLO 공식 분석은 유지한다.
 
-가중치 저장 방식은 최종 확정 전이다.
+가중치 저장 방식은 MinIO로 확정했다.
 
-- 최초 137 구현: GitLab Generic Package Registry + Deploy Token
-- 인프라 제안: 기존 MinIO + `ai_models` 영구 볼륨
-- 가중치는 82.39MB지만 Git 저장소 비대화를 막기 위해 Git 커밋은 권하지 않는다.
-- 추천: MinIO에 원본 저장, 컨테이너 시작 시 체크섬 검증 후 영구 볼륨 캐시
-- MinIO bucket/object 경로와 다운로드 인증 방식은 인프라 담당자와 확정해야 한다.
+- 최초 137 구현(GitLab Generic Package Registry + Deploy Token)은 폐기했다.
+- 확정: 기존 MinIO 재사용, bucket `safy-ai-models`,
+  object 경로 `p2pnet/{deploymentVersion}/{fileName}`
+- 가중치는 82.39MB지만 Git 저장소 비대화를 막기 위해 Git 커밋은 하지 않는다.
+- MinIO 원본을 컨테이너 시작 시 체크섬 검증 후 영구 볼륨(`p2pnet_model_cache`)에
+  캐시한다.
+- 다운로드는 presigned URL(권장) 또는 nginx 헤더 검증 방식 중 하나를
+  사용한다. 코드(`p2pnet_assets.py`)는 URL과 단일 인증 헤더만 받는 범용
+  다운로더라 두 방식 모두 코드 변경 없이 지원한다.
+- 자세한 내용은 `ai/docs/p2pnet-deployment-assets.md`의 "가중치 저장 정책"을
+  참고한다.
 
 ## 11. 반드시 해결할 미해결 사항
 
@@ -596,8 +602,10 @@ ai/requirements-deploy.txt
 3. 사용자가 요청하면 CPU 전환 변경을 스테이징·커밋·푸시한다.
 4. 인프라 담당자에게 CPU 실측값, 가중치 82.39MB, 최고 RSS 1.25GB를
    전달한다.
-5. 가중치를 MinIO에 저장할지 GitLab Package Registry에 저장할지 최종
-   결정한다. Git 커밋은 피한다.
+5. ~~가중치를 MinIO에 저장할지 GitLab Package Registry에 저장할지 최종
+   결정한다.~~ MinIO로 확정했다(§10 참고). 인프라가 `safy-ai-models`
+   버킷에 실제 게시하고 presigned URL 또는 헤더 검증 방식을 정하면
+   서버 `.env`에 반영한다.
 6. 인프라가 CPU 컨테이너를 운영 서버에 올리면 동일 벤치마크를 서버에서
    재실행한다.
 7. 서버 결과가 5초 예산과 메모리 기준을 통과하면 CPU 단독 배포를 확정한다.

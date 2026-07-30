@@ -47,14 +47,20 @@ checkout한다. 현재 PyTorch·torchvision과의 호환을 위해
 
 ## 가중치 저장 정책
 
-약 82.39MB인 P2PNet 가중치는 Git에 커밋하지 않는다. 비공개 GitLab Generic
-Package Registry에 다음 구조로 한 번 게시한다.
+약 82.39MB인 P2PNet 가중치는 Git에 커밋하지 않는다. 기존에 운영 중인
+MinIO(`infra/env.example`의 `MINIO_ENDPOINT`/`MINIO_PUBLIC_ENDPOINT`)를
+재사용해 다음 구조로 한 번 게시한다. 별도 저장소(GitLab Generic Package
+Registry)를 새로 두지 않는 이유는 인증 정보를 하나 더 관리하지 않기
+위해서다.
 
 ```text
-package: p2pnet
-version: safy-p2pnet-v2-epoch3
-file: epoch-003.pth
+bucket: safy-ai-models
+object: p2pnet/safy-p2pnet-v2-epoch3/epoch-003.pth
 ```
+
+경로에 배포 버전(`safy-p2pnet-v2-epoch3`)을 그대로 넣어 이후 버전이
+추가돼도 기존 객체를 덮어쓰지 않고 나란히 보관하며, 롤백 시 이전 버전
+경로를 그대로 다시 가리키면 된다.
 
 게시 전 로컬 파일의 체크섬을 확인한다.
 
@@ -69,32 +75,42 @@ sha256sum \
 934989b1ec644660f3924fb916418cb7f757b11f35b470af46c324ac18204857
 ```
 
-GitLab Deploy Token은 `read_package_registry`와
-`write_package_registry` 범위로 생성하고 환경 변수로만 전달한다.
+게시는 기존 MinIO 자격증명(`MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY`)으로
+`mc`(MinIO Client)를 이용한다.
 
 ```bash
-export GITLAB_PROJECT_ID="1373906"
-export GITLAB_DEPLOY_TOKEN="<read-write-package-registry-token>"
-
-curl --fail-with-body \
-  --header "DEPLOY-TOKEN: ${GITLAB_DEPLOY_TOKEN}" \
-  --upload-file \
+mc alias set safy-minio "${MINIO_ENDPOINT}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
+mc cp \
   runs/p2pnet-finetune-v2-balanced-search/epoch-003.pth \
-  "https://lab.ssafy.com/api/v4/projects/${GITLAB_PROJECT_ID}/packages/generic/p2pnet/safy-p2pnet-v2-epoch3/epoch-003.pth"
+  safy-minio/safy-ai-models/p2pnet/safy-p2pnet-v2-epoch3/epoch-003.pth
 ```
 
-토큰, 서명 URL 또는 인증 헤더 값은 Git, Docker 이미지, 로그에 기록하지
-않는다.
+컨테이너 시작 스크립트는 MinIO SDK나 자격증명을 직접 다루지 않는다.
+`prepare_p2pnet_assets()`는 URL과(선택적) 단일 인증 헤더만 받는 범용
+다운로더이므로, 다음 두 방식 중 하나로 접근 가능한 URL만 넘기면 된다.
+
+1. **presigned URL**(권장): 인프라가 `mc share download`로 장기 유효
+   presigned URL을 발급해 `P2PNET_SHADOW_WEIGHT_URL`에 넣는다. 서명이
+   URL에 포함되므로 `P2PNET_ASSET_AUTH_HEADER_NAME`/`VALUE`는 비워둔다.
+   URL 만료 전에 인프라가 재발급해 `.env`를 갱신해야 한다.
+2. **서비스 계정 헤더 검증**: nginx(`infra/nginx/minio.conf`)가 특정
+   헤더 값을 검사한 뒤에만 MinIO로 프록시하도록 규칙을 추가하고, 그
+   헤더 이름과 값을 `P2PNET_ASSET_AUTH_HEADER_NAME`/`VALUE`로 전달한다.
+   presigned URL 재발급이 번거로울 때의 대안이다.
+
+어느 방식을 쓸지, 정확한 헤더 이름/값은 인프라 담당자가 최종 결정하고
+서버 `.env`에만 저장한다. 토큰, 서명 URL 또는 인증 헤더 값은 Git, Docker
+이미지, 로그에 기록하지 않는다.
 
 ## 시작 시 다운로드와 캐시
 
-배포 서버의 `infra/.env`에 다음 값을 설정한다.
+배포 서버의 `infra/.env`에 다음 값을 설정한다(presigned URL 방식 예시).
 
 ```dotenv
 P2PNET_SHADOW_ENABLED=true
-P2PNET_SHADOW_WEIGHT_URL=https://lab.ssafy.com/api/v4/projects/1373906/packages/generic/p2pnet/safy-p2pnet-v2-epoch3/epoch-003.pth
-P2PNET_ASSET_AUTH_HEADER_NAME=DEPLOY-TOKEN
-P2PNET_ASSET_AUTH_HEADER_VALUE=<read-package-registry-deploy-token>
+P2PNET_SHADOW_WEIGHT_URL=https://i15a503.p.ssafy.io:9200/safy-ai-models/p2pnet/safy-p2pnet-v2-epoch3/epoch-003.pth?<presigned-query-params>
+P2PNET_ASSET_AUTH_HEADER_NAME=
+P2PNET_ASSET_AUTH_HEADER_VALUE=
 ```
 
 컨테이너 시작 시 다음 순서로 처리한다.
