@@ -192,6 +192,24 @@ P2PNet의 저밀도 장면 오탐을 보완하기 위해 JHU-CROWD++와 사용 �
 학습 구성, 손실 키 보정, 체크포인트 비교와 선정 근거는
 [P2PNet 미세 조정 및 체크포인트 선정](docs/p2pnet-fine-tuning.md)을 참고합니다.
 
+## YOLO·P2PNet 동일 표본 비교
+
+같은 평가 프레임에 YOLO11n과 미세 조정 P2PNet을 실행하고 모델별 사람 수,
+C·L, 처리시간, 실패 코드와 예측 차이를 기록하는 오프라인 도구를 제공합니다.
+
+- 한 모델이 실패해도 다른 모델의 성공 결과를 보존
+- 시나리오별 MAE·RMSE 비교
+- 일반 평가 manifest와 `head-point-v1` manifest 지원
+- 운영 공식 모델: YOLO11n
+- 보조 관찰 모델: P2PNet v2 epoch3 (`SHADOW`)
+- 자동 모델 전환: `DISABLED`
+- 고정 테스트 29장 계수 MAE: YOLO `16.90`, P2PNet v2 `41.34`
+- P2PNet v2의 LOCAL_DENSE 계수 MAE `7.33`, CROWDED 계수 MAE `34.5`
+- 운영 분석 API와 공식 모델 가중치는 변경하지 않음
+
+고정 테스트 결과, 그림자 운영 방식과 자동 전환을 보류한 근거는
+[YOLO·P2PNet 동일 표본 비교 기반](docs/hybrid-model-comparison.md)을 참고합니다.
+
 ## 프레임 품질 기준 검증
 
 프레임 품질 검사는 사람 탐지 전에 해상도, 밝기와 블러 상태를 판정합니다.
