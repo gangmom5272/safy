@@ -43,6 +43,7 @@ class SeoulEventBatchRaw(BaseModel):
 
 
 class SeoulEvent(BaseModel):
+    external_id: str
     area_name: str
     area_code: str
     name: str

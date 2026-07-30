@@ -2,6 +2,7 @@ from datetime import date
 
 from app.normalizers.seoul_event import (
     filter_active_events,
+    generate_seoul_event_external_id,
     normalize_active_seoul_events,
     normalize_seoul_event,
     parse_event_period,
@@ -55,6 +56,72 @@ def test_normalize_seoul_event() -> None:
     )
     assert event.details == "야외 행사"
     assert event.source == "seoul-citydata"
+
+
+def test_external_id_normalizes_identity_values() -> None:
+    first = generate_seoul_event_external_id(
+        area_code=" POI009 ",
+        name="광화문  문화축제",
+        period="2026-07-21 ~ 2026-07-25",
+        place="광화문광장",
+        longitude=126.9760053,
+        latitude=37.5726241,
+    )
+    second = generate_seoul_event_external_id(
+        area_code="poi009",
+        name="광화문 문화축제",
+        period="2026-07-21~2026-07-25",
+        place="광화문광장",
+        longitude=126.976005300,
+        latitude=37.572624100,
+    )
+
+    assert first == second
+    assert len(first) == 64
+
+
+def test_external_id_changes_with_identity_field() -> None:
+    base_fields = {
+        "area_code": "POI009",
+        "name": "광화문 문화축제",
+        "period": "2026-07-21~2026-07-25",
+        "place": "광화문광장",
+        "longitude": 126.9760053,
+        "latitude": 37.5726241,
+    }
+    original = generate_seoul_event_external_id(
+        **base_fields
+    )
+    changed_fields = [
+        {"area_code": "POI010"},
+        {"name": "다른 문화축제"},
+        {"period": "2026-07-22~2026-07-25"},
+        {"place": "서울광장"},
+        {"longitude": 127.0000000},
+        {"latitude": 37.6000000},
+    ]
+
+    for changed_field in changed_fields:
+        changed = generate_seoul_event_external_id(
+            **{
+                **base_fields,
+                **changed_field,
+            }
+        )
+        assert original != changed
+
+
+def test_external_id_handles_empty_coordinates() -> None:
+    external_id = generate_seoul_event_external_id(
+        area_code="POI009",
+        name="좌표 없는 행사",
+        period="잘못된 기간",
+        place="온라인",
+        longitude=None,
+        latitude=None,
+    )
+
+    assert len(external_id) == 64
 
 
 def test_normalize_seoul_event_handles_empty_values() -> None:
