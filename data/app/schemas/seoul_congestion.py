@@ -37,6 +37,8 @@ class SeoulCongestion(BaseModel):
     population_max: int
     is_replaced: bool | None
     observed_at: datetime
+    latitude: float | None = None
+    longitude: float | None = None
     source: Literal["seoul-citydata-ppltn"] = (
         "seoul-citydata-ppltn"
     )
