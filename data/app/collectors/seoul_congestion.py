@@ -181,17 +181,7 @@ class SeoulCongestionCollector:
         self,
         payload: dict[str, Any],
     ) -> SeoulCongestionRaw:
-        service_data = payload.get(
-            "SeoulRtd.citydata_ppltn"
-        )
-
-        if not isinstance(service_data, dict):
-            raise SeoulCongestionAPIError(
-                "서울 실시간 인구 API 응답 구조가 "
-                "올바르지 않습니다."
-            )
-
-        result = service_data.get("RESULT") or {}
+        result = payload.get("RESULT") or {}
         result_code = result.get("CODE")
 
         if result_code != "INFO-000":
@@ -203,16 +193,24 @@ class SeoulCongestionCollector:
                 f"message={result_message}"
             )
 
-        rows = service_data.get("row")
+        service_data = payload.get(
+            "SeoulRtd.citydata_ppltn"
+        )
 
-        if not isinstance(rows, list) or not rows:
+        if not isinstance(service_data, list):
+            raise SeoulCongestionAPIError(
+                "서울 실시간 인구 API 응답 구조가 "
+                "올바르지 않습니다."
+            )
+
+        if not service_data:
             raise SeoulCongestionAPIError(
                 "서울 실시간 인구 API 데이터가 없습니다."
             )
 
         try:
             return SeoulCongestionRaw.model_validate(
-                rows[0]
+                service_data[0]
             )
         except ValidationError as exc:
             raise SeoulCongestionAPIError(
