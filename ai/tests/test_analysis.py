@@ -4,6 +4,7 @@ from app.api import analysis
 from app.main import app
 from app.services.frame_quality import FrameQualityResult
 from app.services.person_detector import PersonDetectionResult
+from app.services.shadow_analysis import ModelAnalysisSnapshot
 
 
 client = TestClient(app)
@@ -114,6 +115,143 @@ def test_analyze_frame(monkeypatch) -> None:
         "frameQualityRuleVersion": "frame-quality-v0.2",
         "processingTimeMs": 10,
     }
+
+
+def test_completed_analysis_runs_enabled_shadow_in_background(
+    monkeypatch,
+) -> None:
+    shadow_calls: list[tuple[bytes, ModelAnalysisSnapshot]] = []
+
+    class FakeShadowService:
+        enabled = True
+
+        async def analyze_and_log(
+            self,
+            *,
+            image_bytes: bytes,
+            official: ModelAnalysisSnapshot,
+        ) -> None:
+            shadow_calls.append(
+                (
+                    image_bytes,
+                    official,
+                )
+            )
+
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_valid_quality,
+    )
+    monkeypatch.setattr(
+        analysis,
+        "detect_people",
+        fake_detect_people,
+    )
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        lambda: FakeShadowService(),
+    )
+
+    response = client.post(
+        "/api/v1/analyze/frame",
+        files={
+            "image": (
+                "test.jpg",
+                b"fake-image",
+                "image/jpeg",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["modelName"] == "YOLO"
+    assert response.json()["personCount"] == 2
+    assert len(shadow_calls) == 1
+    assert shadow_calls[0][0] == b"fake-image"
+    assert shadow_calls[0][1].model_name == "YOLO"
+    assert shadow_calls[0][1].person_count == 2
+
+
+def test_invalid_frame_does_not_run_shadow(
+    monkeypatch,
+) -> None:
+    class FakeShadowService:
+        enabled = True
+
+        async def analyze_and_log(self, **_) -> None:
+            raise AssertionError(
+                "invalid frames must not run shadow analysis",
+            )
+
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_invalid_quality,
+    )
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        lambda: FakeShadowService(),
+    )
+
+    response = client.post(
+        "/api/v1/analyze/frame",
+        files={
+            "image": (
+                "dark.jpg",
+                b"fake-image",
+                "image/jpeg",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["analysisStatus"] == "INVALID_FRAME"
+
+
+def test_shadow_configuration_failure_keeps_yolo_response(
+    monkeypatch,
+    caplog,
+) -> None:
+    caplog.set_level("ERROR")
+    monkeypatch.setattr(
+        analysis,
+        "inspect_frame_quality",
+        fake_valid_quality,
+    )
+    monkeypatch.setattr(
+        analysis,
+        "detect_people",
+        fake_detect_people,
+    )
+
+    def fail_to_build_shadow_service():
+        raise RuntimeError("sensitive shadow configuration error")
+
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        fail_to_build_shadow_service,
+    )
+
+    response = client.post(
+        "/api/v1/analyze/frame",
+        files={
+            "image": (
+                "test.jpg",
+                b"fake-image",
+                "image/jpeg",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["analysisStatus"] == "COMPLETED"
+    assert response.json()["modelName"] == "YOLO"
+    assert response.json()["personCount"] == 2
+    assert "P2PNet shadow analysis scheduling failed" in caplog.text
 
 
 def test_invalid_frame_skips_detection(monkeypatch) -> None:
