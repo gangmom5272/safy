@@ -1,6 +1,6 @@
 # CI 전용 requirements — GPU 없는 러너에서 빌드/테스트만 통과시키기 위한 목적
-# requirements.txt(cu130, GPU)와 다르게 torch/torchvision만 CPU 휠로 교체함
-# 실배포용 requirements.txt는 건드리지 않음 — 두 파일을 항상 같이 갱신할 것
+# requirements.txt는 GPU 학습용, requirements-deploy.txt는 CPU 운영 배포용이다.
+# 공통 라이브러리 변경 시 세 파일을 항상 함께 갱신한다.
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 annotated-doc==0.0.4

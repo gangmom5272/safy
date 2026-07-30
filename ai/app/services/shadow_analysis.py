@@ -118,18 +118,18 @@ class ShadowAnalysisConfig:
             p2pnet_root=_resolve_path(
                 os.getenv(
                     "P2PNET_SHADOW_ROOT",
-                    "runs/candidate-models/p2pnet",
+                    "/opt/p2pnet",
                 )
             ),
             weight_path=_resolve_path(
                 os.getenv(
                     "P2PNET_SHADOW_WEIGHT_PATH",
-                    ("runs/p2pnet-finetune-v2-balanced-search/epoch-003.pth"),
+                    ("/var/cache/safy-ai/models/p2pnet/epoch-003.pth"),
                 )
             ),
             device=os.getenv(
                 "P2PNET_SHADOW_DEVICE",
-                "cuda",
+                "cpu",
             ),
             threshold=threshold,
             timeout_seconds=timeout_seconds,
@@ -172,10 +172,11 @@ class P2PNetShadowAnalysisService:
         self._runner: ShadowRunner | None = None
         self._runner_lock = Lock()
         self._inference_lock = Lock()
+        self._available = config.enabled
 
     @property
     def enabled(self) -> bool:
-        return self.config.enabled
+        return self._available
 
     async def analyze_and_log(
         self,
@@ -247,9 +248,17 @@ class P2PNetShadowAnalysisService:
 
         with self._runner_lock:
             if self._runner is None:
-                self._runner = self._runner_factory(
-                    self.config,
-                )
+                try:
+                    self._runner = self._runner_factory(
+                        self.config,
+                    )
+                except Exception:
+                    self._available = False
+                    logger.exception(
+                        "P2PNet shadow runner initialization failed; "
+                        "shadow analysis is now disabled",
+                    )
+                    raise
 
         return self._runner
 

@@ -57,10 +57,15 @@ def test_shadow_analysis_is_disabled_by_default(
         "P2PNET_SHADOW_ENABLED",
         raising=False,
     )
+    monkeypatch.delenv(
+        "P2PNET_SHADOW_DEVICE",
+        raising=False,
+    )
 
     config = ShadowAnalysisConfig.from_environment()
 
     assert config.enabled is False
+    assert config.device == "cpu"
 
 
 def test_shadow_analysis_records_model_differences() -> None:
@@ -107,8 +112,11 @@ def test_shadow_analysis_records_model_differences() -> None:
 
 def test_shadow_failure_does_not_change_official_result() -> None:
     records: list[dict] = []
+    factory_calls = 0
 
     def runner_factory(_):
+        nonlocal factory_calls
+        factory_calls += 1
         raise RuntimeError("sensitive loader error")
 
     service = P2PNetShadowAnalysisService(
@@ -133,6 +141,17 @@ def test_shadow_failure_does_not_change_official_result() -> None:
     ]
     assert record.differences.person_count is None
     assert "sensitive loader error" not in str(records[0])
+    assert service.enabled is False
+
+    second_record = asyncio.run(
+        service.analyze_and_log(
+            image_bytes=b"frame-2",
+            official=official,
+        )
+    )
+
+    assert second_record is None
+    assert factory_calls == 1
 
 
 def test_shadow_timeout_is_recorded_as_isolated_failure() -> None:
