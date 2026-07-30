@@ -67,6 +67,27 @@ app:
     scheduler-delay: ${REPORT_ROUTING_SCHEDULER_DELAY:PT30S}
   report-assignment:
     scheduler-delay: ${REPORT_ASSIGNMENT_SCHEDULER_DELAY:PT30S}
+  public-data:
+    base-url: ${PUBLIC_DATA_BASE_URL:http://localhost:8000}
+    connect-timeout: ${PUBLIC_DATA_CONNECT_TIMEOUT:PT2S}
+    # 혼잡도·행사 요청은 FastAPI 가 장소 121곳을 나눠 병렬 조회하는 동안 대기한다.
+    # 이 값을 넘기면 그 주기의 수집 결과를 통째로 버리고 다음 주기에 다시 요청한다
+    # (FastAPI 는 서울시 호출을 이미 마쳤을 수 있으므로 그 run 의 데이터는 유실된다).
+    # 타임아웃 경고가 반복되면 값을 올려야 한다.
+    read-timeout: ${PUBLIC_DATA_READ_TIMEOUT:PT2M}
+    # fixedRate 라서 실행 시작 시각 기준 주기다. read-timeout 보다 길게 두어야
+    # 한 회차가 다음 회차를 밀어내지 않는다(현재 혼잡도 3분 > read-timeout 2분).
+    # 관측 시각이 같은 값은 (place_id, observed_at) 유일 제약으로 걸러지므로 중복 적재는 없다.
+    city-congestion-delay: ${PUBLIC_DATA_CITY_CONGESTION_DELAY:PT3M}
+    disaster-message-delay: ${PUBLIC_DATA_DISASTER_MESSAGE_DELAY:PT2M}
+    cultural-event-cron: ${PUBLIC_DATA_CULTURAL_EVENT_CRON:0 0 4 * * *}
+    # 수집은 FastAPI 응답을 최대 2분 기다리므로, 앱 공용 스케줄러(스레드 1개)를 쓰면
+    # 제보 라우팅·라이브 정리가 그동안 멈춘다. 그래서 전용 풀을 둔다.
+    scheduler-pool-size: ${PUBLIC_DATA_SCHEDULER_POOL_SIZE:3}
+    # 관측값은 지역 121곳 × 5분이라 월 100만 행씩 늘어난다.
+    # 지도는 최신 1건만 쓰고 위험도 추이도 몇 주면 충분하므로 보관 기간을 넘긴 행은 지운다.
+    observation-retention: ${PUBLIC_DATA_OBSERVATION_RETENTION:P90D}
+    observation-cleanup-cron: ${PUBLIC_DATA_OBSERVATION_CLEANUP_CRON:0 30 4 * * *}
 springdoc:
   api-docs:
     path: /v3/api-docs
