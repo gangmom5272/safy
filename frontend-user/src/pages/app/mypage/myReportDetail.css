@@ -208,6 +208,12 @@
   background: #dcfce7;
 }
 
+/* 취소된 제보 상세로 바로 들어올 수 있어 배지 색을 비워 두지 않는다. */
+.report-detail-heading .status-cancelled {
+  color: #6b7280;
+  background: #e5e7eb;
+}
+
 .report-detail-description,
 .report-detail-section__card > p {
   margin: 0;
@@ -217,13 +223,13 @@
   line-height: 1.7;
 }
 
+/* 주소·등록 시간·유형이 카드 맨 위로 올라와 위쪽 구분선이 필요 없어졌다. 라벨 칸은
+   '유형 · 카테고리'가 한 줄에 들어가는 너비로 잡는다. */
 .report-detail-info {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   gap: 14px 12px;
   margin: 0;
-  padding-top: 18px;
-  border-top: 1px solid #e5e7eb;
   font-size: 13px;
   line-height: 1.55;
 }
@@ -251,6 +257,78 @@
 
 .report-detail-info dd span {
   color: #4b5563;
+}
+
+/* 메타데이터와 제보 내용을 가르는 구분선. */
+.report-detail-content {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.report-detail-content h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.report-detail-content h3 svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: #004aad;
+}
+
+/* 사용자가 입력한 줄바꿈을 그대로 보여주고, 긴 글은 카드 안에서 줄바꿈한다. */
+.report-detail-content .report-detail-description {
+  white-space: pre-wrap;
+}
+
+.report-detail-cancel {
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 12px;
+  border: 1px solid #f4c7c2;
+  border-radius: 16px;
+  color: #b42318;
+  background: #fee4e2;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.report-detail-cancel:active {
+  background: #fecdca;
+}
+
+.report-detail-cancel:disabled {
+  cursor: default;
+}
+
+/* 취소 처리 중에만 옅게 해서 진행 중임을 알린다. 취소 완료 문구는 계속 읽어야 하는
+   상태 안내라 흐리게 하지 않는다. */
+.report-detail-cancel:disabled:not(.is-cancelled) {
+  opacity: .6;
+}
+
+.report-detail-cancel.is-cancelled {
+  border-color: #f4c7c2;
+  color: #912018;
+  background: #fef3f2;
+  font-size: 13px;
+}
+
+.report-detail-cancel:focus-visible {
+  outline: 3px solid rgba(180, 35, 24, .25);
+  outline-offset: 2px;
 }
 
 .report-detail-section {

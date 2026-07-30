@@ -11,7 +11,7 @@ import {
   mockUser,
 } from './mypageMock'
 import type { ApiResponse, PageResponse } from '../../../api/types'
-import type { Faq, FavoriteLocation, Inquiry, MyReport, Notice, NotificationSettingsData, ReportStatus, ReportSummary, UserProfile } from './mypageTypes'
+import type { Faq, FavoriteLocation, Inquiry, MyReport, Notice, NotificationSettingsData, ReportCategoryCode, ReportStatus, ReportSummary, ReportTypeCode, UserProfile } from './mypageTypes'
 import { normalizeAttachments } from './mypageUtils'
 
 type BackendReportStatus = 'RECEIVED' | 'ASSIGNED' | 'ACCEPTED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 'CANCELLED'
@@ -27,8 +27,9 @@ interface ReportImageView {
 
 interface ReportListItemView {
   reportId: number
-  reportType: 'IMAGE' | 'LIVE'
-  category: string
+  reportType: ReportTypeCode
+  // 서버는 enum 이름(CROWD_CONGESTION 등)을 그대로 준다. 한글 라벨 변환은 화면에서 한다.
+  category: ReportCategoryCode
   subcategory: string
   description: string
   address: string
@@ -73,6 +74,8 @@ function toMyReport(report: ReportListItemView, history: ReportStatusHistoryResp
   return {
     id: report.reportId,
     type: report.reportType === 'IMAGE' ? '이미지' : '라이브',
+    reportType: report.reportType,
+    category: report.category,
     title: report.description,
     description: report.description,
     locationName: report.administrativeAreaName ?? report.address ?? '위치 확인 중',
@@ -135,7 +138,13 @@ export async function getMyReport(reportId: number) {
 }
 
 export async function cancelMyReport(reportId: number) {
-  if (USE_MOCK_API) return mockResponse(undefined)
+  if (USE_MOCK_API) {
+    // 실제 서버는 취소(204) 후 상세 조회에서 CANCELLED 를 준다. 목도 같은 흐름이 되도록
+    // 상태를 바꿔 둔다. 이러지 않으면 목 모드에서만 취소 후 다시 접수 대기 중으로 보인다.
+    const index = mockReports.findIndex((report) => report.id === reportId)
+    if (index >= 0) mockReports[index] = { ...mockReports[index], status: 'CANCELLED' }
+    return mockResponse(undefined)
+  }
 
   await apiClient.patch(`/reports/${reportId}/cancel`)
 }

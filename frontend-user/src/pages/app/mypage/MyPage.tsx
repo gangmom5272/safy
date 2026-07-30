@@ -88,6 +88,36 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
       : undefined
     navigate(returnTo, { replace: true, state })
   }
+  // 취소는 서버가 204 만 주므로 취소 결과는 상세·목록을 다시 받아 확인한다. 취소 요청과
+  // 재조회를 분리해야 재조회만 실패했을 때 취소 실패로 잘못 안내하지 않는다.
+  const handleCancelReport = async (reportId: number) => {
+    if (!window.confirm('이 제보를 취소할까요?')) return
+
+    try {
+      await cancelMyReport(reportId)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '제보를 취소하지 못했습니다.')
+      return
+    }
+
+    setMessage('')
+    const [detailResult, listResult] = await Promise.allSettled([getMyReport(reportId), getMyReports()])
+    if (!mounted.current) return
+
+    // 목록을 먼저 반영하고 상세를 마지막에 덮어써야 상세의 첨부 목록이 목록 값에 밀리지 않는다.
+    if (listResult.status === 'fulfilled') setReports(listResult.value)
+    if (detailResult.status === 'fulfilled') {
+      const report = detailResult.value
+      setDetailReport(report)
+      setReports((current) => [...current.filter((item) => item.id !== report.id), report])
+      return
+    }
+
+    // 재조회가 실패해도 취소 자체는 이미 끝났다. 취소된 상태만 반영해 두고 따로 안내한다.
+    setDetailReport((current) => current && current.id === reportId ? { ...current, status: 'CANCELLED' } : current)
+    setReports((current) => current.map((item) => item.id === reportId ? { ...item, status: 'CANCELLED' } : item))
+    setMessage('제보는 취소되었지만 최신 정보를 불러오지 못했습니다. 잠시 후 다시 확인해주세요.')
+  }
   const handleLogout = () => {
     if (!window.confirm('로그아웃할까요?')) return
     clearAuthentication()
@@ -106,16 +136,7 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
     {view === 'PRIVACY' && <Privacy onBack={back} />}
     {view === 'NOTIFICATION_SETTINGS' && <NotificationPreferences settings={notificationSettings} usingMock={notificationUsingMock} onBack={back} onChange={setNotificationSettings} />}
     {view === 'REPORTS' && <Reports reports={reports} onBack={() => navigate('/app/mypage', { replace: true })} onOpen={openReport} />}
-    {view === 'REPORT_DETAIL' && selectedReport && <ReportDetail report={selectedReport} onBack={handleReportDetailBack} onCancel={async () => {
-      if (!window.confirm('이 제보를 취소할까요?')) return
-      try {
-        await cancelMyReport(selectedReport.id)
-        const report = await getMyReport(selectedReport.id)
-        setReports((current) => [...current.filter((item) => item.id !== report.id), report])
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : '제보를 취소하지 못했습니다.')
-      }
-    }} />}
+    {view === 'REPORT_DETAIL' && selectedReport && <ReportDetail report={selectedReport} onBack={handleReportDetailBack} onCancel={() => handleCancelReport(selectedReport.id)} />}
     {view === 'FAVORITES' && <Favorites items={favorites} onBack={initialView === 'FAVORITES' ? () => navigate(-1) : back} onChange={setFavorites} onNavigate={(item) => navigate(buildFavoriteSituationUrl(item), { state: { from: 'favorites' } })} usingMock={usingMock} />}
     {view === 'SUPPORT' && <Support onBack={back} onGo={go} />}{view === 'FAQ' && <Faqs onBack={back} />}{view === 'NOTICES' && <Notices onBack={back} onOpen={(notice) => { setSelectedNotice(notice); go('NOTICE_DETAIL') }} />}{view === 'NOTICE_DETAIL' && selectedNotice && <NoticeDetail notice={selectedNotice} onBack={back} />}
     {view === 'INQUIRY_FORM' && <InquiryForm onBack={back} onSubmit={(item) => { setInquiries((items) => [item, ...items]); setMessage('문의가 등록되었습니다.'); setView('SUPPORT') }} />}{view === 'INQUIRIES' && <Inquiries items={inquiries} onBack={back} onOpen={(item) => { setSelectedInquiry(item); go('INQUIRY_DETAIL') }} />}{view === 'INQUIRY_DETAIL' && selectedInquiry && <InquiryDetail item={selectedInquiry} onBack={back} />}{view === 'GUIDE' && <Guide onBack={back} />}

@@ -606,9 +606,11 @@
   overflow: visible;
 }
 
+/* 탭 5개가 컨테이너 너비를 균등하게 나눠 쓴다. 모두 한 화면에 들어가므로 가로 스크롤은
+   두지 않는다. 가장 긴 '접수 대기 중'이 한 줄로 들어가도록 글자 크기와 좌우 여백을 맞췄다. */
 .report-status-filters {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 2px;
   padding: 4px;
   border-radius: 14px;
@@ -617,13 +619,15 @@
 
 .report-status-filters button {
   min-height: 38px;
-  padding: 0 8px;
+  padding: 0 2px;
   border: 0;
   border-radius: 10px;
   color: #6b7280;
   background: transparent;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
+  letter-spacing: -.2px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -828,6 +832,12 @@
   background: rgba(254, 228, 226, .94);
 }
 
+/* 취소됨 탭은 없지만 전체 목록에는 취소된 제보가 그대로 내려온다. */
+.report-card-status--cancelled {
+  color: #6b7280;
+  background: rgba(229, 231, 235, .94);
+}
+
 .mypage-shell .report-card-body {
   display: grid;
   min-width: 0;
@@ -887,6 +897,32 @@
 .account-withdrawal:focus-visible {
   outline: 3px solid rgba(0, 74, 173, .25);
   outline-offset: 2px;
+}
+
+/* 즐겨찾기 추가 버튼만 원형으로 키운다. 공통 헤더 기본 스타일(40px)을 바꾸면 다른 화면의
+   헤더 버튼까지 커지므로 이 화면 클래스 안에서만 덮어쓴다. */
+.favorites-header .page-header__action,
+.favorites-header .page-header__action > .favorite-add-button {
+  width: 44px;
+  height: 44px;
+}
+
+.favorites-header .favorite-add-button {
+  border: 0;
+  border-radius: 50%;
+  color: #004aad;
+  background: #e8f1ff;
+  box-shadow: 0 2px 8px rgba(0, 74, 173, .12);
+  cursor: pointer;
+}
+
+.favorites-header .favorite-add-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.favorites-header .favorite-add-button:active {
+  background: #d6e6ff;
 }
 
 @media (max-width: 360px) {
