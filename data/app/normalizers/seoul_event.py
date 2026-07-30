@@ -1,11 +1,18 @@
+import hashlib
+import json
+import unicodedata
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
 from app.schemas.seoul_event import (
     SeoulEvent,
     SeoulEventBatchRaw,
     SeoulEventRaw,
 )
+
+
 KST = timezone(timedelta(hours=9))
+
 
 def empty_to_none(value: str | None) -> str | None:
     if value is None:
@@ -79,6 +86,58 @@ def parse_event_period(
     return start_date, end_date
 
 
+def normalize_identity_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value)
+    return " ".join(normalized.split()).casefold()
+
+
+def normalize_identity_coordinate(
+    value: float | None,
+) -> str:
+    if value is None:
+        return ""
+
+    coordinate = Decimal(str(value)).quantize(
+        Decimal("0.0000001")
+    )
+    return format(coordinate, "f")
+
+
+def generate_seoul_event_external_id(
+    *,
+    area_code: str,
+    name: str,
+    period: str,
+    place: str,
+    longitude: float | None,
+    latitude: float | None,
+) -> str:
+    start_date, end_date = parse_event_period(period)
+    canonical_period = (
+        f"{start_date.isoformat()}~{end_date.isoformat()}"
+        if start_date is not None and end_date is not None
+        else normalize_identity_text(period)
+    )
+    identity_fields = {
+        "area_code": normalize_identity_text(area_code),
+        "latitude": normalize_identity_coordinate(latitude),
+        "longitude": normalize_identity_coordinate(longitude),
+        "name": normalize_identity_text(name),
+        "period": canonical_period,
+        "place": normalize_identity_text(place),
+    }
+    canonical_value = json.dumps(
+        identity_fields,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+    return hashlib.sha256(
+        canonical_value.encode("utf-8")
+    ).hexdigest()
+
+
 def normalize_seoul_event(
     raw: SeoulEventRaw,
     area_name: str,
@@ -87,16 +146,32 @@ def normalize_seoul_event(
     start_date, end_date = parse_event_period(
         raw.event_period
     )
+    area_name = area_name.strip()
+    area_code = area_code.strip()
+    name = raw.event_name.strip()
+    period = raw.event_period.strip()
+    place = raw.event_place.strip()
+    longitude = coordinate_to_float(raw.longitude)
+    latitude = coordinate_to_float(raw.latitude)
+
     return SeoulEvent(
-        area_name=area_name.strip(),
-        area_code=area_code.strip(),
-        name=raw.event_name.strip(),
-        period=raw.event_period.strip(),
+        external_id=generate_seoul_event_external_id(
+            area_code=area_code,
+            name=name,
+            period=period,
+            place=place,
+            longitude=longitude,
+            latitude=latitude,
+        ),
+        area_name=area_name,
+        area_code=area_code,
+        name=name,
+        period=period,
         start_date=start_date,
         end_date=end_date,
-        place=raw.event_place.strip(),
-        longitude=coordinate_to_float(raw.longitude),
-        latitude=coordinate_to_float(raw.latitude),
+        place=place,
+        longitude=longitude,
+        latitude=latitude,
         is_paid=normalize_payment_status(raw.pay_yn),
         thumbnail_url=empty_to_none(raw.thumbnail_url),
         detail_url=empty_to_none(raw.detail_url),
