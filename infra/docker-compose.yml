@@ -69,6 +69,12 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_UPLOAD_BUCKET=${MINIO_UPLOAD_BUCKET}
+      # 녹화(Egress)가 업로드할 주소. 위 MINIO_ENDPOINT와 다른 값이다 — 그건 backend가
+      # 직접 쓰는 브리지 내부 주소이고, 이건 host 네트워크인 egress가 쓸 주소다.
+      # 기본값을 비우면 안 된다. Spring의 ${VAR:기본값}은 변수가 '없을 때'만 기본값을
+      # 쓰고 빈 문자열이면 그대로 빈 값을 써서, 녹화 시작이 설정 누락으로 실패한다.
+      # 그래서 미설정 시 기존 동작과 같도록 내부 주소를 기본값으로 둔다.
+      - LIVE_RECORDING_S3_ENDPOINT=${LIVE_RECORDING_S3_ENDPOINT:-http://minio:9000}
       # 인증/OAuth/CORS — backend가 부팅·로그인에 요구하는 값. .env에 정의돼 있어도
       # 여기 나열해야 컨테이너로 전달된다(.env는 ${} 치환용일 뿐 자동 주입 아님).
       # JWT_SECRET 미전달 시 "JWT_SECRET must be at least 32 bytes"로 부팅 실패(2026-07-27 실측).
@@ -177,6 +183,13 @@ services:
       # 9200을 nginx가 쓰므로 여기서 중복 바인딩하면 포트 충돌로 기동에 실패한다.
       #
       # 관리 콘솔은 팀만 쓰면 되므로 외부에 열지 않는다. SSH 터널로 접근한다.
+      # Egress(녹화)가 업로드할 S3 API 진입점. OpenVidu의 egress 컨테이너는 host
+      # 네트워크라 우리 브리지 네트워크의 이름 minio를 해석하지 못한다(2026-07-30 실측:
+      # getent hosts minio 실패, wget http://minio:9000 이 exit 4). 반면 host 네트워크에서
+      # 호스트 루프백에 게시된 포트는 그대로 닿는다(같은 날 9201로 실측, HTTP 200).
+      # 127.0.0.1 바인딩이라 방화벽 추가 개방이 필요 없다 — AWS 콘솔 권한이 없어
+      # 새 포트를 열 수 없는 제약과 맞는다. 평문이지만 호스트 밖으로 나가지 않는다.
+      - "127.0.0.1:9202:9000"   # Egress 전용 S3 API
       - "127.0.0.1:9201:9001"   # 관리 콘솔
     environment:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}

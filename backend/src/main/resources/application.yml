@@ -98,7 +98,11 @@ live:
     enabled: ${LIVE_RECORDING_ENABLED:true}
     bucket: ${LIVE_RECORDING_BUCKET:${MINIO_UPLOAD_BUCKET:safy}}
     # Egress 컨테이너에서 접근 가능한 내부 주소여야 한다(브라우저용 public 주소가 아님).
-    s3-endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    # backend 자신이 쓰는 MINIO_ENDPOINT와 값이 다를 수 있다. Egress는 OpenVidu 스택의
+    # host 네트워크 컨테이너라 우리 도커 브리지의 이름(minio)을 해석하지 못한다
+    # (2026-07-30 실측: getent hosts minio 실패, wget http://minio:9000 이 exit 4).
+    # 미지정 시 MINIO_ENDPOINT로 대체되므로 기존 동작과 같다.
+    s3-endpoint: ${LIVE_RECORDING_S3_ENDPOINT:${MINIO_ENDPOINT:http://localhost:9000}}
     s3-access-key: ${MINIO_ACCESS_KEY:}
     s3-secret-key: ${MINIO_SECRET_KEY:}
     region: ${LIVE_RECORDING_REGION:us-east-1}
