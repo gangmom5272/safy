@@ -70,6 +70,10 @@ def test_fetch_seoul_congestion(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = {
+        "RESULT": {
+            "RESULT.CODE": "INFO-000",
+            "RESULT.MESSAGE": "정상 처리되었습니다.",
+        },
         "SeoulRtd.citydata_ppltn": [
             {
                 "AREA_NM": "광화문·덕수궁",
@@ -84,10 +88,6 @@ def test_fetch_seoul_congestion(
                 "PPLTN_TIME": "2026-07-30 14:20",
             }
         ],
-        "RESULT": {
-            "CODE": "INFO-000",
-            "MESSAGE": "정상 처리되었습니다.",
-        },
     }
     fake_client = FakeClient(payload)
 
@@ -118,6 +118,10 @@ def test_fetch_many_returns_partial_success(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     success_payload = {
+        "RESULT": {
+            "RESULT.CODE": "INFO-000",
+            "RESULT.MESSAGE": "정상 처리되었습니다.",
+        },
         "SeoulRtd.citydata_ppltn": [
             {
                 "AREA_NM": "광화문·덕수궁",
@@ -132,17 +136,13 @@ def test_fetch_many_returns_partial_success(
                 "PPLTN_TIME": "2026-07-30 14:20",
             }
         ],
-        "RESULT": {
-            "CODE": "INFO-000",
-            "MESSAGE": "정상 처리되었습니다.",
-        },
     }
     failure_payload = {
-        "SeoulRtd.citydata_ppltn": [],
         "RESULT": {
-            "CODE": "INFO-200",
-            "MESSAGE": "해당하는 데이터가 없습니다.",
+            "RESULT.CODE": "INFO-200",
+            "RESULT.MESSAGE": "해당하는 데이터가 없습니다.",
         },
+        "SeoulRtd.citydata_ppltn": [],
     }
     fake_client = FakeAsyncClient(
         {

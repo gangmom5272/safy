@@ -48,6 +48,8 @@ public class SecurityConfig {
 								"/api/v1/auth/token/refresh",
 								"/api/v1/auth/logout").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/live/webhooks/**").permitAll()
+						// 공개 도시데이터이고 로그인 전 지도에서 조회하므로 인증을 요구하지 않는다.
+						.requestMatchers(HttpMethod.GET, "/api/v1/public-data/**").permitAll()
 						.requestMatchers("/oauth2/**", "/login/oauth2/**", "/error").permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(oauth -> oauth

@@ -86,6 +86,10 @@ def test_fetch_seoul_events(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = {
+        "RESULT": {
+            "RESULT.CODE": "INFO-000",
+            "RESULT.MESSAGE": "정상 처리되었습니다.",
+        },
         "CITYDATA": {
             "AREA_NM": "광화문·덕수궁",
             "AREA_CD": "POI001",
@@ -133,6 +137,10 @@ def test_fetch_returns_empty_events(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = {
+        "RESULT": {
+            "RESULT.CODE": "INFO-000",
+            "RESULT.MESSAGE": "정상 처리되었습니다.",
+        },
         "CITYDATA": {
             "AREA_NM": "광화문·덕수궁",
             "AREA_CD": "POI001",
@@ -164,8 +172,8 @@ def test_fetch_raises_error_when_api_result_fails(
 ) -> None:
     payload = {
         "RESULT": {
-            "CODE": "INFO-100",
-            "MESSAGE": "인증키가 유효하지 않습니다.",
+            "RESULT.CODE": "INFO-100",
+            "RESULT.MESSAGE": "인증키가 유효하지 않습니다.",
         }
     }
     fake_client = FakeClient(payload)

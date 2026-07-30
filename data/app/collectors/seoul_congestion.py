@@ -182,10 +182,16 @@ class SeoulCongestionCollector:
         payload: dict[str, Any],
     ) -> SeoulCongestionRaw:
         result = payload.get("RESULT") or {}
-        result_code = result.get("CODE")
+        result_code = result.get(
+            "RESULT.CODE",
+            result.get("CODE"),
+        )
 
         if result_code != "INFO-000":
-            result_message = result.get("MESSAGE")
+            result_message = result.get(
+                "RESULT.MESSAGE",
+                result.get("MESSAGE"),
+            )
 
             raise SeoulCongestionAPIError(
                 f"서울 실시간 인구 API 오류: "

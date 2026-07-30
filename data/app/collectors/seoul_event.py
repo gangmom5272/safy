@@ -72,8 +72,14 @@ class SeoulEventCollector:
         result = payload.get("RESULT")
 
         if isinstance(result, dict):
-            result_code = result.get("CODE")
-            result_message = result.get("MESSAGE")
+            result_code = result.get(
+                "RESULT.CODE",
+                result.get("CODE"),
+            )
+            result_message = result.get(
+                "RESULT.MESSAGE",
+                result.get("MESSAGE"),
+            )
 
             if result_code != "INFO-000":
                 raise SeoulEventAPIError(
