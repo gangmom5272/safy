@@ -39,9 +39,9 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY requirements.txt ./requirements.txt
+COPY requirements-deploy.txt ./requirements-deploy.txt
 
-RUN python -m pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --no-cache-dir -r requirements-deploy.txt
 
 COPY --from=p2pnet-source /opt/p2pnet /opt/p2pnet
 COPY app ./app

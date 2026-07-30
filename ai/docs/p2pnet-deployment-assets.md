@@ -1,4 +1,4 @@
-# P2PNet 운영 자산 및 GPU 배포
+# P2PNet 운영 자산 및 CPU 배포
 
 ## 문서 목적
 
@@ -47,7 +47,7 @@ checkout한다. 현재 PyTorch·torchvision과의 호환을 위해
 
 ## 가중치 저장 정책
 
-86MB P2PNet 가중치는 Git에 커밋하지 않는다. 비공개 GitLab Generic
+약 82.39MB인 P2PNet 가중치는 Git에 커밋하지 않는다. 비공개 GitLab Generic
 Package Registry에 다음 구조로 한 번 게시한다.
 
 ```text
@@ -108,37 +108,30 @@ P2PNET_ASSET_AUTH_HEADER_VALUE=<read-package-registry-deploy-token>
 
 인증 헤더 이름과 값, 다운로드 URL은 로그에 남기지 않는다.
 
-## CPU CI와 GPU 배포 의존성
+## 학습·CI·운영 배포 의존성
 
 CPU CI는 `requirements-ci.txt`를 설치한다. 여기서는 CPU용 PyTorch와
 torchvision으로 전체 테스트와 배포 구성 검증을 수행한다.
 
-GPU 컨테이너는 `requirements.txt`를 설치한다. 이 파일은 CUDA 13.0용
-PyTorch wheel을 사용한다. 두 requirements 파일의 공통 라이브러리를
-변경할 때는 항상 함께 갱신한다.
+운영 컨테이너는 `requirements-deploy.txt`를 설치한다. 배포 서버에는 GPU와
+NVIDIA 런타임이 없으므로 CPU용 PyTorch만 포함한다. CUDA 13.0용
+`requirements.txt`는 RTX 4050 노트북의 학습과 로컬 GPU 검증에만 사용한다.
+세 requirements 파일의 공통 라이브러리를 변경할 때는 함께 갱신한다.
 
 Docker 컨텍스트에서는 `runs/`, 로컬 `weights/`, `*.pth`를 제외한다.
 따라서 학습 데이터, 개인 사진, 로컬 가중치와 대용량 결과가 이미지에
 실수로 들어가지 않는다. 공식 YOLO11n 가중치는 고정 URL에서 빌드 중
 다운로드하고 SHA-256을 검증한다.
 
-## GPU 이미지 빌드와 기동
+## CPU 이미지 빌드와 기동
 
-GPU 호스트에는 NVIDIA 드라이버와 NVIDIA Container Toolkit이 필요하다.
-호스트 준비 여부를 먼저 확인한다.
-
-```bash
-nvidia-smi
-docker run --rm --gpus all nvidia/cuda:13.0.0-base-ubuntu24.04 nvidia-smi
-```
-
-AI 서비스는 기본 compose 실행에 포함되지 않도록 `ai-gpu` 프로필에 둔다.
-준비된 GPU 호스트에서만 다음 명령으로 빌드하고 기동한다.
+운영 서버는 4 vCPU, 메모리 15GB, swap 0 환경이며 GPU와 NVIDIA 런타임이
+없다. 컨테이너는 CPU 추론만 사용하며 NVIDIA 장치 예약을 설정하지 않는다.
 
 ```bash
 cd infra
-docker compose --profile ai-gpu build ai-server
-docker compose --profile ai-gpu up -d ai-server
+docker compose build ai-server
+docker compose up -d ai-server
 docker compose logs --tail=100 ai-server
 ```
 
@@ -158,8 +151,8 @@ docker compose logs --tail=100 ai-server
 정상 상태를 유지한다.
 
 현재 GitLab 자동 배포 명령에는 `ai-server`를 추가하지 않는다. 실제 배포
-호스트의 GPU와 Container Toolkit 확인 및 백엔드 호출 연동이 끝난 뒤
-`ai-gpu` 프로필을 명시해 활성화한다.
+서버에서 CPU 이미지와 메모리를 다시 측정하고, 백엔드 호출 연동과 모델
+저장소 설정이 끝난 뒤 배포 목록에 추가한다.
 
 ## 실패 상태
 
@@ -186,7 +179,7 @@ P2PNET_SHADOW_ENABLED=false
 ```
 
 ```bash
-docker compose --profile ai-gpu up -d --force-recreate ai-server
+docker compose up -d --force-recreate ai-server
 ```
 
 이 설정은 P2PNet만 끄며 YOLO 공식 분석 API 계약을 변경하지 않는다.
@@ -195,7 +188,7 @@ docker compose --profile ai-gpu up -d --force-recreate ai-server
 
 ```bash
 DEPLOY_TAG=<previous-commit-sha> \
-docker compose --profile ai-gpu up -d --no-build ai-server
+docker compose up -d --no-build ai-server
 ```
 
 가중치 캐시를 삭제하거나 교체하기 전에는 현재 파일과 체크섬을 별도로

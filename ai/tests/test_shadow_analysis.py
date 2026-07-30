@@ -57,10 +57,15 @@ def test_shadow_analysis_is_disabled_by_default(
         "P2PNET_SHADOW_ENABLED",
         raising=False,
     )
+    monkeypatch.delenv(
+        "P2PNET_SHADOW_DEVICE",
+        raising=False,
+    )
 
     config = ShadowAnalysisConfig.from_environment()
 
     assert config.enabled is False
+    assert config.device == "cpu"
 
 
 def test_shadow_analysis_records_model_differences() -> None:

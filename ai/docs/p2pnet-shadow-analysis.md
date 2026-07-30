@@ -37,7 +37,7 @@ P2PNet 결과는 API 응답, 공식 사람 수, C·L 또는 백엔드 위험도 
 | `P2PNET_SHADOW_ENABLED` | `false` | 그림자 분석 활성화 여부 |
 | `P2PNET_SHADOW_ROOT` | `/opt/p2pnet` | 컨테이너의 P2PNet 소스 루트 |
 | `P2PNET_SHADOW_WEIGHT_PATH` | `/var/cache/safy-ai/models/p2pnet/epoch-003.pth` | 검증된 그림자 모델 가중치 캐시 |
-| `P2PNET_SHADOW_DEVICE` | `cuda` | 추론 장치 |
+| `P2PNET_SHADOW_DEVICE` | `cpu` | 운영 추론 장치 |
 | `P2PNET_SHADOW_THRESHOLD` | `0.5` | P2PNet 점수 임계값 |
 | `P2PNET_SHADOW_TIMEOUT_SECONDS` | `5.0` | 프레임당 최대 대기시간 |
 | `P2PNET_SHADOW_MODEL_VERSION` | `safy-p2pnet-v2-epoch3` | 비교 로그 모델 버전 |
@@ -46,7 +46,7 @@ P2PNet 결과는 API 응답, 공식 사람 수, C·L 또는 백엔드 위험도 
 P2PNet 코드는 고정된 외부 저장소 커밋을 컨테이너 이미지에 포함한다.
 가중치는 Git에 포함하지 않고 비공개 패키지 저장소에서 내려받아 SHA-256을
 검증한 뒤 영속 볼륨에 캐시한다. 자세한 절차는
-[P2PNet 운영 자산 및 GPU 배포](p2pnet-deployment-assets.md)를 참고한다.
+[P2PNet 운영 자산 및 CPU 배포](p2pnet-deployment-assets.md)를 참고한다.
 
 ## 초기화와 동시 실행
 
@@ -54,7 +54,7 @@ P2PNet은 그림자 분석이 비활성화된 동안 import하거나 초기화�
 활성화 후 첫 정상 프레임이 들어올 때 한 번만 지연 초기화하며 이후
 동일한 모델 인스턴스를 재사용한다.
 
-GPU 메모리 급증과 모델 객체의 동시 접근을 피하기 위해 P2PNet 추론은
+CPU 메모리 급증과 모델 객체의 동시 접근을 피하기 위해 P2PNet 추론은
 프로세스 안에서 한 번에 하나씩 실행한다. 프레임당 시간 제한을 넘기면
 해당 그림자 결과만 실패로 기록한다.
 
@@ -124,6 +124,6 @@ AI 서버는 프레임 단위 비교 로그를 생성한다. 제보 ID, 추출 �
 백엔드는 공식 값과 그림자 값을 분리해 저장해야 하며 그림자 값을 사용자
 응답이나 최종 위험도에 사용하면 안 된다.
 
-동시 요청에서의 GPU 메모리, 대기열, 시간 초과 비율과 처리량 검증은
+동시 요청에서의 CPU·메모리 사용량, 대기열, 시간 초과 비율과 처리량 검증은
 부하 테스트 이슈 `S15P11A503-106`에서 수행한다. 이 결과를 확인하기 전에는
 자동 전환을 활성화하지 않는다.

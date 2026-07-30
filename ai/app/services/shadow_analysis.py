@@ -129,7 +129,7 @@ class ShadowAnalysisConfig:
             ),
             device=os.getenv(
                 "P2PNET_SHADOW_DEVICE",
-                "cuda",
+                "cpu",
             ),
             threshold=threshold,
             timeout_seconds=timeout_seconds,

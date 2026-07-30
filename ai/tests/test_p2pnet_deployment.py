@@ -8,14 +8,15 @@ AI_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = AI_ROOT.parent
 
 
-def test_dockerfile_pins_p2pnet_source_and_gpu_dependencies() -> None:
+def test_dockerfile_pins_p2pnet_source_and_cpu_dependencies() -> None:
     manifest = json.loads(
         (AI_ROOT / "deploy" / "p2pnet-assets.json").read_text(encoding="utf-8")
     )
     dockerfile = (AI_ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert manifest["source"]["commit"] in dockerfile
-    assert "requirements.txt" in dockerfile
+    assert "requirements-deploy.txt" in dockerfile
+    assert "requirements.txt" not in dockerfile
     assert "requirements-ci.txt" not in dockerfile
     assert "p2pnet-compatibility.patch" in dockerfile
 
@@ -30,7 +31,7 @@ def test_docker_context_excludes_local_large_assets() -> None:
     assert "*.pth" in excluded_paths
 
 
-def test_compose_uses_persistent_model_cache_and_gpu() -> None:
+def test_compose_uses_persistent_model_cache_and_cpu() -> None:
     compose = yaml.safe_load(
         (REPOSITORY_ROOT / "infra" / "docker-compose.yml").read_text(encoding="utf-8")
     )
@@ -40,6 +41,13 @@ def test_compose_uses_persistent_model_cache_and_gpu() -> None:
     assert any(item.startswith("P2PNET_SHADOW_ENABLED=") for item in environment)
     assert any(item.startswith("P2PNET_SHADOW_WEIGHT_URL=") for item in environment)
     assert "p2pnet_model_cache:/var/cache/safy-ai/models/p2pnet" in service["volumes"]
-    devices = service["deploy"]["resources"]["reservations"]["devices"]
-    assert devices[0]["driver"] == "nvidia"
-    assert "gpu" in devices[0]["capabilities"]
+    assert "P2PNET_SHADOW_DEVICE=cpu" in environment
+    assert "deploy" not in service
+
+
+def test_cpu_deployment_requirements_do_not_include_cuda_packages() -> None:
+    requirements = (AI_ROOT / "requirements-deploy.txt").read_text(encoding="utf-8")
+
+    assert "https://download.pytorch.org/whl/cpu" in requirements
+    assert "+cu" not in requirements
+    assert "nvidia-" not in requirements
