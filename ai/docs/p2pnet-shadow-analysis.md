@@ -35,17 +35,18 @@ P2PNet 결과는 API 응답, 공식 사람 수, C·L 또는 백엔드 위험도 
 | 환경 변수 | 기본값 | 의미 |
 |---|---|---|
 | `P2PNET_SHADOW_ENABLED` | `false` | 그림자 분석 활성화 여부 |
-| `P2PNET_SHADOW_ROOT` | `runs/candidate-models/p2pnet` | P2PNet 소스 루트 |
-| `P2PNET_SHADOW_WEIGHT_PATH` | `runs/p2pnet-finetune-v2-balanced-search/epoch-003.pth` | 그림자 모델 가중치 |
+| `P2PNET_SHADOW_ROOT` | `/opt/p2pnet` | 컨테이너의 P2PNet 소스 루트 |
+| `P2PNET_SHADOW_WEIGHT_PATH` | `/var/cache/safy-ai/models/p2pnet/epoch-003.pth` | 검증된 그림자 모델 가중치 캐시 |
 | `P2PNET_SHADOW_DEVICE` | `cuda` | 추론 장치 |
 | `P2PNET_SHADOW_THRESHOLD` | `0.5` | P2PNet 점수 임계값 |
 | `P2PNET_SHADOW_TIMEOUT_SECONDS` | `5.0` | 프레임당 최대 대기시간 |
 | `P2PNET_SHADOW_MODEL_VERSION` | `safy-p2pnet-v2-epoch3` | 비교 로그 모델 버전 |
 | `P2PNET_SHADOW_WEIGHT_ID` | `p2pnet-finetune-v2-balanced-search/epoch-003.pth` | 비교 로그 가중치 식별자 |
 
-P2PNet 코드와 가중치는 현재 `runs/`에 있어 저장소와 배포 이미지에
-포함되지 않는다. 운영 배포 자산 패키징은 후속 이슈 `S15P11A503-137`의
-범위다.
+P2PNet 코드는 고정된 외부 저장소 커밋을 컨테이너 이미지에 포함한다.
+가중치는 Git에 포함하지 않고 비공개 패키지 저장소에서 내려받아 SHA-256을
+검증한 뒤 영속 볼륨에 캐시한다. 자세한 절차는
+[P2PNet 운영 자산 및 GPU 배포](p2pnet-deployment-assets.md)를 참고한다.
 
 ## 초기화와 동시 실행
 

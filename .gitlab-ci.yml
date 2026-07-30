@@ -66,6 +66,8 @@ ai:
   rules:
     - changes:
         - ai/**/*
+        - infra/docker-compose.yml
+        - infra/env.example
   cache:
     key: ai-pip
     paths:
