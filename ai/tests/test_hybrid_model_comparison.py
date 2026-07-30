@@ -60,7 +60,7 @@ def test_compare_sample_preserves_both_model_results(
         ),
     )
 
-    assert record.selection_status == "UNDECIDED"
+    assert record.selection_status == "YOLO_PRIMARY_P2PNET_SHADOW"
     assert record.yolo.analysis_status == "COMPLETED"
     assert record.p2pnet.analysis_status == "COMPLETED"
     assert record.person_count_difference == 5
@@ -127,7 +127,7 @@ def test_summarize_hybrid_comparisons_reports_each_model(
     assert summary["P2PNet:v1"].failed_count == 0
 
 
-def test_save_report_keeps_selection_undecided(
+def test_save_report_records_operating_decision(
     tmp_path: Path,
 ) -> None:
     record = compare_sample(
@@ -152,9 +152,14 @@ def test_save_report_keeps_selection_undecided(
         output_path.read_text(encoding="utf-8"),
     )
     assert report["decisionPolicy"] == {
-        "selectionStatus": "UNDECIDED",
-        "reason": "INSUFFICIENT_SAFY_EVALUATION_DATA",
+        "selectionStatus": "YOLO_PRIMARY_P2PNET_SHADOW",
+        "productionModel": "YOLO:yolo11n",
+        "secondaryModel": "P2PNet:safy-p2pnet-v2-epoch3",
+        "secondaryMode": "SHADOW",
+        "automaticFallback": "DISABLED",
+        "reason": "INSUFFICIENT_RELIABLE_DENSE_SCENE_GATE",
     }
+    assert report["records"][0]["selectionStatus"] == ("YOLO_PRIMARY_P2PNET_SHADOW")
     assert report["records"][0]["personCountDifference"] == 5
     assert report["records"][0]["yolo"]["modelWeightId"] == ("yolo-v1.pth")
 

@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 
 from app.services.hybrid_model_comparison import (
+    AUTOMATIC_FALLBACK_STATUS,
     HybridModelComparisonRecord,
     build_p2pnet_runner,
     build_yolo_runner,
@@ -123,7 +124,8 @@ def main() -> None:
     )
     summaries = summarize_hybrid_comparisons(records)
 
-    print("selectionStatus: UNDECIDED")
+    print(f"selectionStatus: {records[0].selection_status}")
+    print(f"automaticFallback: {AUTOMATIC_FALLBACK_STATUS}")
     print(f"sampleCount: {len(records)}")
     for model_key, summary in sorted(summaries.items()):
         print(f"model: {model_key}")

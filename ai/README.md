@@ -200,10 +200,14 @@ C·L, 처리시간, 실패 코드와 예측 차이를 기록하는 오프라인 
 - 한 모델이 실패해도 다른 모델의 성공 결과를 보존
 - 시나리오별 MAE·RMSE 비교
 - 일반 평가 manifest와 `head-point-v1` manifest 지원
-- 데이터가 충분해질 때까지 자동 모델 선택은 `UNDECIDED`로 유지
-- 운영 분석 API와 모델 가중치는 아직 변경하지 않음
+- 운영 공식 모델: YOLO11n
+- 보조 관찰 모델: P2PNet v2 epoch3 (`SHADOW`)
+- 자동 모델 전환: `DISABLED`
+- 고정 테스트 29장 계수 MAE: YOLO `16.90`, P2PNet v2 `41.34`
+- P2PNet v2의 LOCAL_DENSE 계수 MAE `7.33`, CROWDED 계수 MAE `34.5`
+- 운영 분석 API와 공식 모델 가중치는 변경하지 않음
 
-현재 팀 검증 결과와 재현 명령, 자동 선택을 보류한 근거는
+고정 테스트 결과, 그림자 운영 방식과 자동 전환을 보류한 근거는
 [YOLO·P2PNet 동일 표본 비교 기반](docs/hybrid-model-comparison.md)을 참고합니다.
 
 ## 프레임 품질 기준 검증

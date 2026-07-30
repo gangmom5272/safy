@@ -23,8 +23,12 @@ logger = logging.getLogger(__name__)
 
 COMPLETED_STATUS = "COMPLETED"
 FAILED_STATUS = "FAILED"
-UNDECIDED_STATUS = "UNDECIDED"
-UNDECIDED_REASON = "INSUFFICIENT_SAFY_EVALUATION_DATA"
+SELECTION_STATUS = "YOLO_PRIMARY_P2PNET_SHADOW"
+DECISION_REASON = "INSUFFICIENT_RELIABLE_DENSE_SCENE_GATE"
+AUTOMATIC_FALLBACK_STATUS = "DISABLED"
+PRODUCTION_MODEL = "YOLO:yolo11n"
+SECONDARY_MODEL = "P2PNet:safy-p2pnet-v2-epoch3"
+SECONDARY_MODE = "SHADOW"
 
 
 @dataclass(frozen=True)
@@ -97,7 +101,7 @@ class HybridModelComparisonRecord:
     ground_truth_count: int
     yolo: ModelRunResult
     p2pnet: ModelRunResult
-    selection_status: str = UNDECIDED_STATUS
+    selection_status: str = SELECTION_STATUS
 
     @property
     def person_count_difference(self) -> int | None:
@@ -420,8 +424,12 @@ def save_hybrid_model_comparison_report(
 
     report = {
         "decisionPolicy": {
-            "selectionStatus": UNDECIDED_STATUS,
-            "reason": UNDECIDED_REASON,
+            "selectionStatus": SELECTION_STATUS,
+            "productionModel": PRODUCTION_MODEL,
+            "secondaryModel": SECONDARY_MODEL,
+            "secondaryMode": SECONDARY_MODE,
+            "automaticFallback": AUTOMATIC_FALLBACK_STATUS,
+            "reason": DECISION_REASON,
         },
         "sampleCount": len(records),
         "modelSummaries": {

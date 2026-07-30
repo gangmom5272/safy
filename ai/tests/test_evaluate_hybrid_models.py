@@ -7,7 +7,7 @@ from app.services.hybrid_model_comparison import (
 from scripts import evaluate_hybrid_models
 
 
-def test_run_evaluation_saves_unselected_comparison_report(
+def test_run_evaluation_saves_shadow_operating_decision(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -58,5 +58,5 @@ def test_run_evaluation_saves_unselected_comparison_report(
     )
 
     assert len(records) == 1
-    assert records[0].selection_status == "UNDECIDED"
+    assert records[0].selection_status == "YOLO_PRIMARY_P2PNET_SHADOW"
     assert output_path.exists()
