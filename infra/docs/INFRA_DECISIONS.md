@@ -998,3 +998,234 @@ role별 사용자                CITIZEN 6 / SUPER_ADMIN 1 / OPERATOR 0
 - **배포·복구 런북(티켓 49)**: 여전히 미작성. 오늘만으로도 진입점·MinIO 위치·9200 소유·8091
   의미가 바뀌었고 8091 폐기·비밀 교체·헬스 엔드포인트·AI 배포가 예정돼 있다. **절차서는
   현재 상태를 기술하므로 스택이 멈춘 뒤에 쓰는 것이 맞다.** 이 저널(시점 기록)과 역할이 다르다.
+
+---
+
+# 2026-07-30 (목) — 통합 로그 수집(티켓 104 종료) · WebRTC/Egress 원인 규명
+
+> 1~3절(통합 로그)은 7/29 오후 작업이고 배포는 `2026-07-29T07:11Z`다. 4절부터가 7/30이다.
+> 인용한 타임스탬프는 전부 UTC 원문이라 KST 기준 날짜와 다르게 보일 수 있다.
+
+## 1. 통합 로그 수집은 라벨 하나로 끝났다 (`caa2d7d`, 티켓 104)
+
+서버에 Loki·Grafana·Prometheus·Alloy가 이미 떠 있다. OpenVidu 스택이 자체 관측 도구를
+포함하기 때문이다. 문제는 우리 컨테이너만 거기서 빠져 있었다는 것이고, 원인은 Alloy의
+수집 대상 선정 방식이었다.
+
+```
+discovery.docker { filter { name = "label"  values = ["logging=true"] } }
+```
+
+**컨테이너 이름이 아니라 `logging=true` 도커 라벨로 고른다.** `openvidu`·`caddy`·`egress`
+등에는 이 라벨이 있고 `infra-backend-1`·`infra-nginx-1`에는 없었다. 그래서
+`docker-compose.yml`에 `labels: - "logging=true"`를 붙이는 것만으로 기존 Grafana에
+합류했다. OpenVidu 설정은 건드리지 않았다.
+
+배포 파이프라인을 태우기 전에 라벨만으로 수집되는지를 일회용 컨테이너로 먼저 확인했다.
+
+```
+docker run -d --name loki-probe --label logging=true alpine \
+  sh -c 'while true; do echo SAFY-LOKI-PROBE-$(date +%s); sleep 3; done'
+→ 25초 안에 Loki에서 조회됨. 확인 후 삭제.
+```
+
+부수 확인 두 가지.
+
+- Loki가 `service_name`·`detected_level`을 자동으로 붙인다. 별도 작업이 필요 없다.
+- **Alloy의 relabel 규칙은 컨테이너 이름 하나만 Loki 라벨로 옮긴다.** `stack=safy` 같은
+  커스텀 라벨을 붙여도 조회에 쓸 수 없다. 우리 서비스는 `{container=~"infra-.*"}`로 고른다.
+
+`db`·`redis`·`minio`·`uptime-kuma`는 티켓 범위 밖이라 라벨을 붙이지 않았다. 라벨 변경은
+컨테이너 재생성을 유발하므로 불필요한 재기동을 피하는 쪽이 낫다. 실제로 이번 배포에서
+재생성된 것은 `backend`와 `nginx` 둘뿐이다.
+
+조회 방법·쿼리·재현 절차는 `LOGGING.md`로 분리했다(`5125116`).
+
+## 2. Spring Boot는 요청별 로그를 남기지 않는다
+
+통합 로그의 실효 범위를 마커로 확인했다.
+
+```
+curl "http://127.0.0.1:6080/api/v1/reports?probe=CORRTEST-1785309229"
+→ infra-nginx-1 에만 기록됨. infra-backend-1 에는 없음.
+```
+
+따라서 정상 요청의 nginx ↔ backend 연결은 **타임스탬프로만** 맞출 수 있다. 예외가 나면
+backend가 스택트레이스를 남기므로 실패 경로 추적에는 지장이 없다. 요청 ID 단위 추적이
+필요해지면 backend에 access 로그나 MDC trace ID를 켜야 하고, 이는 백엔드 영역이다.
+
+프론트는 SPA라 서버 로그가 없다. 프론트 계층에서 볼 수 있는 것은 nginx access 로그가
+전부다. 브라우저 콘솔을 Loki로 보내려면 프론트에 리포팅 SDK가 필요한데, 제출까지 남은
+기간에 새 의존성을 들일 값어치는 없다고 판단했다.
+
+## 3. Loki 3100은 무인증이고 보안그룹만이 막고 있다
+
+`auth_enabled: false`이고 host 네트워크로 `0.0.0.0:3100`에 바인딩돼 있다. 외부에서
+접속하면 타임아웃이므로 지금은 닫혀 있지만, **막고 있는 것은 컨테이너 설정이 아니라
+보안그룹 하나뿐이다.** 3100이 열리는 순간 전 서비스 로그가 무인증으로 노출된다.
+OpenVidu 소유 설정이라 지금은 바꾸지 않되, 포트 정책을 손댈 일이 생기면 먼저 볼 항목이다.
+
+## 4. WebRTC는 이미 동작하고 있었다 (티켓 95)
+
+검증하지 않았을 뿐 깨져 있던 것이 아니었다. `live_sessions`에 5건이 있었고, 그중 66초짜리
+세션의 openvidu 로그가 Loki에 남아 있어 브라우저 재현 없이 판정할 수 있었다.
+
+```
+06:22:29  participant active      reporter-6     시민 접속
+06:22:29  mediaTrack published ×2                영상·음성 발행
+06:22:35  participant active      operator-1     관제 구독
+06:23:34  participant closing     reporter-6     정상 종료
+```
+
+`Failed to ping without candidate pairs`가 대량으로 찍히지만 ICE 후보 수집 이전의 정상
+노이즈다. 직후 `participant active`가 나오므로 연결에 성공한 것이다. 로그의 WARN을
+장애로 읽지 않도록 주의해야 한다.
+
+포트도 문제가 아니었다. 외부에서 열려 있는 것은 TCP 443뿐이고 7881·7880·1935는 막혀
+있지만, TURN/TLS가 Caddy 443의 TCP demux를 거쳐 처리되므로(`caddy.yaml`의
+`LIVEKIT_TURN_TLS_INTERNAL_PORT` 라우트) 미디어 경로가 성립한다.
+
+## 5. Egress가 한 번도 시작되지 않은 이유 — 웹훅 미등록
+
+`stream_recordings`가 0행이고 세션 구간에 `egress` 컨테이너 로그가 한 줄도 없다.
+원인은 트리거 경로에 있었다.
+
+```java
+// LiveWebhookService.java
+case PARTICIPANT_JOINED -> {
+    if (!isReporter(session, event)) return;
+    recordingService.startForSession(session, event.participantIdentity());
+}
+```
+
+**Egress는 `PARTICIPANT_JOINED` 웹훅으로만 시작된다.** 그런데 LiveKit의 웹훅 대상은
+Meet 하나뿐이다.
+
+```yaml
+webhook:
+  api_key: APIEMCZ9q73NLEV
+  urls:
+    - http://127.0.0.1:9080/livekit/webhook     # OpenVidu Meet
+```
+
+우리 backend의 `/api/v1/live/webhooks/livekit`은 살아 있다(서명 없는 POST에 403 =
+검증이 동작). 등록만 안 돼 있었다. `EGRESS_STARTED`/`EGRESS_ENDED`도 같은 경로로 오므로
+녹화 생명주기 전체가 이 하나에 걸려 있다.
+
+서명 키는 이미 일치한다(`OPENVIDU_API_KEY` = LiveKit `webhook.api_key` = `APIEMCZ9q73NLEV`).
+URL만 추가하면 검증까지 통과한다.
+
+### 5.1 등록하기 전에 경로 전체를 시뮬레이션으로 검증했다
+
+"URL만 추가하면 된다"는 것도 가설이므로, LiveKit 설정을 바꾸기 전에 서명된 웹훅을 직접
+만들어 쏴봤다. 서버에서 `OPENVIDU_API_SECRET`으로 HS256 JWT를 만들어(`iss`=api key,
+`sha256`=본문 해시) `http://127.0.0.1:6080/api/v1/live/webhooks/livekit`에 POST했다.
+
+DB를 건드리지 않도록 대상은 이미 `ENDED`인 세션으로 골랐다. `markReconnected`는
+`DISCONNECTED`가 아니면 false를 반환하고 아무것도 바꾸지 않으며(`LiveSession:111`),
+`startForSession`은 저장 전에 게이트웨이를 먼저 호출하므로 그 호출이 실패하면 행이
+생기지 않는다.
+
+```
+정상 서명        → HTTP 204
+변조 서명(대조군) → HTTP 403  COMMON_013 웹훅 서명 검증에 실패했습니다
+
+backend  : Failed to start recording for live session 9804e9ca-…
+           LiveMediaException: Egress start failed: HTTP 404
+           at LiveRecordingService.startForSession(LiveRecordingService.java:75)
+openvidu : API Egress.StartParticipantEgress
+           {"room":"report-9804e9ca-…","identity":"reporter-6",
+            "status":"404","error":"requested room does not exist"}
+
+DB       : status=ENDED 유지, stream_recordings=0 유지
+```
+
+404는 19시간 전에 끝난 방이라 나온 의도된 결과다. 그 앞 단계가 전부 통과했다는 것이
+핵심이다 — nginx 라우팅, 서명 검증, protobuf JSON 파싱과 타입 인식, `findByRoomName`,
+`isReporter`, `startForSession`의 Egress API 호출까지. 예외는 잡혀서 500이 아니라 204가
+나갔고 트랜잭션도 롤백되지 않았다.
+
+대조군을 하나 더 시도했다가 무효로 판정한 것도 적어둔다. 알 수 없는 필드를 넣은 본문으로
+파서가 거부하는지 보려 했으나 204가 나왔다. `WebhookReceiver`가 unknown field를 무시하기
+때문이라 파서 동작의 증거로 쓸 수 없다. 타입 인식은 대신 `startForSession` 도달 자체로
+증명됐다 — `UNSUPPORTED`로 파싱됐다면 그 앞에서 return 했을 것이다.
+
+미검증으로 남은 것은 하나다. **LiveKit이 `urls` 배열의 두 대상 모두에 실제로 전송하는지**는
+등록해봐야 확인된다. 문서상 배열이므로 전송하는 것이 맞지만 실측은 아니다.
+
+## 6. OpenVidu 설정 파일은 이중 구조다 — 렌더링본을 고쳐야 적용된다
+
+웹훅 등록을 준비하다 확인한 것이다. 컨테이너 마운트는 다음과 같다.
+
+```
+/opt/openvidu/data/runtime/config/openvidu  →  /config
+```
+
+즉 `/opt/openvidu/config/livekit.yaml`은 **읽히지 않는다.** 그것은 `${openvidu.*}` 치환 전
+템플릿이고, 전체 스택 기동 시 위 런타임 경로로 렌더링된다.
+
+- 런타임본만 고치면 즉시 적용되지만 다음 전체 재기동 때 사라진다.
+- 템플릿만 고치면 지금은 무효고 다음 전체 재기동 때 적용된다.
+- **둘 다 고쳐야 지금 적용되고 나중에도 유지된다.**
+
+재기동 범위도 처음 생각보다 작다. `systemctl restart openvidu`는 유닛이
+`ExecStartPre=docker-compose down`이라 Caddy까지 내려가 우리 앱도 함께 끊긴다. 반면
+`docker restart openvidu`는 livekit-server 컨테이너만 재시작하므로 Caddy가 살아 있고
+사이트는 유지된다. 끊기는 것은 진행 중인 라이브 세션과 Meet 방뿐이다.
+
+이 변경은 `/opt/openvidu` 아래라 우리 CI의 rsync 대상이 아니다. 배포로 지워지지 않지만
+git에도 남지 않는다. 그래서 `infra/openvidu/register-livekit-webhook.sh`에 멱등 스크립트로
+남겼다. OpenVidu 업그레이드로 초기화되면 재실행하면 된다. CI는 이 스크립트를 실행하지
+않는다 — OpenVidu 스택은 수동으로만 건드린다.
+
+## 7. 다음 관문 — Egress는 우리 MinIO에 닿지 못한다
+
+웹훅을 고치면 그 다음에 이것이 터진다. 아직 드러나지 않았을 뿐이다.
+
+backend가 Egress에 넘기는 저장소 주소는 `live.recording.s3-endpoint`이고 그 값은
+`MINIO_ENDPOINT` = `http://minio:9000`이다(`LiveKitMediaGateway.s3Upload()`).
+
+```
+egress 컨테이너            네트워크 모드 host
+우리 minio                 infra_default 브리지 172.19.0.4, 호스트 포트 없음
+egress → getent hosts minio    결과 없음
+egress → wget http://minio:9000  exit 4 (도달 불가)
+```
+
+7/29에 MinIO의 호스트 9000 바인딩을 없애고 nginx가 9200에서 TLS를 종단하도록 바꾼 것과
+맞물렸다. 해결 후보는 MinIO S3 API를 `127.0.0.1:9202` 같은 루프백 포트로 노출하고 녹화
+전용 엔드포인트 변수를 따로 두는 것이다. 루프백이라 방화벽 추가 개방이 필요 없다는 점이
+AWS 콘솔 권한이 없는 제약과 맞는다. `MINIO_ENDPOINT` 자체는 backend가 쓰는 값이라
+그대로 둬야 하므로 `application.yml`에 변수 하나가 추가된다.
+
+## 8. 측정에 실패한 사례 — 대조군이 없었으면 오판할 뻔했다
+
+외부에서 UDP 443이 열렸는지 확인하려고 STUN 바인딩 요청을 보냈고 무응답이었다. 여기서
+"UDP가 막혀 있다"로 넘어갔으면 WebRTC 경로를 잘못 진단했을 것이다.
+
+대조군을 돌리자 판정이 뒤집혔다.
+
+```
+stun.l.google.com:19302   무응답
+stun.cloudflare.com:3478  무응답
+1.1.1.1:53 (UDP DNS)      무응답
+```
+
+**내 쪽 네트워크가 아웃바운드 UDP를 전부 막고 있었다.** 대상이 아니라 측정 지점의 문제였고,
+따라서 UDP 443 결과는 무효다. 이 지점에서는 UDP를 측정할 수 없다.
+
+같은 날 `caddy.yaml`에서 TURN 라우트를 소문자 `turn`으로만 grep해 "없다"고 판단한 일도
+있었다. 실제로는 `LIVEKIT_TURN_TLS_INTERNAL_PORT`로 대문자였다. 무응답과 무결과를
+부재의 증거로 쓰기 전에 측정 자체가 유효한지를 먼저 확인해야 한다.
+
+## 9. 후속
+
+- **웹훅 등록 실행**: 스크립트는 커밋했으나 서버 실행은 별도 판단으로 남겼다. 실행하면
+  5절이 풀린다.
+- **Egress → MinIO 경로**: 7절. 웹훅과 함께 처리해야 녹화가 완성된다.
+- **95의 점검 절차 기록**: 위 4·5절의 조회 방법을 `LOGGING.md`에 절차로 옮긴다.
+- **자원 사용량 메트릭**: Prometheus는 `openvidu` 하나만 수집한다. 부하 측정(티켓 106)에는
+  cAdvisor 추가 또는 `docker stats` 수집이 필요하다. Prometheus 설정은 OpenVidu 소유다.
+- **`operator-accounts.sql`**: 라이브 관제 검증에는 걸리지 않는 것으로 확인됐다.
+  `requireAccess`가 `SUPER_ADMIN`을 그대로 통과시키고 `markHandling`은 배정이 없으면
+  조용히 반환한다. 다만 그 경우 제보 상태가 `HANDLING`으로 바뀌지 않는다.
