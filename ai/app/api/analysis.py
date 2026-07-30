@@ -2,6 +2,7 @@ import logging
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     File,
     HTTPException,
     UploadFile,
@@ -22,6 +23,10 @@ from app.services.model import (
     MODEL_WEIGHT_ID,
 )
 from app.services.person_detector import detect_people
+from app.services.shadow_analysis import (
+    ModelAnalysisSnapshot,
+    get_shadow_analysis_service,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -37,6 +42,7 @@ router = APIRouter(
     response_model=FrameAnalysisResponse,
 )
 async def analyze_frame(
+    background_tasks: BackgroundTasks,
     image: UploadFile = File(...),
 ) -> FrameAnalysisResponse:
     if image.content_type is None or not image.content_type.startswith("image/"):
@@ -175,7 +181,7 @@ async def analyze_frame(
             processing_time_ms=(detection_result.processing_time_ms),
         )
 
-    return FrameAnalysisResponse(
+    response = FrameAnalysisResponse(
         analysis_status="COMPLETED",
         person_count=detection_result.person_count,
         person_confidences=detection_result.confidences,
@@ -197,3 +203,31 @@ async def analyze_frame(
         frame_quality_rule_version=(FRAME_QUALITY_RULE_VERSION),
         processing_time_ms=(detection_result.processing_time_ms),
     )
+
+    try:
+        shadow_service = get_shadow_analysis_service()
+
+        if shadow_service.enabled:
+            background_tasks.add_task(
+                shadow_service.analyze_and_log,
+                image_bytes=image_bytes,
+                official=ModelAnalysisSnapshot(
+                    model_name=MODEL_NAME,
+                    model_version=MODEL_VERSION,
+                    model_weight_id=MODEL_WEIGHT_ID,
+                    analysis_status="COMPLETED",
+                    person_count=detection_result.person_count,
+                    visual_congestion_score=(congestion_result.visual_congestion_score),
+                    local_peak_congestion_score=(
+                        congestion_result.local_peak_congestion_score
+                    ),
+                    processing_time_ms=(detection_result.processing_time_ms),
+                    failure_codes=[],
+                ),
+            )
+    except Exception:
+        logger.exception(
+            "P2PNet shadow analysis scheduling failed",
+        )
+
+    return response
