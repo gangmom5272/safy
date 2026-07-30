@@ -22,8 +22,8 @@ def test_accepts_current_seoul_area_count() -> None:
     request = SeoulCongestionCollectionRequest(
         area_codes=[
             f"POI{index:03d}"
-            for index in range(1, 123)
+            for index in range(1, 122)
         ]
     )
 
-    assert len(request.area_codes) == 122
+    assert len(request.area_codes) == 121
