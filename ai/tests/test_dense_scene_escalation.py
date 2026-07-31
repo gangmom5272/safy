@@ -1,6 +1,11 @@
 from app.services.dense_scene_escalation import (
+    CONGESTION_CORRECTION_ENABLED_VARIABLE,
+    CONGESTION_SOURCE_CORRECTED,
+    CONGESTION_SOURCE_OFFICIAL,
     DENSE_SCENE_LOCAL_PEAK_THRESHOLD,
+    correct_congestion_scores,
     determine_dense_scene_assessment,
+    is_congestion_correction_enabled,
 )
 
 
@@ -94,3 +99,115 @@ def test_person_count_is_not_used_for_the_decision() -> None:
 
     assert low_l_high_count.suspected is False
     assert high_l_low_count.suspected is True
+
+
+def build_correction(**overrides):
+    """기본값은 고밀도 장면에서 보정이 일어나는 조건이다."""
+    arguments = {
+        "official_visual_congestion_score": 27.2,
+        "official_local_peak_congestion_score": 45.0,
+        "shadow_analysis_status": "COMPLETED",
+        "shadow_visual_congestion_score": 82.3,
+        "shadow_local_peak_congestion_score": 100.0,
+        "shadow_low_confidence_signal": False,
+    }
+    arguments.update(overrides)
+
+    return correct_congestion_scores(**arguments)
+
+
+def test_correction_is_disabled_by_default(monkeypatch) -> None:
+    monkeypatch.delenv(
+        CONGESTION_CORRECTION_ENABLED_VARIABLE,
+        raising=False,
+    )
+
+    assert is_congestion_correction_enabled() is False
+
+
+def test_correction_flag_is_read_from_environment(monkeypatch) -> None:
+    monkeypatch.setenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "true")
+
+    assert is_congestion_correction_enabled() is True
+
+    monkeypatch.setenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "off")
+
+    assert is_congestion_correction_enabled() is False
+
+
+def test_correction_raises_scores_in_dense_scene() -> None:
+    # 0086.jpg 사례: 실제 172명, YOLO L=45 / P2PNet L=100
+    correction = build_correction()
+
+    assert correction.visual_congestion_score == 82.3
+    assert correction.local_peak_congestion_score == 100.0
+    assert correction.source == CONGESTION_SOURCE_CORRECTED
+    assert correction.applied is True
+
+
+def test_correction_never_lowers_scores() -> None:
+    """그림자 값이 더 낮으면 공식 값을 유지해야 한다."""
+    correction = build_correction(
+        official_visual_congestion_score=60.0,
+        official_local_peak_congestion_score=90.0,
+        shadow_visual_congestion_score=5.0,
+        shadow_local_peak_congestion_score=10.0,
+    )
+
+    assert correction.visual_congestion_score == 60.0
+    assert correction.local_peak_congestion_score == 90.0
+    assert correction.source == CONGESTION_SOURCE_OFFICIAL
+    assert correction.applied is False
+
+
+def test_gate_blocks_correction_for_large_false_positive() -> None:
+    """색종이 사례: 실제 0명인데 P2PNet L=100. 자동 등급을 움직여선 안 된다."""
+    correction = build_correction(
+        official_visual_congestion_score=0.0,
+        official_local_peak_congestion_score=0.0,
+        shadow_visual_congestion_score=15.1,
+        shadow_local_peak_congestion_score=100.0,
+        shadow_low_confidence_signal=True,
+    )
+
+    assert correction.visual_congestion_score == 0.0
+    assert correction.local_peak_congestion_score == 0.0
+    assert correction.source == CONGESTION_SOURCE_OFFICIAL
+
+
+def test_failed_shadow_analysis_does_not_correct() -> None:
+    correction = build_correction(
+        shadow_analysis_status="FAILED",
+        shadow_visual_congestion_score=None,
+        shadow_local_peak_congestion_score=None,
+        shadow_low_confidence_signal=None,
+    )
+
+    assert correction.visual_congestion_score == 27.2
+    assert correction.local_peak_congestion_score == 45.0
+    assert correction.source == CONGESTION_SOURCE_OFFICIAL
+
+
+def test_correction_applies_per_field() -> None:
+    """C는 공식값이 더 크고 L은 그림자가 더 큰 경우."""
+    correction = build_correction(
+        official_visual_congestion_score=70.0,
+        official_local_peak_congestion_score=40.0,
+        shadow_visual_congestion_score=30.0,
+        shadow_local_peak_congestion_score=100.0,
+    )
+
+    assert correction.visual_congestion_score == 70.0
+    assert correction.local_peak_congestion_score == 100.0
+    assert correction.source == CONGESTION_SOURCE_CORRECTED
+
+
+def test_correction_handles_missing_official_scores() -> None:
+    correction = build_correction(
+        official_visual_congestion_score=None,
+        official_local_peak_congestion_score=None,
+    )
+
+    assert correction.visual_congestion_score == 82.3
+    assert correction.local_peak_congestion_score == 100.0
+    assert correction.source == CONGESTION_SOURCE_CORRECTED
