@@ -166,6 +166,24 @@ docker compose logs --tail=100 ai-server
 실패해도 FastAPI와 YOLO 공식 분석은 계속 동작하므로 컨테이너 자체는
 정상 상태를 유지한다.
 
+`/health`는 P2PNet 그림자 자산 상태도 함께 보고한다. 운영 중 상태를
+확인할 수단이 시작 로그뿐이었으므로 `S15P11A503-141`에서 추가했다.
+
+```json
+{
+  "status": "ok",
+  "p2pnetShadow": {
+    "ready": false,
+    "status": "P2PNET_WEIGHT_DOWNLOAD_FAILED",
+    "modelVersion": "safy-p2pnet-v2-epoch3"
+  }
+}
+```
+
+`status`는 P2PNet 상태와 무관하게 항상 `ok`다. P2PNet 실패로 컨테이너를
+unhealthy로 표시하면 Compose가 재시작 루프에 빠지기 때문이다. 자격증명,
+인증 헤더와 다운로드 URL은 이 응답에 포함하지 않는다.
+
 현재 GitLab 자동 배포 명령에는 `ai-server`를 추가하지 않는다. 실제 배포
 서버에서 CPU 이미지와 메모리를 다시 측정하고, 백엔드 호출 연동과 모델
 저장소 설정이 끝난 뒤 배포 목록에 추가한다.
@@ -184,6 +202,51 @@ docker compose logs --tail=100 ai-server
 
 P2PNet 모델 객체의 첫 초기화가 실패한 경우에도 해당 서비스 인스턴스의
 그림자 분석을 비활성화한다. 이후 프레임은 YOLO 공식 분석만 수행한다.
+
+## 장애 격리 실사용 검증 (`S15P11A503-141`)
+
+단위 테스트가 아니라 실제 uvicorn 서버를 시나리오별로 기동해 검증했다.
+각 시나리오에서 P2PNet 자산 준비를 의도적으로 실패시키고 실제 이미지를
+`POST /api/v1/analyze/frame`에 전송했다.
+
+```bash
+python -m scripts.verify_deployment_isolation
+```
+
+결과: **7개 시나리오, 항목별 10개 체크 전부 통과(70/70)**
+
+| 시나리오 | `p2pnetShadow.status` | YOLO 공식 분석 |
+|---|---|---|
+| 그림자 비활성화 | `DISABLED` | `COMPLETED` (4명) |
+| 소스 디렉터리 없음 | `P2PNET_SOURCE_MISSING` | `COMPLETED` (4명) |
+| 소스 커밋 불일치 | `P2PNET_SOURCE_VERSION_MISMATCH` | `COMPLETED` (4명) |
+| 가중치·URL 모두 없음 | `P2PNET_WEIGHT_URL_MISSING` | `COMPLETED` (4명) |
+| 가중치 체크섬 불일치 | `P2PNET_WEIGHT_CHECKSUM_MISMATCH` | `COMPLETED` (4명) |
+| 다운로드 실패 | `P2PNET_WEIGHT_DOWNLOAD_FAILED` | `COMPLETED` (4명) |
+| 매니페스트 무효 | `P2PNET_ASSET_MANIFEST_INVALID` | `COMPLETED` (4명) |
+
+모든 시나리오에서 확인한 항목:
+
+- `/health`가 200과 `status=ok`를 유지한다.
+- `p2pnetShadow.status`가 실패 원인을 정확히 보고하고 `ready=false`다.
+- 프레임 분석이 200 + `analysisStatus=COMPLETED`를 반환하고 `personCount`가
+  존재하며 `failureCodes`가 비어 있다.
+- 공식 응답의 `modelName`이 `YOLO`다.
+- 가짜 presigned 서명(`X-Amz-Signature=...`), 인증 헤더 이름과 토큰 값이
+  `/health`와 분석 응답 어디에도 노출되지 않는다.
+
+검증 결과 원본은 `runs/deployment-isolation-report.json`에 저장되며 Git에는
+포함하지 않는다.
+
+### 아직 검증하지 못한 항목
+
+다음은 Docker가 필요하므로 이 검증 범위에 포함되지 않았다.
+
+- CPU 이미지 빌드와 YOLO 가중치 체크섬 다운로드
+- `p2pnet_model_cache` 볼륨 재사용(2회 기동 시 재다운로드 생략)
+- 비루트 사용자(uid 10001) 실행
+- Compose `healthcheck`의 `start_period` 동작
+- 컨테이너 RSS와 동시 요청 처리량 (`S15P11A503-106`)
 
 ## 비활성화와 롤백
 

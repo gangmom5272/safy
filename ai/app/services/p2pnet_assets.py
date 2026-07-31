@@ -77,6 +77,22 @@ AssetDownloader = Callable[
     None,
 ]
 
+# 마지막 시작 시 자산 준비 결과. 운영 중 P2PNet 그림자 상태를 확인할 수단이
+# 시작 로그뿐이었으므로 /health가 읽을 수 있도록 보관한다.
+_last_preparation: P2PNetAssetPreparation | None = None
+
+
+def _remember_preparation(
+    preparation: P2PNetAssetPreparation,
+) -> None:
+    global _last_preparation
+    _last_preparation = preparation
+
+
+def get_last_preparation() -> P2PNetAssetPreparation | None:
+    """시작 시 기록된 자산 준비 결과. 아직 초기화 전이면 None."""
+    return _last_preparation
+
 
 def load_p2pnet_asset_manifest(
     manifest_path: Path = DEFAULT_MANIFEST_PATH,
@@ -283,6 +299,7 @@ def initialize_p2pnet_shadow_assets() -> P2PNetAssetPreparation:
             source_root=source_root,
             weight_path=weight_path,
         )
+        _remember_preparation(preparation)
         _log_preparation(preparation)
         get_shadow_analysis_service.cache_clear()
         return preparation
@@ -333,6 +350,7 @@ def initialize_p2pnet_shadow_assets() -> P2PNetAssetPreparation:
     else:
         os.environ["P2PNET_SHADOW_ENABLED"] = "false"
 
+    _remember_preparation(preparation)
     get_shadow_analysis_service.cache_clear()
     _log_preparation(preparation)
     return preparation
