@@ -220,8 +220,12 @@ export function mapLiveReport(raw: unknown): LiveReportSummary {
     relativeTime: asString(item.relativeTime),
     riskLevel: normalizeRiskLevel(item.riskLevel ?? item.risk ?? item.riskScore),
     description,
+    // 공개 피드는 블러 처리된 대표 이미지만 blurredImageUrl 로 내려준다(원본은 관제 전용).
     maskedThumbnailUrl:
-      asString(item.maskedThumbnailUrl ?? item.thumbnailUrl ?? item.maskedImageUrl, '') || null,
+      asString(
+        item.blurredImageUrl ?? item.maskedThumbnailUrl ?? item.thumbnailUrl ?? item.maskedImageUrl,
+        '',
+      ) || null,
     isWebRtc: item.streamRoomId ? true : asBoolean(item.isWebRtc ?? item.webRtc ?? item.webrtc),
     isLive,
     viewerCount: asOptionalNumber(item.viewerCount ?? item.participantCount),

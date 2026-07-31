@@ -55,7 +55,10 @@ public class AreaSituationController {
 	}
 
 	@GetMapping("/{areaId}/reports/live")
-	@Operation(summary = "행정구역별 라이브 제보 목록 조회", description = "해당 행정구역의 라이브 제보를 커서 기반으로 조회합니다.")
+	@PreAuthorize("hasAnyRole('OPERATOR','SUPER_ADMIN')")
+	@Operation(summary = "행정구역별 라이브 제보 목록 조회",
+			description = "해당 행정구역의 라이브 제보를 커서 기반으로 조회합니다. 라이브 세션 정보를 담으므로 관제 전용입니다. "
+					+ "시민 화면은 GET /api/v1/feed/areas/{areaId}/reports 를 사용합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "지역별 라이브 제보 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "행정구역을 찾을 수 없음", content = @Content)

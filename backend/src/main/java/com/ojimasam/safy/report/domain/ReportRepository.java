@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.report.domain.type.ReportPublicVisibility;
 import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.type.ReportType;
@@ -43,6 +44,20 @@ public interface ReportRepository {
 			Instant cursor,
 			Pageable pageable
 	);
+	/** 시민 피드: 공개 상태만 조회한다. 처리 진행 상태는 따지지 않는다. */
+	List<Report> findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+			ReportPublicVisibility publicVisibility,
+			Instant cursor,
+			Pageable pageable
+	);
+	List<Report> findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+			Long administrativeAreaId,
+			ReportPublicVisibility publicVisibility,
+			Instant cursor,
+			Pageable pageable
+	);
+	Optional<Report> findByIdAndPublicVisibility(Long id, ReportPublicVisibility publicVisibility);
+
 	long countByAdministrativeArea_IdAndStatusIn(Long administrativeAreaId, Collection<ReportStatus> statuses);
 	long countByAdministrativeArea_IdAndTypeAndStatusIn(
 			Long administrativeAreaId,

@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 import com.ojimasam.safy.report.domain.type.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportPublicVisibility;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.type.ReportSubcategory;
 import com.ojimasam.safy.report.domain.type.ReportType;
@@ -34,6 +36,7 @@ class ReportTest {
 		assertThat(report.getLongitude()).isEqualByComparingTo("126.9780000");
 		assertThat(report.getAddress()).isEqualTo("서울특별시 중구");
 		assertThat(report.getStatus()).isEqualTo(ReportStatus.RECEIVED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.PENDING);
 		assertThat(report.getReportedAt()).isNotNull();
 	}
 
@@ -91,6 +94,7 @@ class ReportTest {
 		report.cancel();
 
 		assertThat(report.getStatus()).isEqualTo(ReportStatus.CANCELLED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.WITHHELD);
 			assertThatThrownBy(report::cancel)
 					.isInstanceOf(IllegalStateException.class)
 					.hasMessage("접수 또는 배정 상태의 제보만 취소할 수 있습니다.");
@@ -110,11 +114,77 @@ class ReportTest {
 	}
 
 	@Test
+	void completingWorkPublishesToCitizenFeed() {
+		Report report = handledReport();
+
+		report.completeWork(closedAt(report));
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.CLOSED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.PUBLISHED);
+	}
+
+	@Test
+	void rejectingWithholdsFromCitizenFeed() {
+		Report report = handledReport();
+
+		report.reject(closedAt(report));
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.REJECTED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.WITHHELD);
+	}
+
+	/** 내려둔 제보를 담당자가 종료해도 다시 공개되지 않고, 종료 자체는 막히지 않는다. */
+	@Test
+	void completingWorkKeepsWithheldReportHidden() {
+		Report report = handledReport();
+		report.withhold();
+
+		report.completeWork(closedAt(report));
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.CLOSED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.WITHHELD);
+	}
+
+	@Test
+	void withholdIsIdempotent() {
+		Report report = handledReport();
+
+		report.withhold();
+		report.withhold();
+
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.WITHHELD);
+	}
+
+	@Test
+	void reassignmentDoesNotChangeVisibility() {
+		Report report = handledReport();
+
+		report.releaseForReassignment();
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.RECEIVED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.PENDING);
+	}
+
+	@Test
 	void rejectsSubcategoryFromAnotherCategory() {
 		assertThatThrownBy(() -> Report.create(
 				1L, ReportType.LIVE, ReportCategory.ACCIDENT_RISK, ReportSubcategory.EXIT_CONGESTION,
 				"사고 현장", new BigDecimal("37.5"), new BigDecimal("127.0"), null
 		)).isInstanceOf(IllegalArgumentException.class)
 				.hasMessage("제보 카테고리와 세부 상황이 일치하지 않습니다.");
+	}
+
+	private Report handledReport() {
+		Report report = Report.create(1L, ReportType.IMAGE,
+				ReportCategory.FACILITY_ROAD, ReportSubcategory.ROAD_DAMAGE, "제보 내용",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+		report.assign();
+		report.beginHandling();
+		return report;
+	}
+
+	/** reportedAt 은 생성 시각(now)이라 고정 상수를 쓰면 종료 시각 검증에 걸린다. */
+	private Instant closedAt(Report report) {
+		return report.getReportedAt().plusSeconds(60);
 	}
 }

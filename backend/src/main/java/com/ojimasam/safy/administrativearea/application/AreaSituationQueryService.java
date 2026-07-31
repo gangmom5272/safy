@@ -12,6 +12,7 @@ import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaStatus
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.report.application.dto.ReportCursorResponse;
+import com.ojimasam.safy.report.application.PublicReportQueryService;
 import com.ojimasam.safy.report.application.ReportFeedQueryService;
 import com.ojimasam.safy.administrativearea.application.dto.AreaMapResponse;
 import com.ojimasam.safy.administrativearea.application.dto.AreaStatusResponse;
@@ -21,23 +22,27 @@ import com.ojimasam.safy.administrativearea.application.dto.AreaStatusResponse;
 public class AreaSituationQueryService {
 	private final AdministrativeAreaRepository administrativeAreaRepository;
 	private final ReportFeedQueryService reportFeedQueryService;
+	private final PublicReportQueryService publicReportQueryService;
 	private final Clock clock;
 
 	@Autowired
 	public AreaSituationQueryService(
 			AdministrativeAreaRepository administrativeAreaRepository,
-			ReportFeedQueryService reportFeedQueryService
+			ReportFeedQueryService reportFeedQueryService,
+			PublicReportQueryService publicReportQueryService
 	) {
-		this(administrativeAreaRepository, reportFeedQueryService, Clock.systemUTC());
+		this(administrativeAreaRepository, reportFeedQueryService, publicReportQueryService, Clock.systemUTC());
 	}
 
 	AreaSituationQueryService(
 			AdministrativeAreaRepository administrativeAreaRepository,
 			ReportFeedQueryService reportFeedQueryService,
+			PublicReportQueryService publicReportQueryService,
 			Clock clock
 	) {
 		this.administrativeAreaRepository = administrativeAreaRepository;
 		this.reportFeedQueryService = reportFeedQueryService;
+		this.publicReportQueryService = publicReportQueryService;
 		this.clock = clock;
 	}
 
@@ -48,12 +53,16 @@ public class AreaSituationQueryService {
 		return AreaStatusResponse.of(area, riskLevel(activeCount, liveCount), activeCount, liveCount, clock.instant());
 	}
 
+	/**
+	 * 지도 데이터는 시민 화면이 쓰므로 제보 목록은 공개된 건만 담는다.
+	 * 위험도 요약(status)은 미공개 제보까지 세는 집계라 그대로 둔다.
+	 */
 	public AreaMapResponse map(Long areaId, Instant cursor, int size) {
 		AdministrativeArea area = findActiveArea(areaId);
 		return new AreaMapResponse(
 				status(areaId),
 				area.getBoundaryGeoJson(),
-				reportFeedQueryService.liveByArea(areaId, cursor, size)
+				publicReportQueryService.reportsByArea(areaId, cursor, size)
 		);
 	}
 

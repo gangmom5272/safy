@@ -9,7 +9,8 @@ import {
   mapReportWebRtcInfo,
 } from './situationMapper.ts'
 
-// docs/api-contract.md 의 ReportFeedItemResponse 그대로.
+// 공개 피드(/api/v1/feed)의 PublicReportView 그대로.
+// 라이브 세션 정보(streamRoomId·streamStatus)와 처리 상태는 시민에게 내려오지 않는다.
 const feedItem = {
   reportId: 41,
   reportType: 'LIVE',
@@ -19,13 +20,12 @@ const feedItem = {
   latitude: 37.4979,
   longitude: 127.0276,
   address: '서울특별시 강남구 강남대로 396',
-  status: 'IN_PROGRESS',
   areaId: 24,
   areaCode: '1168000000',
   areaName: '강남구',
-  streamRoomId: '0d1f2e3a-4b5c-6d7e-8f90-123456789abc',
-  streamStatus: 'ACTIVE',
   reportedAt: '2026-07-29T01:00:00Z',
+  blurredImageUrl: 'http://localhost:9000/blurred.jpg',
+  blurredImageExpiresAt: '2026-07-29T01:10:00Z',
 }
 
 // docs/api-contract.md 의 AreaStatusResponse 그대로.
@@ -61,16 +61,22 @@ test('제보 피드 항목이 목록 카드로 변환된다', () => {
   assert.equal(report.address, '서울특별시 강남구 강남대로 396')
   // 백엔드에 제목 필드가 없어 본문을 제목으로 쓴다.
   assert.equal(report.title, '11번 출구 앞 대기 줄이 길어지고 있습니다.')
-  // streamStatus 가 CREATED/ACTIVE 면 송출 중이다.
-  assert.equal(report.isLive, true)
-  assert.equal(report.isWebRtc, true)
+  // 시민에게는 원본이 아니라 블러 처리된 대표 이미지만 내려온다.
+  assert.equal(report.maskedThumbnailUrl, 'http://localhost:9000/blurred.jpg')
 })
 
-test('라이브 세션이 없는 제보는 송출 중으로 보지 않는다', () => {
-  const report = mapLiveReport({ ...feedItem, streamRoomId: null, streamStatus: 'ENDED' })
+test('공개 피드 항목은 송출 중으로 표시되지 않는다', () => {
+  // 라이브 제보라도 시민에게는 스트림 정보를 주지 않으므로 카드가 송출 중으로 뜨면 안 된다.
+  const report = mapLiveReport(feedItem)
 
   assert.equal(report.isLive, false)
   assert.equal(report.isWebRtc, false)
+})
+
+test('블러 이미지가 아직 없으면 썸네일 없이 처리한다', () => {
+  const report = mapLiveReport({ ...feedItem, blurredImageUrl: null })
+
+  assert.equal(report.maskedThumbnailUrl, null)
 })
 
 test('지역 지도 마커가 제보의 지역명을 그대로 쓴다', () => {

@@ -5,7 +5,9 @@ import java.time.Instant;
 
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.common.persistence.BaseEntity;
+import com.ojimasam.safy.media.domain.MediaAsset;
 
+import org.hibernate.annotations.ColumnDefault;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -19,6 +21,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Table;
 import com.ojimasam.safy.report.domain.type.ReportCategory;
+import com.ojimasam.safy.report.domain.type.ReportPublicVisibility;
 import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.type.ReportSubcategory;
@@ -27,10 +30,16 @@ import com.ojimasam.safy.report.domain.type.ReportType;
 @Entity
 @Table(
 		name = "reports",
-		indexes = @Index(
-				name = "idx_reports_routing_retry",
-				columnList = "routing_status, next_routing_at"
-		)
+		indexes = {
+				@Index(
+						name = "idx_reports_routing_retry",
+						columnList = "routing_status, next_routing_at"
+				),
+				@Index(
+						name = "idx_reports_public_feed",
+						columnList = "public_visibility, reported_at, id"
+				)
+		}
 )
 public class Report extends BaseEntity {
 	@Id
@@ -71,6 +80,16 @@ public class Report extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
 	private ReportStatus status;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "public_visibility", nullable = false, length = 20)
+	@ColumnDefault("'PENDING'")
+	private ReportPublicVisibility publicVisibility;
+
+	/** 시민에게 내보내는 유일한 이미지. 원본이 아니라 블러 파생본만 여기에 들어간다. */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "representative_blur_asset_id")
+	private MediaAsset representativeBlurAsset;
 
 	@Column(name = "reported_at", nullable = false, columnDefinition = "timestamp(6) with time zone")
 	private Instant reportedAt;
@@ -116,6 +135,7 @@ public class Report extends BaseEntity {
 		this.address = address;
 		this.status = status;
 		this.reportedAt = reportedAt;
+		this.publicVisibility = ReportPublicVisibility.PENDING;
 		this.routingStatus = ReportRoutingStatus.PENDING;
 		this.nextRoutingAt = reportedAt;
 	}
@@ -192,6 +212,7 @@ public class Report extends BaseEntity {
 			throw new IllegalStateException("접수 또는 배정 상태의 제보만 취소할 수 있습니다.");
 		}
 		this.status = ReportStatus.CANCELLED;
+		withhold();
 		if (routingStatus == ReportRoutingStatus.PENDING) {
 			this.routingStatus = ReportRoutingStatus.CANCELLED;
 			this.nextRoutingAt = null;
@@ -217,6 +238,7 @@ public class Report extends BaseEntity {
 		requireHandling();
 		this.status = ReportStatus.CLOSED;
 		this.closedAt = requireClosedAt(closedAt);
+		publish();
 	}
 
 	/**
@@ -226,6 +248,25 @@ public class Report extends BaseEntity {
 		requireHandling();
 		this.status = ReportStatus.REJECTED;
 		this.closedAt = requireClosedAt(closedAt);
+		withhold();
+	}
+
+	/**
+	 * 담당자가 업무를 종료(채택)하며 시민 피드에 공개한다.
+	 * 이미 내려진(WITHHELD) 제보는 다시 올리지 않는다 — 내림이 나중 판단이므로 우선한다.
+	 * 내려진 제보 때문에 업무 종료 자체가 막히면 안 되므로 예외 대신 조용히 반환한다.
+	 */
+	public void publish() {
+		if (publicVisibility == ReportPublicVisibility.WITHHELD) return;
+		this.publicVisibility = ReportPublicVisibility.PUBLISHED;
+	}
+
+	/**
+	 * 시민 피드에서 내린다. 취소·반려처럼 공개 전(PENDING)에서도 호출되고,
+	 * 공개 후 담당자가 직접 내리는 경로도 있어 상태를 따지지 않는다. 멱등.
+	 */
+	public void withhold() {
+		this.publicVisibility = ReportPublicVisibility.WITHHELD;
 	}
 
 	/**
@@ -339,6 +380,14 @@ public class Report extends BaseEntity {
 
 	public ReportStatus getStatus() {
 		return status;
+	}
+
+	public ReportPublicVisibility getPublicVisibility() {
+		return publicVisibility;
+	}
+
+	public MediaAsset getRepresentativeBlurAsset() {
+		return representativeBlurAsset;
 	}
 
 	public Instant getReportedAt() {
