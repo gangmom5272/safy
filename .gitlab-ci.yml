@@ -104,7 +104,7 @@ data:
     - pytest
 
 # AI 서비스는 배포 대상에서 제외 (팀 결정 대기 중 - INFRA_DECISIONS.md 참고 예정).
-# backend/frontend-user/frontend-admin만 배포한다.
+# backend/data/frontend-user/frontend-admin을 배포한다.
 deploy:
   stage: deploy
   image: alpine:3.20
@@ -136,7 +136,10 @@ deploy:
     - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
   script:
     - ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503"
-    - rsync -az --delete --exclude=.env -e "ssh -i ~/.ssh/id_deploy" backend infra "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/"
+    # data 를 포함한다. --exclude=.env 는 basename 매칭이라 data/.env 도 제외되므로
+    # API 키가 서버로 실려가지 않는다(키는 infra/.env 를 통해 compose 가 주입한다).
+    # 주의: data 도 --delete 대상이 되므로 서버의 ~/S15P11A503/data 에 수동 파일을 두면 안 된다.
+    - rsync -az --delete --exclude=.env -e "ssh -i ~/.ssh/id_deploy" backend infra data "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/"
     - |
       if [ -d frontend-user/dist ]; then
         ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-user/dist"
@@ -150,6 +153,6 @@ deploy:
     - |
       ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "
         cd ~/S15P11A503/infra &&
-        DEPLOY_TAG=$CI_COMMIT_SHORT_SHA docker compose up -d --build backend db redis minio nginx uptime-kuma &&
+        DEPLOY_TAG=$CI_COMMIT_SHORT_SHA docker compose up -d --build backend data db redis minio nginx uptime-kuma &&
         echo '$CI_COMMIT_SHORT_SHA $(date -u +%Y-%m-%dT%H:%M:%SZ)' >> ~/S15P11A503/.deployed_tags
       "
