@@ -1,19 +1,23 @@
+"""위험 상향 신호 전략 비교 시뮬레이션.
+
+"어떤 신호로 고밀도를 판정해야 하는가"를 홀드아웃 표본에서 비교한다.
+신호 종류(인원수, 국소 최대 혼잡도 L 등)에 무관하게 동작하도록 값과
+임계값만 받는다. 덕분에 인원수 기반 분석과 L 기반 분석이 같은 코드로
+재현된다.
+
+`S15P11A503-140`에서 두 신호를 비교한 결과와 결론은
+`docs/dense-scene-escalation.md`에 정리했다.
+"""
+
 from dataclasses import dataclass
 
-from app.services.dense_scene_escalation import (
-    DENSE_SCENE_PERSON_THRESHOLD,
-)
 
-
-# 런타임 판정과 시뮬레이션이 서로 어긋나지 않도록 임계값 출처를 하나로 둔다.
-DEFAULT_DENSE_THRESHOLD = DENSE_SCENE_PERSON_THRESHOLD
-
-STRATEGY_YOLO_ONLY = "YOLO_ONLY"
+STRATEGY_OFFICIAL_ONLY = "OFFICIAL_ONLY"
 STRATEGY_ASYMMETRIC_GATED = "ASYMMETRIC_GATED"
 STRATEGY_ASYMMETRIC_UNGATED = "ASYMMETRIC_UNGATED"
 
 ALL_STRATEGIES = (
-    STRATEGY_YOLO_ONLY,
+    STRATEGY_OFFICIAL_ONLY,
     STRATEGY_ASYMMETRIC_GATED,
     STRATEGY_ASYMMETRIC_UNGATED,
 )
@@ -21,18 +25,26 @@ ALL_STRATEGIES = (
 
 @dataclass(frozen=True)
 class FrameObservation:
+    """한 프레임의 정답 신호값과 두 모델의 예측 신호값.
+
+    `ground_truth_value`, `official_value`, `shadow_value`는 같은 종류의
+    신호여야 한다(예: 셋 다 인원수, 또는 셋 다 L).
+    """
+
     sample_id: str
     scenario: str
-    ground_truth_count: int
-    yolo_count: int | None
-    p2pnet_count: int | None
-    p2pnet_low_confidence_signal: bool
+    ground_truth_value: float
+    official_value: float | None
+    shadow_value: float | None
+    shadow_low_confidence_signal: bool
 
 
 @dataclass(frozen=True)
 class StrategyOutcome:
     strategy: str
-    dense_threshold: int
+    signal_name: str
+    threshold: float
+    ground_truth_threshold: float
     sample_count: int
     actually_dense_count: int
     escalated_count: int
@@ -72,49 +84,60 @@ class StrategyOutcome:
 def is_actually_dense(
     observation: FrameObservation,
     *,
-    dense_threshold: int = DEFAULT_DENSE_THRESHOLD,
+    threshold: float,
 ) -> bool:
-    return observation.ground_truth_count >= dense_threshold
+    return observation.ground_truth_value >= threshold
 
 
 def should_escalate(
     observation: FrameObservation,
     *,
     strategy: str,
-    dense_threshold: int = DEFAULT_DENSE_THRESHOLD,
+    threshold: float,
 ) -> bool:
     if strategy not in ALL_STRATEGIES:
         raise ValueError(f"지원하지 않는 전략입니다: {strategy}")
 
-    yolo_says_dense = (
-        observation.yolo_count is not None and observation.yolo_count >= dense_threshold
+    official_says_dense = (
+        observation.official_value is not None
+        and observation.official_value >= threshold
     )
 
-    if strategy == STRATEGY_YOLO_ONLY:
-        return yolo_says_dense
+    if strategy == STRATEGY_OFFICIAL_ONLY:
+        return official_says_dense
 
-    p2pnet_says_dense = (
-        observation.p2pnet_count is not None
-        and observation.p2pnet_count >= dense_threshold
+    shadow_says_dense = (
+        observation.shadow_value is not None and observation.shadow_value >= threshold
     )
 
     if strategy == STRATEGY_ASYMMETRIC_UNGATED:
-        return yolo_says_dense or p2pnet_says_dense
+        return official_says_dense or shadow_says_dense
 
-    # ASYMMETRIC_GATED: P2PNet 신호는 140번 게이트를 통과한 경우에만 인정한다.
-    gate_passed = not observation.p2pnet_low_confidence_signal
+    # ASYMMETRIC_GATED: 그림자 신호는 140번 게이트를 통과한 경우에만 인정한다.
+    gate_passed = not observation.shadow_low_confidence_signal
 
-    return yolo_says_dense or (p2pnet_says_dense and gate_passed)
+    return official_says_dense or (shadow_says_dense and gate_passed)
 
 
 def evaluate_strategy(
     observations: list[FrameObservation],
     *,
     strategy: str,
-    dense_threshold: int = DEFAULT_DENSE_THRESHOLD,
+    threshold: float,
+    ground_truth_threshold: float | None = None,
+    signal_name: str = "unknown",
 ) -> StrategyOutcome:
+    """전략을 평가한다.
+
+    정답 신호와 예측 신호가 다른 종류일 수 있으므로(예: 정답은 L, 예측은
+    인원수) 임계값을 따로 받는다. `ground_truth_threshold`를 생략하면
+    `threshold`를 그대로 쓴다.
+    """
     if not observations:
         raise ValueError("시뮬레이션 표본이 한 건 이상 필요합니다.")
+
+    if ground_truth_threshold is None:
+        ground_truth_threshold = threshold
 
     true_positive = 0
     false_positive = 0
@@ -124,12 +147,12 @@ def evaluate_strategy(
     for observation in observations:
         actually_dense = is_actually_dense(
             observation,
-            dense_threshold=dense_threshold,
+            threshold=ground_truth_threshold,
         )
         escalated = should_escalate(
             observation,
             strategy=strategy,
-            dense_threshold=dense_threshold,
+            threshold=threshold,
         )
 
         if actually_dense and escalated:
@@ -143,7 +166,9 @@ def evaluate_strategy(
 
     return StrategyOutcome(
         strategy=strategy,
-        dense_threshold=dense_threshold,
+        signal_name=signal_name,
+        threshold=threshold,
+        ground_truth_threshold=(ground_truth_threshold),
         sample_count=len(observations),
         actually_dense_count=(true_positive + false_negative),
         escalated_count=(true_positive + false_positive),
@@ -154,62 +179,72 @@ def evaluate_strategy(
     )
 
 
-def find_newly_caught_samples(
+def _difference_against_official(
     observations: list[FrameObservation],
     *,
-    dense_threshold: int = DEFAULT_DENSE_THRESHOLD,
+    threshold: float,
+    ground_truth_threshold: float | None = None,
+    want_dense: bool,
 ) -> list[FrameObservation]:
-    """YOLO 단독으로는 놓쳤지만 게이트 적용 비대칭 규칙이 잡아낸 고밀도 표본."""
-    caught = []
+    if ground_truth_threshold is None:
+        ground_truth_threshold = threshold
+
+    selected = []
 
     for observation in observations:
-        if not is_actually_dense(observation, dense_threshold=dense_threshold):
+        is_dense = is_actually_dense(
+            observation,
+            threshold=ground_truth_threshold,
+        )
+
+        if is_dense is not want_dense:
             continue
 
-        yolo_escalated = should_escalate(
+        official_escalated = should_escalate(
             observation,
-            strategy=STRATEGY_YOLO_ONLY,
-            dense_threshold=dense_threshold,
+            strategy=STRATEGY_OFFICIAL_ONLY,
+            threshold=threshold,
         )
         gated_escalated = should_escalate(
             observation,
             strategy=STRATEGY_ASYMMETRIC_GATED,
-            dense_threshold=dense_threshold,
+            threshold=threshold,
         )
 
-        if gated_escalated and not yolo_escalated:
-            caught.append(observation)
+        if gated_escalated and not official_escalated:
+            selected.append(observation)
 
-    return caught
+    return selected
+
+
+def find_newly_caught_samples(
+    observations: list[FrameObservation],
+    *,
+    threshold: float,
+    ground_truth_threshold: float | None = None,
+) -> list[FrameObservation]:
+    """공식 모델 단독으로는 놓쳤지만 게이트 적용 비대칭 규칙이 잡아낸 표본."""
+    return _difference_against_official(
+        observations,
+        threshold=threshold,
+        ground_truth_threshold=(ground_truth_threshold),
+        want_dense=True,
+    )
 
 
 def find_new_false_alarms(
     observations: list[FrameObservation],
     *,
-    dense_threshold: int = DEFAULT_DENSE_THRESHOLD,
+    threshold: float,
+    ground_truth_threshold: float | None = None,
 ) -> list[FrameObservation]:
-    """YOLO 단독에서는 없었으나 게이트 적용 비대칭 규칙이 새로 만든 오경보."""
-    alarms = []
-
-    for observation in observations:
-        if is_actually_dense(observation, dense_threshold=dense_threshold):
-            continue
-
-        yolo_escalated = should_escalate(
-            observation,
-            strategy=STRATEGY_YOLO_ONLY,
-            dense_threshold=dense_threshold,
-        )
-        gated_escalated = should_escalate(
-            observation,
-            strategy=STRATEGY_ASYMMETRIC_GATED,
-            dense_threshold=dense_threshold,
-        )
-
-        if gated_escalated and not yolo_escalated:
-            alarms.append(observation)
-
-    return alarms
+    """공식 모델 단독에서는 없었으나 비대칭 규칙이 새로 만든 오경보."""
+    return _difference_against_official(
+        observations,
+        threshold=threshold,
+        ground_truth_threshold=(ground_truth_threshold),
+        want_dense=False,
+    )
 
 
 def outcome_to_dict(
@@ -217,7 +252,9 @@ def outcome_to_dict(
 ) -> dict:
     return {
         "strategy": outcome.strategy,
-        "denseThreshold": outcome.dense_threshold,
+        "signalName": outcome.signal_name,
+        "threshold": outcome.threshold,
+        "groundTruthThreshold": (outcome.ground_truth_threshold),
         "sampleCount": outcome.sample_count,
         "actuallyDenseCount": outcome.actually_dense_count,
         "escalatedCount": outcome.escalated_count,

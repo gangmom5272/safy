@@ -122,6 +122,7 @@ def test_dense_scene_signal_is_not_blocked_by_low_confidence() -> None:
     def runner_factory(_):
         return lambda _: FakeRunnerResult(
             person_count=300,
+            local_peak_congestion_score=100.0,
             low_confidence_signal=True,
         )
 
@@ -164,7 +165,7 @@ def test_dense_scene_signal_absent_for_low_density_frame() -> None:
 
     assert record is not None
     assert record.dense_scene.suspected is False
-    assert records[0]["denseScene"]["personThreshold"] == 51
+    assert records[0]["denseScene"]["localPeakThreshold"] == 80.0
 
 
 def test_shadow_analysis_records_low_confidence_signal() -> None:

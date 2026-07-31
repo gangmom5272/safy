@@ -81,7 +81,7 @@ class ShadowAnalysisRecord:
                 "suspected": self.dense_scene.suspected,
                 "officialSaysDense": (self.dense_scene.official_says_dense),
                 "shadowSaysDense": (self.dense_scene.shadow_says_dense),
-                "personThreshold": (self.dense_scene.person_threshold),
+                "localPeakThreshold": (self.dense_scene.local_peak_threshold),
             },
         }
 
@@ -234,8 +234,10 @@ class P2PNetShadowAnalysisService:
                 shadow,
             ),
             dense_scene=determine_dense_scene_assessment(
-                official_person_count=(official.person_count),
-                shadow_person_count=(shadow.person_count),
+                official_local_peak_congestion_score=(
+                    official.local_peak_congestion_score
+                ),
+                shadow_local_peak_congestion_score=(shadow.local_peak_congestion_score),
             ),
         )
         self._record_sink(record.to_dict())
