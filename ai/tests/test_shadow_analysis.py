@@ -111,6 +111,62 @@ def test_shadow_analysis_records_model_differences() -> None:
     assert factory_calls == 1
 
 
+def test_dense_scene_signal_is_not_blocked_by_low_confidence() -> None:
+    """확신도가 낮아도 고밀도 위험 신호는 그대로 내보내야 한다.
+
+    SAFY는 안전관리 프로세스를 보조하며 최종 판단은 사람이 한다.
+    확신도가 낮다는 이유로 위험 신호를 막으면 진짜 위험을 놓칠 수 있다.
+    """
+    records: list[dict] = []
+
+    def runner_factory(_):
+        return lambda _: FakeRunnerResult(
+            person_count=300,
+            low_confidence_signal=True,
+        )
+
+    service = P2PNetShadowAnalysisService(
+        config=build_config(),
+        runner_factory=runner_factory,
+        record_sink=records.append,
+    )
+
+    record = asyncio.run(
+        service.analyze_and_log(
+            image_bytes=b"frame",
+            official=build_official_snapshot(),
+        )
+    )
+
+    assert record is not None
+    assert record.shadow.low_confidence_signal is True
+    assert record.dense_scene.suspected is True
+    assert records[0]["denseScene"]["suspected"] is True
+    assert records[0]["denseScene"]["shadowSaysDense"] is True
+    assert records[0]["shadow"]["lowConfidenceSignal"] is True
+
+
+def test_dense_scene_signal_absent_for_low_density_frame() -> None:
+    records: list[dict] = []
+
+    service = P2PNetShadowAnalysisService(
+        config=build_config(),
+        runner_factory=lambda _: lambda _: FakeRunnerResult(),
+        record_sink=records.append,
+    )
+
+    record = asyncio.run(
+        service.analyze_and_log(
+            image_bytes=b"frame",
+            official=build_official_snapshot(),
+        )
+    )
+
+    assert record is not None
+    assert record.dense_scene.suspected is False
+    assert records[0]["denseScene"]["personThreshold"] == 51
+
+
 def test_shadow_analysis_records_low_confidence_signal() -> None:
     records: list[dict] = []
 

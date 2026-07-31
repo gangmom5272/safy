@@ -127,6 +127,32 @@ confidence 목록은 기록하지 않으며, 프레임 연결에는 SHA-256 해�
 않는다.** YOLO 결과에는 항상 `null`을 기록하고(YOLO에는 적용하지 않는
 개념), P2PNet 포인트가 하나도 없으면(사람 없음) `false`로 기록한다.
 
+⚠️ 이 신호를 **위험 상향 판정의 거부권으로 사용하지 않는다.** 홀드아웃
+실측에서 거부권으로 쓰면 실제 위험 97건(최대 8,994명 장면 포함)을 추가로
+놓쳤다. 신뢰도 정보로만 사용하며, 자세한 근거는
+[고밀도 장면 위험 상향 신호와 게이트 역할](dense-scene-escalation.md)을
+참고한다.
+
+## 고밀도 위험 상향 신호 (`denseScene`)
+
+두 모델 중 하나라도 51명 이상을 예측하면 고밀도 의심으로 기록한다.
+`lowConfidenceSignal`은 이 판정을 막지 않는다.
+
+```json
+{
+  "denseScene": {
+    "suspected": true,
+    "officialSaysDense": false,
+    "shadowSaysDense": true,
+    "personThreshold": 51
+  }
+}
+```
+
+판정 근거, 실측 비교와 백엔드 연동 계약은
+[고밀도 장면 위험 상향 신호와 게이트 역할](dense-scene-escalation.md)에
+정리했다.
+
 ## 실패 격리
 
 P2PNet 모델 로딩, 추론 또는 시간 초과는 다음처럼 처리한다.

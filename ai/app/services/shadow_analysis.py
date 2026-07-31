@@ -11,6 +11,11 @@ from threading import Lock
 from typing import Protocol
 from uuid import uuid4
 
+from app.services.dense_scene_escalation import (
+    DenseSceneAssessment,
+    determine_dense_scene_assessment,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +59,7 @@ class ShadowAnalysisRecord:
     official: ModelAnalysisSnapshot
     shadow: ModelAnalysisSnapshot
     differences: ShadowAnalysisDifferences
+    dense_scene: DenseSceneAssessment
 
     def to_dict(self) -> dict:
         return {
@@ -70,6 +76,12 @@ class ShadowAnalysisRecord:
                 "localPeakCongestionScore": (
                     self.differences.local_peak_congestion_score
                 ),
+            },
+            "denseScene": {
+                "suspected": self.dense_scene.suspected,
+                "officialSaysDense": (self.dense_scene.official_says_dense),
+                "shadowSaysDense": (self.dense_scene.shadow_says_dense),
+                "personThreshold": (self.dense_scene.person_threshold),
             },
         }
 
@@ -220,6 +232,10 @@ class P2PNetShadowAnalysisService:
             differences=_calculate_differences(
                 official,
                 shadow,
+            ),
+            dense_scene=determine_dense_scene_assessment(
+                official_person_count=(official.person_count),
+                shadow_person_count=(shadow.person_count),
             ),
         )
         self._record_sink(record.to_dict())
