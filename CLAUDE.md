@@ -250,7 +250,12 @@ pinned commit:
 5c91a81ca062b1c7fd3db3ad1c55b1c21f0a7455
 ```
 
-외부 라이선스는 학술 연구용 제한이 있으므로 상용 전환 시 반드시 재검토한다.
+현재 학업·비상업 용도는 P2PNet, JHU-CROWD++, 팀 사진 모두 허용 범위 안이다.
+다만 공식 모델의 `ultralytics`는 AGPL-3.0이므로 상업성과 무관하게 네트워크
+배포가 조건 발동 기준이다. 외부 공개 서비스로 열 계획이 생기면 먼저 논의한다.
+JHU-CROWD++ 약관 조항 6은 발표 자료와 보고서에 논문 2편 인용을 요구한다.
+자세한 내용은 `ai/docs/model-license-review.md`를 참고한다.
+
 가중치는 Git에 커밋하지 않는다.
 
 ## 7. 완료된 주요 AI 이슈
@@ -631,6 +636,7 @@ ai/requirements-deploy.txt
 6. `ai/docs/p2pnet-deployment-assets.md` — 137 배포 자산
 7. `ai/docs/runtime-performance-benchmark.md` — GPU·CPU 성능
 8. `ai/docs/video-frame-analysis.md` — 프레임 상태·실패 계약
+9. `ai/docs/model-license-review.md` — 모델·데이터 라이선스 제약
 
 이 문서와 코드가 다르면 코드를 먼저 확인하고, 차이를 사용자에게 알린 뒤 문서를
 갱신한다. 날짜가 바뀌었거나 브랜치가 변경되었다면 이 문서의 `현재 Git 상태`를
