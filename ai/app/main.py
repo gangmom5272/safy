@@ -5,7 +5,12 @@ from fastapi import FastAPI
 
 from app.api.analysis import router as analysis_router
 from app.api.privacy import router as privacy_router
+from app.logging_config import configure_logging
 from app.services import p2pnet_assets
+
+
+# lifespan에서 자산 준비 로그가 발생하므로 앱 생성 전에 설정해야 한다.
+configure_logging()
 
 
 @asynccontextmanager
