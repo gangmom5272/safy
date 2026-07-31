@@ -15,6 +15,7 @@
 줄였다. 자세한 근거는 `docs/dense-scene-escalation.md`를 참고한다.
 """
 
+import os
 from dataclasses import dataclass
 
 
@@ -22,6 +23,13 @@ from dataclasses import dataclass
 # 그대로 사용한다. 신호가 먹이는 규칙과 같은 경계선을 쓰는 것이 의미가
 # 분명하기 때문이다.
 DENSE_SCENE_LOCAL_PEAK_THRESHOLD = 80.0
+
+CONGESTION_CORRECTION_ENABLED_VARIABLE = "P2PNET_CONGESTION_CORRECTION_ENABLED"
+
+CONGESTION_SOURCE_OFFICIAL = "YOLO"
+CONGESTION_SOURCE_CORRECTED = "P2PNET_CORRECTED"
+
+COMPLETED_STATUS = "COMPLETED"
 
 
 @dataclass(frozen=True)
@@ -63,3 +71,102 @@ def determine_dense_scene_assessment(
         shadow_says_dense=shadow_says_dense,
         local_peak_threshold=local_peak_threshold,
     )
+
+
+@dataclass(frozen=True)
+class CongestionCorrection:
+    """보정 후 C·L과 그 출처."""
+
+    visual_congestion_score: float | None
+    local_peak_congestion_score: float | None
+    source: str
+
+    @property
+    def applied(self) -> bool:
+        return self.source == CONGESTION_SOURCE_CORRECTED
+
+
+def is_congestion_correction_enabled() -> bool:
+    """공식 C·L 보정 활성화 여부. 기본값은 비활성화다.
+
+    보정을 켜면 P2PNet이 공식 응답의 크리티컬 패스로 들어와 지연시간이
+    크게 늘고(CPU 680~1,726ms) 동시 요청이 직렬화된다. 서버 실측
+    (`S15P11A503-106`)으로 5초 프레임 예산을 확인한 뒤에만 켠다.
+    """
+    raw_value = os.getenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "false")
+
+    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def correct_congestion_scores(
+    *,
+    official_visual_congestion_score: float | None,
+    official_local_peak_congestion_score: float | None,
+    shadow_analysis_status: str | None,
+    shadow_visual_congestion_score: float | None,
+    shadow_local_peak_congestion_score: float | None,
+    shadow_low_confidence_signal: bool | None,
+) -> CongestionCorrection:
+    """위험을 올리는 방향으로만 공식 C·L을 P2PNet 값으로 보정한다.
+
+    고밀도 장면에서 YOLO의 C·L 오차가 매우 커(C 44.15, L 80.62) 위험등급
+    예외 규칙이 발동하지 않는 문제를 완화한다. 자세한 근거는
+    `docs/official-congestion-correction-proposal.md`를 참고한다.
+
+    보정 조건:
+
+    1. P2PNet 분석이 `COMPLETED`다.
+    2. 저밀도 대형 오탐 의심 신호(`lowConfidenceSignal`)가 없다.
+    3. P2PNet 값이 공식 값보다 크다(항목별로 판단).
+
+    2번을 조건에 넣는 이유는 공식값 대체가 자동 위험등급을 직접 바꾸기
+    때문이다. 색종이를 사람으로 오인해 L=100이 된 프레임이 CAUTION을
+    자동 발동시키면 안 된다. 진단용 `denseScene.suspected` 신호에는 이
+    게이트를 적용하지 않으므로 사람은 여전히 고밀도 의심을 확인할 수 있다.
+    """
+    correctable = (
+        shadow_analysis_status == COMPLETED_STATUS
+        and shadow_low_confidence_signal is not True
+    )
+
+    if not correctable:
+        return CongestionCorrection(
+            visual_congestion_score=(official_visual_congestion_score),
+            local_peak_congestion_score=(official_local_peak_congestion_score),
+            source=CONGESTION_SOURCE_OFFICIAL,
+        )
+
+    visual_score = _raise_only(
+        official_value=official_visual_congestion_score,
+        shadow_value=shadow_visual_congestion_score,
+    )
+    local_peak_score = _raise_only(
+        official_value=official_local_peak_congestion_score,
+        shadow_value=shadow_local_peak_congestion_score,
+    )
+
+    raised = (
+        visual_score != official_visual_congestion_score
+        or local_peak_score != official_local_peak_congestion_score
+    )
+
+    return CongestionCorrection(
+        visual_congestion_score=visual_score,
+        local_peak_congestion_score=local_peak_score,
+        source=(CONGESTION_SOURCE_CORRECTED if raised else CONGESTION_SOURCE_OFFICIAL),
+    )
+
+
+def _raise_only(
+    *,
+    official_value: float | None,
+    shadow_value: float | None,
+) -> float | None:
+    """그림자 값이 더 클 때만 대체한다. 낮추는 방향으로는 쓰지 않는다."""
+    if shadow_value is None:
+        return official_value
+
+    if official_value is None:
+        return shadow_value
+
+    return max(official_value, shadow_value)

@@ -28,6 +28,11 @@ FailureCode = Literal[
     "INTERNAL_AI_ERROR",
 ]
 
+CongestionSource = Literal[
+    "YOLO",
+    "P2PNET_CORRECTED",
+]
+
 
 class FrameAnalysisResponse(BaseModel):
     model_config = ConfigDict(
@@ -45,6 +50,7 @@ class FrameAnalysisResponse(BaseModel):
                     ],
                     "visualCongestionScore": 1.88,
                     "localPeakCongestionScore": 15.0,
+                    "congestionSource": "YOLO",
                     "densityLevel": None,
                     "riskScore": None,
                     "confidence": None,
@@ -78,6 +84,14 @@ class FrameAnalysisResponse(BaseModel):
     local_peak_congestion_score: float | None = Field(
         default=None,
         alias="localPeakCongestionScore",
+    )
+    congestion_source: CongestionSource = Field(
+        default="YOLO",
+        alias="congestionSource",
+        description=(
+            "C·L 값의 출처입니다. P2PNET_CORRECTED는 고밀도 장면에서 "
+            "위험을 올리는 방향으로만 P2PNet 값으로 보정했다는 뜻입니다."
+        ),
     )
     density_level: None = Field(default=None, alias="densityLevel")
     risk_score: None = Field(default=None, alias="riskScore")

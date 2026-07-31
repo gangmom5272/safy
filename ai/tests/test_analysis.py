@@ -2,9 +2,17 @@ from fastapi.testclient import TestClient
 
 from app.api import analysis
 from app.main import app
+from app.services.dense_scene_escalation import (
+    CONGESTION_CORRECTION_ENABLED_VARIABLE,
+    determine_dense_scene_assessment,
+)
 from app.services.frame_quality import FrameQualityResult
 from app.services.person_detector import PersonDetectionResult
-from app.services.shadow_analysis import ModelAnalysisSnapshot
+from app.services.shadow_analysis import (
+    ModelAnalysisSnapshot,
+    ShadowAnalysisDifferences,
+    ShadowAnalysisRecord,
+)
 
 
 client = TestClient(app)
@@ -97,6 +105,7 @@ def test_analyze_frame(monkeypatch) -> None:
         "analysisStatus": "COMPLETED",
         "personCount": 2,
         "personConfidences": [0.9, 0.8],
+        "congestionSource": "YOLO",
         "visualCongestionScore": 0.94,
         "localPeakCongestionScore": 15.0,
         "densityLevel": None,
@@ -471,3 +480,190 @@ def test_no_people_returns_completed_with_zero_congestion(
     assert response.json()["personCount"] == 0
     assert response.json()["visualCongestionScore"] == 0.0
     assert response.json()["localPeakCongestionScore"] == 0.0
+
+
+def _build_shadow_service(
+    *,
+    shadow_snapshot: ModelAnalysisSnapshot,
+    call_log: list[str],
+):
+    """보정 경로 검증용 가짜 그림자 서비스."""
+
+    class FakeShadowService:
+        enabled = True
+
+        async def analyze_and_log(
+            self,
+            *,
+            image_bytes: bytes,
+            official: ModelAnalysisSnapshot,
+        ):
+            call_log.append("awaited")
+
+            return ShadowAnalysisRecord(
+                analysis_id="analysis-1",
+                frame_sha256="sha",
+                selection_status="YOLO_PRIMARY_P2PNET_SHADOW",
+                automatic_fallback="DISABLED",
+                official=official,
+                shadow=shadow_snapshot,
+                differences=ShadowAnalysisDifferences(
+                    person_count=None,
+                    visual_congestion_score=None,
+                    local_peak_congestion_score=None,
+                ),
+                dense_scene=determine_dense_scene_assessment(
+                    official_local_peak_congestion_score=(
+                        official.local_peak_congestion_score
+                    ),
+                    shadow_local_peak_congestion_score=(
+                        shadow_snapshot.local_peak_congestion_score
+                    ),
+                ),
+            )
+
+    return FakeShadowService()
+
+
+def _shadow_snapshot(
+    *,
+    visual: float | None,
+    local_peak: float | None,
+    low_confidence: bool | None,
+    status: str = "COMPLETED",
+) -> ModelAnalysisSnapshot:
+    return ModelAnalysisSnapshot(
+        model_name="P2PNet",
+        model_version="safy-p2pnet-v2-epoch3",
+        model_weight_id="epoch-003.pth",
+        analysis_status=status,
+        person_count=180,
+        visual_congestion_score=visual,
+        local_peak_congestion_score=local_peak,
+        processing_time_ms=900,
+        failure_codes=[],
+        low_confidence_signal=low_confidence,
+    )
+
+
+def test_correction_disabled_keeps_yolo_congestion(monkeypatch) -> None:
+    monkeypatch.delenv(
+        CONGESTION_CORRECTION_ENABLED_VARIABLE,
+        raising=False,
+    )
+    monkeypatch.setattr(analysis, "inspect_frame_quality", fake_valid_quality)
+    monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
+
+    call_log: list[str] = []
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        lambda: _build_shadow_service(
+            shadow_snapshot=_shadow_snapshot(
+                visual=90.0,
+                local_peak=100.0,
+                low_confidence=False,
+            ),
+            call_log=call_log,
+        ),
+    )
+
+    payload = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
+    ).json()
+
+    # 플래그가 꺼져 있으면 YOLO 값을 그대로 쓴다.
+    assert payload["congestionSource"] == "YOLO"
+    assert payload["visualCongestionScore"] == 0.94
+
+
+def test_correction_enabled_raises_congestion_scores(monkeypatch) -> None:
+    monkeypatch.setenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "true")
+    monkeypatch.setattr(analysis, "inspect_frame_quality", fake_valid_quality)
+    monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
+
+    call_log: list[str] = []
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        lambda: _build_shadow_service(
+            shadow_snapshot=_shadow_snapshot(
+                visual=90.0,
+                local_peak=100.0,
+                low_confidence=False,
+            ),
+            call_log=call_log,
+        ),
+    )
+
+    payload = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
+    ).json()
+
+    assert call_log == ["awaited"]
+    assert payload["congestionSource"] == "P2PNET_CORRECTED"
+    assert payload["visualCongestionScore"] == 90.0
+    assert payload["localPeakCongestionScore"] == 100.0
+    # 공식 인원수는 여전히 YOLO 결과다.
+    assert payload["personCount"] == 2
+    assert payload["modelName"] == "YOLO"
+
+
+def test_correction_enabled_but_gate_blocks_keeps_yolo(monkeypatch) -> None:
+    monkeypatch.setenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "true")
+    monkeypatch.setattr(analysis, "inspect_frame_quality", fake_valid_quality)
+    monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
+
+    call_log: list[str] = []
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        lambda: _build_shadow_service(
+            shadow_snapshot=_shadow_snapshot(
+                visual=90.0,
+                local_peak=100.0,
+                low_confidence=True,
+            ),
+            call_log=call_log,
+        ),
+    )
+
+    payload = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
+    ).json()
+
+    assert payload["congestionSource"] == "YOLO"
+    assert payload["visualCongestionScore"] == 0.94
+
+
+def test_correction_enabled_with_failed_shadow_keeps_yolo(monkeypatch) -> None:
+    monkeypatch.setenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "true")
+    monkeypatch.setattr(analysis, "inspect_frame_quality", fake_valid_quality)
+    monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
+
+    call_log: list[str] = []
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        lambda: _build_shadow_service(
+            shadow_snapshot=_shadow_snapshot(
+                visual=None,
+                local_peak=None,
+                low_confidence=None,
+                status="FAILED",
+            ),
+            call_log=call_log,
+        ),
+    )
+
+    payload = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
+    ).json()
+
+    assert payload["analysisStatus"] == "COMPLETED"
+    assert payload["congestionSource"] == "YOLO"
+    assert payload["visualCongestionScore"] == 0.94
