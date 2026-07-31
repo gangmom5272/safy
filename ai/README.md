@@ -115,6 +115,12 @@ AI 서버는 전달받은 단일 프레임의 품질 검사와 분석만 담당�
 프레임 상태, 실패 코드, 재시도 및 영상 단위 집계 기준은
 [영상 프레임 분석 상태 및 실패 처리 기준](docs/video-frame-analysis.md)을 참고합니다.
 
+백엔드가 AI 서버를 호출할 때 필요한 엔드포인트, 요청·응답 형식, 상태별 필드
+값과 오류 계약은
+[AI 서버·백엔드 연동 명세](docs/backend-integration-contract.md)를 참고합니다.
+분석 실패도 HTTP 200으로 반환하므로 HTTP 상태 코드가 아니라 응답 본문의
+`analysisStatus`를 읽어야 합니다.
+
 단일 요청과 연속 프레임의 지연시간, FPS 및 GPU 메모리를 측정하며,
 대표 표본과 고밀도 표본을 이용한 측정 결과와 1차 운영 기준은
 [AI 프레임 분석 런타임 성능 측정](docs/runtime-performance-benchmark.md)을 참고합니다.

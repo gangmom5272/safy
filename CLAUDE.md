@@ -134,6 +134,11 @@ INVALID_AI_RESPONSE
 `FAILED`는 영상 단위 통계에서 제외한다. 최종 위험도와 영상 단위 상태·집계는
 백엔드 책임이다.
 
+주의: `FAILED`도 HTTP 200으로 반환한다. 백엔드는 HTTP 상태 코드가 아니라
+응답 본문의 `analysisStatus`를 읽어야 한다. HTTP가 200이 아닌 경우는 요청
+자체가 잘못된 415와 400뿐이다. 엔드포인트별 요청·응답 전체 명세와 상태별
+필드 값은 `ai/docs/backend-integration-contract.md`에 있다.
+
 ### 전체 이미지 블러
 
 ```text
