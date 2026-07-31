@@ -46,6 +46,8 @@ class OperatorDashboardServiceTest {
 	@Mock LiveSessionRepository liveSessionRepository;
 	@Mock MediaObjectStorage mediaObjectStorage;
 	@Mock OperatorReportAccessService accessService;
+	@Mock com.ojimasam.safy.report.domain.ReportRepository reportRepository;
+	@Mock com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository membershipRepository;
 
 	@Test
 	void returnsImageAndLiveTilesInOnePageForAssignedOperator() {
@@ -95,9 +97,38 @@ class OperatorDashboardServiceTest {
 				eq(OperatorReportAccessService.ACTIVE_ASSIGNMENT_STATUSES), any());
 	}
 
+	@Test
+	void queueReturnsUnassignedReportsOfMyCenter() {
+		Report queued = report(10L, ReportType.IMAGE, "미배정 제보");
+		var membership = mock(com.ojimasam.safy.admin.domain.AdminCenterMembership.class);
+		when(membership.getStatus()).thenReturn(com.ojimasam.safy.admin.domain.type.MembershipStatus.ACTIVE);
+		when(membership.getControlCenterId()).thenReturn(20L);
+		when(membershipRepository.findByUserIdAndIsPrimaryTrue(30L)).thenReturn(java.util.Optional.of(membership));
+		when(reportRepository.findCenterQueue(any(), any(), eq(20L), any(), any(), any()))
+				.thenReturn(new PageImpl<>(List.of(queued)));
+		when(imageRepository.findAllByReportIdInOrderByReportIdAscDisplayOrderAsc(List.of(10L)))
+				.thenReturn(List.of());
+		when(liveSessionRepository.findAllByReportIdIn(List.of(10L))).thenReturn(List.of());
+
+		var result = service().getQueue(30L, 0, 25);
+
+		assertThat(result.getContent()).hasSize(1);
+		assertThat(result.getContent().getFirst().reportId()).isEqualTo(10L);
+		assertThat(result.getContent().getFirst().image().imageCount()).isZero();
+	}
+
+	@Test
+	void queueDeniesOperatorWithoutActiveMembership() {
+		when(membershipRepository.findByUserIdAndIsPrimaryTrue(30L)).thenReturn(java.util.Optional.empty());
+
+		org.assertj.core.api.Assertions.assertThatThrownBy(() -> service().getQueue(30L, 0, 25))
+				.isInstanceOf(com.ojimasam.safy.common.exception.BusinessException.class);
+	}
+
 	private OperatorDashboardService service() {
 		return new OperatorDashboardService(assignmentRepository, imageRepository, liveSessionRepository,
-				mediaObjectStorage, accessService, Clock.fixed(NOW, ZoneOffset.UTC));
+				mediaObjectStorage, accessService, reportRepository, membershipRepository,
+				Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
 	private Report report(Long id, ReportType type, String description) {

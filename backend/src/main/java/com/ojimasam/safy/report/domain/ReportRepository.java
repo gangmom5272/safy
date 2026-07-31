@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
@@ -54,6 +55,16 @@ public interface ReportRepository {
 	List<Long> findRoutedUnassignedIds(
 			ReportRoutingStatus routingStatus,
 			ReportStatus reportStatus,
+			List<ReportOperatorAssignmentStatus> activeAssignmentStatuses,
+			Pageable pageable
+	);
+
+	/** 센터 공용 큐: 해당 관제센터로 라우팅됐지만 아직 담당자가 없는 제보. 오래된 것부터. */
+	Page<Report> findCenterQueue(
+			ReportRoutingStatus routingStatus,
+			ReportStatus reportStatus,
+			Long controlCenterId,
+			ReportCenterRouteStatus routeStatus,
 			List<ReportOperatorAssignmentStatus> activeAssignmentStatuses,
 			Pageable pageable
 	);

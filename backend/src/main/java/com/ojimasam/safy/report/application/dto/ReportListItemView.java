@@ -16,6 +16,8 @@ public record ReportListItemView(
 		String description,
 		String address,
 		ReportStatus status,
+		/** 제보자가 지금 취소할 수 있는지. 판단 규칙은 도메인(Report.isCancellable) 한 곳에만 둔다. */
+		boolean cancellable,
 		ReportRoutingStatus routingStatus,
 		String administrativeAreaName,
 		Instant reportedAt,

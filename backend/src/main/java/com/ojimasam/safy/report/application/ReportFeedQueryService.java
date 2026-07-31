@@ -33,7 +33,6 @@ public class ReportFeedQueryService {
 	public static final List<ReportStatus> VISIBLE_STATUSES = Arrays.asList(
 			ReportStatus.RECEIVED,
 			ReportStatus.ASSIGNED,
-			ReportStatus.ACCEPTED,
 			ReportStatus.IN_PROGRESS
 	);
 

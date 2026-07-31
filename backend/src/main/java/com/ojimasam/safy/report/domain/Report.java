@@ -179,8 +179,16 @@ public class Report extends BaseEntity {
 		}
 	}
 
+	/**
+	 * 제보자가 취소할 수 있는 상태인지. 담당자가 확인(IN_PROGRESS)하기 전까지만 허용한다.
+	 * 취소 버튼 노출 조건이 프론트에 중복되지 않도록 조회 응답(cancellable)에도 그대로 내려준다.
+	 */
+	public boolean isCancellable() {
+		return status == ReportStatus.RECEIVED || status == ReportStatus.ASSIGNED;
+	}
+
 	public void cancel() {
-		if (status != ReportStatus.RECEIVED && status != ReportStatus.ASSIGNED) {
+		if (!isCancellable()) {
 			throw new IllegalStateException("접수 또는 배정 상태의 제보만 취소할 수 있습니다.");
 		}
 		this.status = ReportStatus.CANCELLED;

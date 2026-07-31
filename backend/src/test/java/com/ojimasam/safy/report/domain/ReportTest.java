@@ -97,6 +97,19 @@ class ReportTest {
 	}
 
 	@Test
+	void cancellableOnlyBeforeOperatorBeginsHandling() {
+		Report report = Report.create(1L, ReportType.IMAGE,
+				ReportCategory.FACILITY_ROAD, ReportSubcategory.ROAD_DAMAGE, "제보 내용",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+
+		assertThat(report.isCancellable()).isTrue();
+		report.assign();
+		assertThat(report.isCancellable()).isTrue();
+		report.beginHandling();
+		assertThat(report.isCancellable()).isFalse();
+	}
+
+	@Test
 	void rejectsSubcategoryFromAnotherCategory() {
 		assertThatThrownBy(() -> Report.create(
 				1L, ReportType.LIVE, ReportCategory.ACCIDENT_RISK, ReportSubcategory.EXIT_CONGESTION,

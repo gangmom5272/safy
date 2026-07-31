@@ -7,6 +7,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,7 +21,10 @@ import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.report.application.dto.OperatorAssignmentResponse;
 import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
 import com.ojimasam.safy.report.application.ReportQueryService;
+import com.ojimasam.safy.report.application.ReportTransferService;
 import com.ojimasam.safy.report.application.dto.ReportDetailView;
+import com.ojimasam.safy.report.application.dto.ReportTransferResponse;
+import com.ojimasam.safy.report.presentation.dto.OperatorReportTransferRequest;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,11 +43,13 @@ import com.ojimasam.safy.report.presentation.dto.OperatorReportReleaseRequest;
 public class OperatorReportController {
 	private final ReportOperatorAssignmentService assignmentService;
 	private final ReportQueryService reportQueryService;
+	private final ReportTransferService transferService;
 
 	public OperatorReportController(ReportOperatorAssignmentService assignmentService,
-			ReportQueryService reportQueryService) {
+			ReportQueryService reportQueryService, ReportTransferService transferService) {
 		this.assignmentService = assignmentService;
 		this.reportQueryService = reportQueryService;
+		this.transferService = transferService;
 	}
 
 	@GetMapping("/{reportId}")
@@ -74,6 +80,21 @@ public class OperatorReportController {
 		));
 	}
 
+	@PostMapping("/{reportId}/claim")
+	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "공용 큐 제보 담당하기",
+			description = "센터 공용 큐의 미배정 제보를 직접 담당합니다. 담당 즉시 내 관제 타일에 들어오며, "
+					+ "동시에 다른 담당자가 먼저 담당했다면 409를 반환합니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "담당하기 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 다른 담당자가 담당했거나 소속 관제센터의 제보가 아님", content = @Content)
+	public ApiResponse<OperatorAssignmentResponse> claim(
+			@AuthenticationPrincipal Jwt jwt,
+			@PathVariable Long reportId
+	) {
+		return ApiResponse.success(assignmentService.claim(CurrentUser.id(jwt), reportId));
+	}
+
 	@PatchMapping("/{reportId}/complete")
 	@PreAuthorize("hasRole('OPERATOR')")
 	@Operation(summary = "업무 종료",
@@ -102,6 +123,25 @@ public class OperatorReportController {
 			@Valid @RequestBody OperatorReportReleaseRequest request
 	) {
 		return ApiResponse.success(assignmentService.reject(CurrentUser.id(jwt), reportId, request.reason()));
+	}
+
+	@PostMapping("/{reportId}/transfer")
+	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "다른 관제센터로 이관",
+			description = "담당 중인 제보를 같은 행정구역을 담당(커버리지 등록)하는 다른 관제센터로 이관합니다. "
+					+ "이미 거쳐온 센터로는 되돌릴 수 없으며, 이관 후 대상 센터에서 자동 배정을 시도하고 "
+					+ "실패하면 대상 센터 공용 큐에 남습니다. 사유 필수.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "이관 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "사유 누락 또는 대상 센터가 행정구역을 담당하지 않음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이관할 수 없는 상태이거나 이미 거쳐온 센터", content = @Content)
+	public ApiResponse<ReportTransferResponse> transfer(
+			@AuthenticationPrincipal Jwt jwt,
+			@PathVariable Long reportId,
+			@Valid @RequestBody OperatorReportTransferRequest request
+	) {
+		return ApiResponse.success(transferService.transferManually(
+				CurrentUser.id(jwt), reportId, request.targetControlCenterId(), request.reason()));
 	}
 
 	@PatchMapping("/{reportId}/reassign")

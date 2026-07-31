@@ -21,7 +21,6 @@ import com.ojimasam.safy.user.domain.type.UserRole;
 public class OperatorReportAccessService {
 	public static final Set<ReportOperatorAssignmentStatus> ACTIVE_ASSIGNMENT_STATUSES = Set.of(
 			ReportOperatorAssignmentStatus.ASSIGNED,
-			ReportOperatorAssignmentStatus.ACCEPTED,
 			ReportOperatorAssignmentStatus.IN_PROGRESS
 	);
 

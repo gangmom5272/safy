@@ -10,10 +10,12 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
@@ -102,6 +104,54 @@ public interface JpaReportRepository extends JpaRepository<Report, Long>, Report
 	List<Long> findRoutedUnassignedIds(
 			@Param("routingStatus") ReportRoutingStatus routingStatus,
 			@Param("reportStatus") ReportStatus reportStatus,
+			@Param("activeAssignmentStatuses") List<ReportOperatorAssignmentStatus> activeAssignmentStatuses,
+			Pageable pageable
+	);
+
+	@Override
+	@Query(value = """
+			select report
+			from Report report
+			where report.routingStatus = :routingStatus
+			  and report.status = :reportStatus
+			  and exists (
+			    select route.id
+			    from ReportCenterRoute route
+			    where route.report.id = report.id
+			      and route.status = :routeStatus
+			      and route.controlCenter.id = :controlCenterId
+			  )
+			  and not exists (
+			    select assignment.id
+			    from ReportOperatorAssignment assignment
+			    where assignment.report.id = report.id
+			      and assignment.status in :activeAssignmentStatuses
+			  )
+			order by report.reportedAt asc, report.id asc
+			""", countQuery = """
+			select count(report)
+			from Report report
+			where report.routingStatus = :routingStatus
+			  and report.status = :reportStatus
+			  and exists (
+			    select route.id
+			    from ReportCenterRoute route
+			    where route.report.id = report.id
+			      and route.status = :routeStatus
+			      and route.controlCenter.id = :controlCenterId
+			  )
+			  and not exists (
+			    select assignment.id
+			    from ReportOperatorAssignment assignment
+			    where assignment.report.id = report.id
+			      and assignment.status in :activeAssignmentStatuses
+			  )
+			""")
+	Page<Report> findCenterQueue(
+			@Param("routingStatus") ReportRoutingStatus routingStatus,
+			@Param("reportStatus") ReportStatus reportStatus,
+			@Param("controlCenterId") Long controlCenterId,
+			@Param("routeStatus") ReportCenterRouteStatus routeStatus,
 			@Param("activeAssignmentStatuses") List<ReportOperatorAssignmentStatus> activeAssignmentStatuses,
 			Pageable pageable
 	);
