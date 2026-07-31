@@ -12,6 +12,7 @@ import com.ojimasam.safy.place.domain.PlaceRepository;
 import com.ojimasam.safy.publicdata.application.CityCongestionIngestService;
 import com.ojimasam.safy.publicdata.application.CulturalEventIngestService;
 import com.ojimasam.safy.publicdata.application.DisasterMessageIngestService;
+import com.ojimasam.safy.publicdata.application.dto.DisasterMessageCollectionRequest;
 
 /**
  * 주기적으로 FastAPI 에 수집을 요청하고 결과를 적재한다.
@@ -33,19 +34,22 @@ public class PublicDataCollectionScheduler {
 	private final CityCongestionIngestService cityCongestionIngestService;
 	private final CulturalEventIngestService culturalEventIngestService;
 	private final DisasterMessageIngestService disasterMessageIngestService;
+	private final PublicDataProperties publicDataProperties;
 
 	public PublicDataCollectionScheduler(
 			PublicDataClient publicDataClient,
 			PlaceRepository placeRepository,
 			CityCongestionIngestService cityCongestionIngestService,
 			CulturalEventIngestService culturalEventIngestService,
-			DisasterMessageIngestService disasterMessageIngestService
+			DisasterMessageIngestService disasterMessageIngestService,
+			PublicDataProperties publicDataProperties
 	) {
 		this.publicDataClient = publicDataClient;
 		this.placeRepository = placeRepository;
 		this.cityCongestionIngestService = cityCongestionIngestService;
 		this.culturalEventIngestService = culturalEventIngestService;
 		this.disasterMessageIngestService = disasterMessageIngestService;
+		this.publicDataProperties = publicDataProperties;
 	}
 
 	@Scheduled(
@@ -85,7 +89,10 @@ public class PublicDataCollectionScheduler {
 			scheduler = "publicDataTaskScheduler"
 	)
 	public void collectDisasterMessages() {
-		publicDataClient.fetchDisasterMessages().ifPresent(response -> {
+		DisasterMessageCollectionRequest request = DisasterMessageCollectionRequest.lookingBack(
+				publicDataProperties.disasterMessageLookbackDays()
+		);
+		publicDataClient.fetchDisasterMessages(request).ifPresent(response -> {
 			int saved = disasterMessageIngestService.ingest(response);
 			if (saved > 0) {
 				log.info("재난 문자 {}건을 적재했습니다.", saved);
