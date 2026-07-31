@@ -121,7 +121,7 @@ def test_analyze_frame(monkeypatch) -> None:
         "modelVersion": "yolo11n",
         "modelWeightId": "yolo11n.pt",
         "congestionRuleVersion": "yolo-grid-v0.2",
-        "frameQualityRuleVersion": "frame-quality-v0.2",
+        "frameQualityRuleVersion": "frame-quality-v0.3",
         "processingTimeMs": 10,
     }
 
@@ -300,7 +300,7 @@ def test_invalid_frame_skips_detection(monkeypatch) -> None:
     assert response_body["modelVersion"] == "yolo11n"
     assert response_body["modelWeightId"] == "yolo11n.pt"
     assert response_body["congestionRuleVersion"] == "yolo-grid-v0.2"
-    assert response_body["frameQualityRuleVersion"] == "frame-quality-v0.2"
+    assert response_body["frameQualityRuleVersion"] == "frame-quality-v0.3"
     assert response_body["confidence"] is None
 
 
@@ -343,7 +343,7 @@ def test_analysis_failure_returns_failed_status(
     assert response_body["modelVersion"] == "yolo11n"
     assert response_body["modelWeightId"] == "yolo11n.pt"
     assert response_body["congestionRuleVersion"] == "yolo-grid-v0.2"
-    assert response_body["frameQualityRuleVersion"] == "frame-quality-v0.2"
+    assert response_body["frameQualityRuleVersion"] == "frame-quality-v0.3"
     assert "Person detection failed" in caplog.text
 
 
