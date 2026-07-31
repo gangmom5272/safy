@@ -61,7 +61,9 @@ export async function getLiveReports(params: ReportListParams): Promise<LiveRepo
     return waitForMock(filterAndSortMockReports(params.types, params.sort).slice(0, params.limit))
   }
 
-  const response = await apiClient.get<unknown>('/reports/live', {
+  // 공개 피드(/feed)는 담당 관제사가 정상 제보로 판정한 건만 내려준다.
+  // 관제용 /reports/live 는 라이브 세션 정보를 담고 있어 시민에게 열려 있지 않다.
+  const response = await apiClient.get<unknown>('/feed/reports', {
     params: createLiveReportParams(params),
   })
 
@@ -125,7 +127,7 @@ export async function getAreaLiveReports(
     return waitForMock(filterAndSortMockAreaReports(areaIdOrQuery, params.types, params.sort))
   }
 
-  const response = await apiClient.get<unknown>(`/areas/${areaIdOrQuery}/reports/live`, {
+  const response = await apiClient.get<unknown>(`/feed/areas/${areaIdOrQuery}/reports`, {
     params: createLiveReportParams(params),
   })
 
@@ -143,7 +145,8 @@ export async function getReportDetail(reportId: string): Promise<ReportDetail> {
     return waitForMock(detail)
   }
 
-  const response = await apiClient.get<unknown>(`/reports/${reportId}`)
+  // /reports/{id} 는 제보자 본인만 볼 수 있어 남의 제보 카드에서는 404 였다. 공개 피드 상세로 조회한다.
+  const response = await apiClient.get<unknown>(`/feed/reports/${reportId}`)
 
   return mapReportDetail(unwrapEnvelope(response.data))
 }
@@ -153,7 +156,7 @@ export async function getReportAnalysis(reportId: string): Promise<ReportAnalysi
     return waitForMock(getMockReportAnalysis(reportId) ?? null)
   }
 
-  const response = await apiClient.get<unknown | null>(`/reports/${reportId}/analysis`)
+  const response = await apiClient.get<unknown | null>(`/feed/reports/${reportId}/analysis`)
   const analysis = unwrapEnvelope(response.data)
 
   return analysis ? mapReportAnalysis(analysis) : null

@@ -1,6 +1,7 @@
 package com.ojimasam.safy.report.presentation;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -20,6 +21,7 @@ import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.report.application.dto.OperatorAssignmentResponse;
 import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
+import com.ojimasam.safy.report.application.ReportPublicVisibilityService;
 import com.ojimasam.safy.report.application.ReportQueryService;
 import com.ojimasam.safy.report.application.ReportTransferService;
 import com.ojimasam.safy.report.application.dto.ReportDetailView;
@@ -44,12 +46,30 @@ public class OperatorReportController {
 	private final ReportOperatorAssignmentService assignmentService;
 	private final ReportQueryService reportQueryService;
 	private final ReportTransferService transferService;
+	private final ReportPublicVisibilityService publicVisibilityService;
 
 	public OperatorReportController(ReportOperatorAssignmentService assignmentService,
-			ReportQueryService reportQueryService, ReportTransferService transferService) {
+			ReportQueryService reportQueryService, ReportTransferService transferService,
+			ReportPublicVisibilityService publicVisibilityService) {
 		this.assignmentService = assignmentService;
 		this.reportQueryService = reportQueryService;
 		this.transferService = transferService;
+		this.publicVisibilityService = publicVisibilityService;
+	}
+
+	@PostMapping("/{reportId}/withhold")
+	@Operation(summary = "공개 제보 내리기",
+			description = "업무 종료로 시민에게 공개된 제보를 부적절 판단 시 다시 비공개로 내립니다. "
+					+ "제보 처리 상태와 라이브 세션에는 영향을 주지 않습니다. 담당했던 제보이거나 SUPER_ADMIN 이어야 합니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "비공개 전환 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 제보에 대한 권한 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
+	public ResponseEntity<Void> withhold(
+			@AuthenticationPrincipal Jwt jwt,
+			@PathVariable Long reportId
+	) {
+		publicVisibilityService.withhold(CurrentUser.id(jwt), reportId);
+		return ResponseEntity.noContent().build();
 	}
 
 	@GetMapping("/{reportId}")

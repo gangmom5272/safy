@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportPublicVisibility;
 import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
@@ -67,6 +68,27 @@ public interface JpaReportRepository extends JpaRepository<Report, Long>, Report
 			Instant cursor,
 			Pageable pageable
 	);
+
+	@Override
+	@EntityGraph(attributePaths = {"administrativeArea", "representativeBlurAsset"})
+	List<Report> findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+			ReportPublicVisibility publicVisibility,
+			Instant cursor,
+			Pageable pageable
+	);
+
+	@Override
+	@EntityGraph(attributePaths = {"administrativeArea", "representativeBlurAsset"})
+	List<Report> findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+			Long administrativeAreaId,
+			ReportPublicVisibility publicVisibility,
+			Instant cursor,
+			Pageable pageable
+	);
+
+	@Override
+	@EntityGraph(attributePaths = {"administrativeArea", "representativeBlurAsset"})
+	Optional<Report> findByIdAndPublicVisibility(Long id, ReportPublicVisibility publicVisibility);
 
 	@Override
 	@Lock(LockModeType.PESSIMISTIC_WRITE)

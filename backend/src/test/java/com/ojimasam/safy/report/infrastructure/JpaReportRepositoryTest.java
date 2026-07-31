@@ -23,6 +23,7 @@ import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportPublicVisibility;
 import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.user.domain.User;
@@ -63,7 +64,76 @@ class JpaReportRepositoryTest {
 		assertThat(found.getLatitude()).isEqualByComparingTo("37.5665000");
 		assertThat(found.getLongitude()).isEqualByComparingTo("126.9780000");
 		assertThat(found.getStatus()).isEqualTo(ReportStatus.RECEIVED);
+		assertThat(found.getPublicVisibility()).isEqualTo(ReportPublicVisibility.PENDING);
+		assertThat(found.getRepresentativeBlurAsset()).isNull();
 		assertThat(found.getCreatedAt()).isNotNull();
+	}
+
+	@Test
+	void publicFeedReturnsOnlyPublishedReportsNewestFirst() {
+		Instant now = Instant.parse("2026-07-30T00:00:00Z");
+		visibleReport("공개 오래된", ReportPublicVisibility.PUBLISHED, now.minusSeconds(600));
+		visibleReport("공개 최신", ReportPublicVisibility.PUBLISHED, now.minusSeconds(60));
+		visibleReport("미검수", ReportPublicVisibility.PENDING, now.minusSeconds(30));
+		visibleReport("내려짐", ReportPublicVisibility.WITHHELD, now.minusSeconds(10));
+		entityManager.flush();
+
+		List<Report> result = reportRepository
+				.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						ReportPublicVisibility.PUBLISHED, now, PageRequest.of(0, 10));
+
+		assertThat(result)
+				.extracting(Report::getDescription)
+				.containsExactly("공개 최신", "공개 오래된");
+	}
+
+	@Test
+	void publicFeedHonoursCursorAndPageSize() {
+		Instant now = Instant.parse("2026-07-30T00:00:00Z");
+		visibleReport("첫째", ReportPublicVisibility.PUBLISHED, now.minusSeconds(300));
+		visibleReport("둘째", ReportPublicVisibility.PUBLISHED, now.minusSeconds(200));
+		visibleReport("셋째", ReportPublicVisibility.PUBLISHED, now.minusSeconds(100));
+		entityManager.flush();
+
+		List<Report> firstPage = reportRepository
+				.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						ReportPublicVisibility.PUBLISHED, now, PageRequest.of(0, 2));
+		List<Report> afterCursor = reportRepository
+				.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						ReportPublicVisibility.PUBLISHED, now.minusSeconds(200), PageRequest.of(0, 2));
+
+		assertThat(firstPage).extracting(Report::getDescription).containsExactly("셋째", "둘째");
+		assertThat(afterCursor).extracting(Report::getDescription).containsExactly("첫째");
+	}
+
+	@Test
+	void findByIdAndPublicVisibilityHidesUnpublishedReport() {
+		Instant now = Instant.parse("2026-07-30T00:00:00Z");
+		Report published = visibleReport("공개", ReportPublicVisibility.PUBLISHED, now);
+		Report pending = visibleReport("미검수", ReportPublicVisibility.PENDING, now);
+		entityManager.flush();
+
+		assertThat(reportRepository.findByIdAndPublicVisibility(
+				published.getId(), ReportPublicVisibility.PUBLISHED)).isPresent();
+		assertThat(reportRepository.findByIdAndPublicVisibility(
+				pending.getId(), ReportPublicVisibility.PUBLISHED)).isEmpty();
+	}
+
+	private Report visibleReport(String description, ReportPublicVisibility visibility, Instant reportedAt) {
+		Report report = Report.create(
+				1L,
+				com.ojimasam.safy.report.domain.type.ReportType.IMAGE,
+				com.ojimasam.safy.report.domain.type.ReportCategory.CROWD_CONGESTION,
+				com.ojimasam.safy.report.domain.type.ReportSubcategory.EXIT_CONGESTION,
+				description,
+				new BigDecimal("37.5665000"),
+				new BigDecimal("126.9780000"),
+				"서울특별시 중구"
+		);
+		// 공개 전이는 담당자 종료를 거쳐야 하므로, 조회 조건만 검증하는 여기서는 필드를 직접 세팅한다.
+		ReflectionTestUtils.setField(report, "publicVisibility", visibility);
+		ReflectionTestUtils.setField(report, "reportedAt", reportedAt);
+		return entityManager.persist(report);
 	}
 
 	@Test

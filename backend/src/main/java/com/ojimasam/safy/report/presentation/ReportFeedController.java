@@ -25,9 +25,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+/**
+ * 관제용 제보 피드. 라이브 세션 정보(streamRoomId·streamStatus)를 그대로 담으므로 시민에게 열지 않는다.
+ * 시민 화면은 {@link PublicReportFeedController}(/api/v1/feed)를 쓴다.
+ */
 @RestController
 @RequestMapping("/api/v1/reports")
-@Tag(name = "제보 피드", description = "프론트 지도/상황판 결합용 제보 조회")
+@Tag(name = "제보 피드", description = "관제 지도/상황판 결합용 제보 조회")
 @SecurityRequirement(name = SwaggerConfig.BEARER_AUTH)
 public class ReportFeedController {
 	private final ReportFeedQueryService reportFeedQueryService;
@@ -37,7 +41,7 @@ public class ReportFeedController {
 	}
 
 	@GetMapping("/recent")
-	@PreAuthorize("hasAnyRole('CITIZEN','OPERATOR','SUPER_ADMIN')")
+	@PreAuthorize("hasAnyRole('OPERATOR','SUPER_ADMIN')")
 	@Operation(summary = "최근 제보 목록 조회", description = "노출 가능 상태의 최근 제보를 커서 기반으로 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "최근 제보 목록 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
@@ -49,7 +53,7 @@ public class ReportFeedController {
 	}
 
 	@GetMapping("/live")
-	@PreAuthorize("hasAnyRole('CITIZEN','OPERATOR','SUPER_ADMIN')")
+	@PreAuthorize("hasAnyRole('OPERATOR','SUPER_ADMIN')")
 	@Operation(summary = "라이브 제보 목록 조회", description = "라이브 유형 제보를 커서 기반으로 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "라이브 제보 목록 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
@@ -61,7 +65,7 @@ public class ReportFeedController {
 	}
 
 	@GetMapping("/{reportId}/analysis")
-	@PreAuthorize("hasAnyRole('CITIZEN','OPERATOR','SUPER_ADMIN')")
+	@PreAuthorize("hasAnyRole('OPERATOR','SUPER_ADMIN')")
 	@Operation(summary = "제보 분석 결과 조회", description = "제보의 AI 분석 결과를 조회합니다. 미연동 상태에서는 NOT_STARTED를 반환합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 분석 결과 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
@@ -71,7 +75,7 @@ public class ReportFeedController {
 	}
 
 	@GetMapping("/{reportId}/webrtc")
-	@PreAuthorize("hasAnyRole('CITIZEN','OPERATOR','SUPER_ADMIN')")
+	@PreAuthorize("hasAnyRole('OPERATOR','SUPER_ADMIN')")
 	@Operation(summary = "제보 라이브 세션 정보 조회", description = "제보에 연결된 라이브 세션 정보와 입장 가능 여부를 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 라이브 세션 정보 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
