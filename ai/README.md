@@ -227,7 +227,7 @@ P2PNet v2 epoch3를 백그라운드에서 선택적으로 실행할 수 있습�
 [P2PNet 그림자 분석 운영 기준](docs/p2pnet-shadow-analysis.md)을 참고합니다.
 
 P2PNet 외부 코드는 고정 커밋으로 컨테이너에 포함하고, 운영 가중치는
-GitLab Generic Package Registry에서 내려받아 체크섬 검증 후 영속 볼륨에
+MinIO(`safy-ai-models` 버킷)에서 내려받아 체크섬 검증 후 영속 볼륨에
 캐시합니다. 운영 서버는 CPU 전용 이미지로 기동하며, 가중치 게시,
 비활성화와 롤백 절차는
 [P2PNet 운영 자산 및 CPU 배포](docs/p2pnet-deployment-assets.md)를 참고합니다.
