@@ -114,6 +114,81 @@ def test_fetch_seoul_congestion(
     assert result.population_min == "22000"
 
 
+# RESULT 안의 키가 CODE·MESSAGE로 오는 형태를 검증한다.
+# 배포 서버 실측(259944a)에서 확인한 형태인데,
+# RESULT.CODE 폴백 추가(eb08847) 이후 이 경로의 테스트가 사라졌다.
+def test_fetch_accepts_plain_result_code_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "RESULT": {
+            "CODE": "INFO-000",
+            "MESSAGE": "정상 처리되었습니다.",
+        },
+        "SeoulRtd.citydata_ppltn": [
+            {
+                "AREA_NM": "광화문·덕수궁",
+                "AREA_CD": "POI009",
+                "AREA_CONGEST_LVL": "약간 붐빔",
+                "AREA_CONGEST_MSG": (
+                    "사람이 다소 몰려 있습니다."
+                ),
+                "AREA_PPLTN_MIN": "22000",
+                "AREA_PPLTN_MAX": "24000",
+                "REPLACE_YN": "N",
+                "PPLTN_TIME": "2026-07-30 14:20",
+            }
+        ],
+    }
+    fake_client = FakeClient(payload)
+
+    monkeypatch.setattr(
+        collector_module.httpx2,
+        "Client",
+        lambda timeout: fake_client,
+    )
+
+    collector = SeoulCongestionCollector(
+        base_url="http://openapi.seoul.go.kr:8088",
+        api_key="test-api-key",
+    )
+
+    result = collector.fetch("광화문·덕수궁")
+
+    assert result.area_code == "POI009"
+    assert result.congestion_level == "약간 붐빔"
+
+
+def test_fetch_raises_error_with_plain_result_code_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "RESULT": {
+            "CODE": "INFO-200",
+            "MESSAGE": "해당하는 데이터가 없습니다.",
+        },
+        "SeoulRtd.citydata_ppltn": [],
+    }
+    fake_client = FakeClient(payload)
+
+    monkeypatch.setattr(
+        collector_module.httpx2,
+        "Client",
+        lambda timeout: fake_client,
+    )
+
+    collector = SeoulCongestionCollector(
+        base_url="http://openapi.seoul.go.kr:8088",
+        api_key="test-api-key",
+    )
+
+    with pytest.raises(
+        SeoulCongestionAPIError,
+        match="INFO-200",
+    ):
+        collector.fetch("광화문·덕수궁")
+
+
 def test_fetch_many_returns_partial_success(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
