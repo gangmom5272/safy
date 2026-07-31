@@ -57,9 +57,11 @@ class SeoulEventCollectionRequest(AreaCollectionRequest):
 
 
 class DisasterMessageCollectionRequest(BaseModel):
-    # 재난문자 API는 오래된 순으로 응답하므로 상한에 걸리면 최신 건이 잘린다.
+    # 재난문자 API 응답에는 정렬이 없다(2026-07-31 운영 실측: crtDt=2026-07-30,
+    # num_of_rows=1000 호출 시 348건이 sent_at·SN 어느 쪽으로도 정렬되지 않음).
+    # 상한에 걸리면 어떤 건이 빠질지 예측할 수 없으므로 넉넉히 잡는다.
     # 백엔드가 조회 시작일(crtDt)에 어제 날짜를 넣어 최대 이틀치를 받고,
-    # 평상시 하루 200건 기준이면 400건 정도라 1000이면 여유가 있다.
+    # 실측 348건 기준이면 1000은 약 2.9배 여유다.
     # 호출 한도는 회수 기준이라 상한을 올려도 1회 호출로 동일하다.
     page_no: int = Field(default=1, ge=1)
     num_of_rows: int = Field(default=1000, ge=1, le=1000)
