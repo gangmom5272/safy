@@ -253,8 +253,17 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
-    # CPU 실측 결과를 반영한 서비스다. 현재 자동 배포 명령에는 포함하지 않으며,
-    # 백엔드 호출 배선과 모델 저장소 설정을 확인한 뒤 별도로 활성화한다.
+    # 서버에 GPU가 없어 CPU 전용으로 돈다(P2PNET_SHADOW_DEVICE=cpu 고정).
+    #
+    # P2PNet 그림자 분석은 기본 비활성이고 .env의 P2PNET_SHADOW_ENABLED 와
+    # P2PNET_SHADOW_WEIGHT_URL 을 채워야 켜진다. 가중치가 없어도 YOLO 공식 분석과
+    # /health 는 정상 동작한다(자산 준비 실패 시 P2PNet 만 끄고 YOLO 를 유지한다).
+    #
+    # 배포 서버 실측(2026-07-31, P2PNet 비활성 상태):
+    #   최초 빌드 213s / 이미지 2.85GB / 기동~/health 200 까지 5.2s
+    #   추론 후 RSS 341MB(유휴 202MB) / 동시 4요청은 직렬 처리되어 총 470ms
+    #   1280x720 서버 처리시간 p95 154ms, HTTP 왕복 p95 205ms
+    #     = 5초 프레임 예산의 약 4%. 단 사람 0명 프레임 기준이고 P2PNet 은 미측정이다.
 
   # ==========================================
   # Data 서버 (FastAPI) — 공공데이터 수집
@@ -263,8 +272,7 @@ services:
   # 직접 DB에 적재한다. 이 서비스는 DB에 붙지 않고 파일도 쓰지 않는 무상태 서비스라
   # 볼륨이 필요 없다(app 전체에 쓰기 호출 0건, 2026-07-31 확인).
   #
-  # ai-server와 같이 아직 자동 배포 명령에는 포함하지 않는다. CI 배포 목록 추가는
-  # AI 배포와 함께 팀 확정 후 진행한다.
+  # ai-server 와 함께 CI 자동 배포 목록에 들어있다(.gitlab-ci.yml deploy).
   data:
     build: ../data
     image: safy-data:${DEPLOY_TAG:-latest}
