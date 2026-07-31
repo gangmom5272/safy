@@ -4,12 +4,13 @@ import cv2
 import numpy as np
 
 
-FRAME_QUALITY_RULE_VERSION = "frame-quality-v0.2"
+FRAME_QUALITY_RULE_VERSION = "frame-quality-v0.3"
 MIN_SHORT_SIDE = 240
 MIN_PIXEL_COUNT = 320 * 240
 MIN_BRIGHTNESS = 35.0
 MAX_BRIGHTNESS = 220.0
 MIN_BLUR_SCORE = 80.0
+BLUR_MEASUREMENT_SHORT_SIDE = 720
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,27 @@ class FrameQualityResult:
     height: int | None
     brightness_score: float | None
     blur_score: float | None
+
+
+def _measure_blur_score(gray_image: np.ndarray) -> float:
+    # Laplacian 분산은 인접 1픽셀 간 차이를 재므로 해상도가 커지면 같은 경계가
+    # 여러 픽셀에 퍼져 점수가 낮아진다. 실제 선명함과 무관하게 판정이 뒤집히지
+    # 않도록 측정 전에만 짧은 변을 고정 크기로 축소한다. 확대는 하지 않는다.
+    height, width = gray_image.shape[:2]
+    short_side = min(width, height)
+
+    if short_side > BLUR_MEASUREMENT_SHORT_SIDE:
+        scale = BLUR_MEASUREMENT_SHORT_SIDE / short_side
+        gray_image = cv2.resize(
+            gray_image,
+            (
+                max(1, round(width * scale)),
+                max(1, round(height * scale)),
+            ),
+            interpolation=cv2.INTER_AREA,
+        )
+
+    return float(cv2.Laplacian(gray_image, cv2.CV_64F).var())
 
 
 def inspect_frame_quality(image_bytes: bytes) -> FrameQualityResult:
@@ -40,7 +62,7 @@ def inspect_frame_quality(image_bytes: bytes) -> FrameQualityResult:
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     brightness_score = float(gray_image.mean())
-    blur_score = float(cv2.Laplacian(gray_image, cv2.CV_64F).var())
+    blur_score = _measure_blur_score(gray_image)
 
     issues: list[str] = []
 

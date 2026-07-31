@@ -22,7 +22,7 @@ def test_analysis_schema_contains_completed_example() -> None:
     assert example["modelVersion"] == "yolo11n"
     assert example["modelWeightId"] == "yolo11n.pt"
     assert example["congestionRuleVersion"] == "yolo-grid-v0.2"
-    assert example["frameQualityRuleVersion"] == "frame-quality-v0.2"
+    assert example["frameQualityRuleVersion"] == "frame-quality-v0.3"
 
 
 def test_analysis_schema_accepts_calibrated_confidence() -> None:

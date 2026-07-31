@@ -7,7 +7,7 @@
 - 모델: `YOLO:yolo11n`
 - 가중치 식별자: `yolo11n.pt`
 - 혼잡도 규칙: `yolo-grid-v0.2`
-- 프레임 품질 규칙: `frame-quality-v0.2`
+- 프레임 품질 규칙: `frame-quality-v0.3`
 
 ## 목적
 
@@ -80,7 +80,7 @@ API 스키마는 향후 보정된 값 사용을 위해 `0.0~1.0` 범위의 숫�
 | `modelVersion` | `yolo11n` | 모델 구조 또는 배포 버전 |
 | `modelWeightId` | `yolo11n.pt` | 실제 추론에 사용한 가중치 식별자 |
 | `congestionRuleVersion` | `yolo-grid-v0.2` | C·L 계산 규칙 버전 |
-| `frameQualityRuleVersion` | `frame-quality-v0.2` | 프레임 품질 판정 규칙 버전 |
+| `frameQualityRuleVersion` | `frame-quality-v0.3` | 프레임 품질 판정 규칙 버전 |
 
 가중치 파일 자체는 Git이나 DB에 저장하지 않는다.
 
@@ -118,7 +118,7 @@ API 스키마는 향후 보정된 값 사용을 위해 `0.0~1.0` 범위의 숫�
   "modelVersion": "yolo11n",
   "modelWeightId": "yolo11n.pt",
   "congestionRuleVersion": "yolo-grid-v0.2",
-  "frameQualityRuleVersion": "frame-quality-v0.2",
+  "frameQualityRuleVersion": "frame-quality-v0.3",
   "processingTimeMs": 36
 }
 ```
@@ -148,7 +148,7 @@ API 스키마는 향후 보정된 값 사용을 위해 `0.0~1.0` 범위의 숫�
   "modelVersion": "yolo11n",
   "modelWeightId": "yolo11n.pt",
   "congestionRuleVersion": "yolo-grid-v0.2",
-  "frameQualityRuleVersion": "frame-quality-v0.2",
+  "frameQualityRuleVersion": "frame-quality-v0.3",
   "processingTimeMs": 0
 }
 ```
@@ -178,7 +178,7 @@ API 스키마는 향후 보정된 값 사용을 위해 `0.0~1.0` 범위의 숫�
   "modelVersion": "yolo11n",
   "modelWeightId": "yolo11n.pt",
   "congestionRuleVersion": "yolo-grid-v0.2",
-  "frameQualityRuleVersion": "frame-quality-v0.2",
+  "frameQualityRuleVersion": "frame-quality-v0.3",
   "processingTimeMs": 0
 }
 ```

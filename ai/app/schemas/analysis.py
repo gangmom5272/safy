@@ -64,7 +64,7 @@ class FrameAnalysisResponse(BaseModel):
                     "modelVersion": "yolo11n",
                     "modelWeightId": "yolo11n.pt",
                     "congestionRuleVersion": ("yolo-grid-v0.2"),
-                    "frameQualityRuleVersion": ("frame-quality-v0.2"),
+                    "frameQualityRuleVersion": ("frame-quality-v0.3"),
                     "processingTimeMs": 36,
                 }
             ]
