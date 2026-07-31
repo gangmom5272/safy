@@ -321,8 +321,15 @@ services:
       # 방화벽 추가 개방 없이 https로 바꿀 수 있다(AWS 콘솔 권한이 없다).
       - "9200:9443"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/minio.conf:/etc/nginx/conf.d/minio.conf:ro
+      # conf 파일을 하나씩 마운트하지 않고 디렉터리째 마운트한다.
+      # 이유(2026-07-31 실측): CI 배포의 rsync는 임시 파일에 받아 rename으로 교체하므로
+      # 파일의 inode가 바뀐다. 파일 단위 바인드 마운트는 마운트 시점의 inode에 묶여 있어
+      # 컨테이너 안에서는 계속 옛 내용이 보인다(격리 실험에서 파일 마운트는 옛 내용,
+      # 디렉터리 마운트는 새 내용이 보였다). 즉 전에는 conf만 고쳐 배포하면 nginx가
+      # 새 설정을 볼 방법이 없었고 컨테이너를 재생성해야만 적용됐다.
+      # 디렉터리 마운트면 rsync 후 `docker exec infra-nginx-1 nginx -s reload`로 끝난다.
+      # nginx는 conf.d/*.conf 만 include하므로 이 디렉터리의 .gitkeep은 무시된다.
+      - ./nginx:/etc/nginx/conf.d:ro
       # Caddy가 관리하는 도메인 인증서를 읽기 전용으로 공유한다.
       # 파일이 아니라 디렉터리를 마운트한다(갱신 시 inode 교체 대응, minio.conf 주석 참고).
       # 로컬에서 이 경로가 없으면 nginx가 기동에 실패하므로 그때는 이 변수로 덮어쓴다.
