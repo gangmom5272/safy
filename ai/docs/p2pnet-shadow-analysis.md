@@ -80,7 +80,8 @@ confidence 목록은 기록하지 않으며, 프레임 연결에는 SHA-256 해�
     "visualCongestionScore": 6.56,
     "localPeakCongestionScore": 37.5,
     "processingTimeMs": 13,
-    "failureCodes": []
+    "failureCodes": [],
+    "lowConfidenceSignal": null
   },
   "shadow": {
     "modelName": "P2PNet",
@@ -91,7 +92,8 @@ confidence 목록은 기록하지 않으며, 프레임 연결에는 SHA-256 해�
     "visualCongestionScore": 8.75,
     "localPeakCongestionScore": 100.0,
     "processingTimeMs": 120,
-    "failureCodes": []
+    "failureCodes": [],
+    "lowConfidenceSignal": false
   },
   "differences": {
     "personCount": 15,
@@ -103,6 +105,27 @@ confidence 목록은 기록하지 않으며, 프레임 연결에는 SHA-256 해�
 
 차이는 `abs(YOLO - P2PNet)`으로 계산한다. 어느 한쪽이라도 실패했거나
 비교 값이 없으면 차이 필드는 `null`로 기록한다.
+
+## 저밀도 대형 오탐 신호 (`lowConfidenceSignal`)
+
+이슈 `S15P11A503-140`에서 추가한 진단 필드다. P2PNet은 질감이 복잡한
+저밀도 장면에서 배경을 사람으로 오인해 대형 오탐을 만드는 경우가 있는데
+(`S15P11A503-138` 홀드아웃 검증에서 EMPTY 75%, SPARSE 20% 비율로 확인),
+운영 중에는 정답이 없으므로 YOLO 결과와 비교하는 대신 **P2PNet 자신의
+포인트별 confidence 분포**로 이를 진단한다.
+
+```text
+경계 구간(confidence 0.5~0.6) 점 비율 >= 15%
+→ lowConfidenceSignal = true (대형 오탐 의심)
+```
+
+임계값 15%는 138번 홀드아웃의 대형 오탐 23건과 정상 21건으로 튜닝한
+값이며, 이 표본에서 정확도 81.8%(재현율·정밀도 각 82.6%)를 보였다.
+표본이 작아 실제 운영 데이터가 쌓이면 재조정이 필요하다.
+
+이 필드는 **진단 전용이며 공식 응답이나 자동 전환에 영향을 주지
+않는다.** YOLO 결과에는 항상 `null`을 기록하고(YOLO에는 적용하지 않는
+개념), P2PNet 포인트가 하나도 없으면(사람 없음) `false`로 기록한다.
 
 ## 실패 격리
 
