@@ -30,7 +30,7 @@ class DisasterMessageCollector:
     def fetch(
         self,
         page_no: int = 1,
-        num_of_rows: int = 10,
+        num_of_rows: int = 1000,
         start_date: date | None = None,
         region: str | None = None,
     ) -> list[DisasterMessageRaw]:
