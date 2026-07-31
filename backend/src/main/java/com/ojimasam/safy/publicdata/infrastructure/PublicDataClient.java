@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClientException;
 import com.ojimasam.safy.publicdata.application.dto.AreaCodesRequest;
 import com.ojimasam.safy.publicdata.application.dto.CityCongestionResponse;
 import com.ojimasam.safy.publicdata.application.dto.CulturalEventResponse;
+import com.ojimasam.safy.publicdata.application.dto.DisasterMessageCollectionRequest;
 import com.ojimasam.safy.publicdata.application.dto.DisasterMessageResponse;
 
 /**
@@ -48,13 +49,16 @@ public class PublicDataClient {
 
 	/**
 	 * 재난문자는 장소 기반이 아니라 보낼 코드 목록이 없다.
-	 * 조회 범위(페이지·기간 등)는 FastAPI 기본값을 쓰므로 바디 없이 호출한다.
+	 * 다만 조회 시작일은 반드시 실어 보낸다. 생략하면 FastAPI 가 crtDt 를 붙이지 않고,
+	 * 원본 API 가 가장 오래된 구간을 돌려주므로 최신 문자를 한 건도 받지 못한다.
+	 * 페이지·건수·지역은 FastAPI 기본값(1페이지, 1,000건, 전체 지역)이 그대로 필요한 값이다.
 	 */
-	public Optional<DisasterMessageResponse> fetchDisasterMessages() {
+	public Optional<DisasterMessageResponse> fetchDisasterMessages(DisasterMessageCollectionRequest request) {
 		try {
 			return Optional.ofNullable(
 					restClient.post()
 							.uri(DISASTER_MESSAGE_PATH)
+							.body(request)
 							.retrieve()
 							.body(DisasterMessageResponse.class)
 			);

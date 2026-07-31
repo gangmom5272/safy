@@ -19,6 +19,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import com.ojimasam.safy.publicdata.application.dto.CityCongestionResponse;
+import com.ojimasam.safy.publicdata.application.dto.DisasterMessageCollectionRequest;
 import com.ojimasam.safy.publicdata.application.dto.DisasterMessageResponse;
 import com.ojimasam.safy.publicdata.domain.type.CollectionStatus;
 
@@ -182,13 +183,19 @@ class PublicDataClientTest {
 		assertThat(response.get().collectionRun().errorDetailsAsJson()).contains("POI077");
 	}
 
-	/** 재난문자는 장소 기반이 아니라 코드 목록 없이 POST 한다. */
+	/**
+	 * 재난문자는 장소 코드 목록 없이 POST 하지만, 조회 시작일은 반드시 실려 나가야 한다.
+	 * 빠지면 FastAPI 가 crtDt 를 붙이지 않아 가장 오래된 구간만 받는다.
+	 */
 	@Test
-	void collectsDisasterMessagesWithoutAreaCodes() {
+	void sendsStartDateWhenCollectingDisasterMessages() {
 		RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
 		MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 		server.expect(requestTo(BASE_URL + "/api/v1/collections/disaster-messages"))
 				.andExpect(method(HttpMethod.POST))
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				// FastAPI 는 date 로 파싱하므로 yyyy-MM-dd 문자열이어야 한다.
+				.andExpect(jsonPath("$.start_date").value("2026-07-30"))
 				.andRespond(withSuccess("""
 						{
 						  "collection_run": {
@@ -210,8 +217,8 @@ class PublicDataClientTest {
 						}
 						""", MediaType.APPLICATION_JSON));
 
-		Optional<DisasterMessageResponse> response =
-				new PublicDataClient(builder.build()).fetchDisasterMessages();
+		Optional<DisasterMessageResponse> response = new PublicDataClient(builder.build())
+				.fetchDisasterMessages(new DisasterMessageCollectionRequest("2026-07-30"));
 
 		server.verify();
 		assertThat(response).isPresent();
