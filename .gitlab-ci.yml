@@ -81,6 +81,28 @@ ai:
     - pip install -r requirements-ci.txt
     - pytest
 
+# data는 운영 이미지가 python:3.11-slim이라(data/Dockerfile) CI도 같은 버전을 쓴다.
+# requirements-dev.txt가 requirements.txt를 포함하고 pytest만 더하므로
+# ai처럼 별도의 requirements-ci.txt를 두지 않는다.
+data:
+  stage: test
+  image: python:3.11-slim
+  rules:
+    # 잡 정의 자체가 바뀔 때도 돌려서 CI 설정 변경을 검증한다.
+    - changes:
+        - data/**/*
+        - .gitlab-ci.yml
+  cache:
+    key: data-pip
+    paths:
+      - .cache/pip
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  script:
+    - cd data
+    - pip install -r requirements-dev.txt
+    - pytest
+
 # AI 서비스는 배포 대상에서 제외 (팀 결정 대기 중 - INFRA_DECISIONS.md 참고 예정).
 # backend/frontend-user/frontend-admin만 배포한다.
 deploy:
