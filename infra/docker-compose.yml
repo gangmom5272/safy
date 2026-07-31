@@ -107,14 +107,24 @@ services:
       # application.yml의 기본값 http://localhost:8000은 backend 컨테이너 자신을 가리켜
       # 절대 닿지 않는다(2026-07-31 실측: 2분마다 ConnectException 반복). 브리지 이름으로 지정한다.
       - PUBLIC_DATA_BASE_URL=${PUBLIC_DATA_BASE_URL:-http://data:8000}
-      # 서울시 API의 일일 호출 한도가 공개 문서에 없어(2026-07-31 담당자 확인, 부서 문의 중)
-      # 주기를 .env로 조절할 수 있게 노출한다. 기본 3분은 장소 121곳 × 480회 = 하루 58,080회다.
-      # 한도 초과는 data_collection_runs.error_details에 서울시 응답 원문으로 남으므로,
-      # 보수적인 주기로 켜서 관측한 뒤 줄인다.
+      # 아래 기본값은 모두 팀 합의값이라 .env에서 덮지 않는다. 한도는 2026-07-31에 확인했다.
+      #
+      # 혼잡도 3분 = 장소 121곳 × 480회 = 하루 58,080회. 서울시(citydata_ppltn, citydata)는
+      #   호출 횟수 제한이 없다. 열린데이터광장 안내문의 "1,000건"은 1회 호출당 행 수 상한이고
+      #   괄호에 "호출 횟수 제한은 없습니다"로 명시돼 있다. "1일 1,000회"는 실시간 지하철
+      #   API 전용이라 citydata에는 해당하지 않는다. 혼잡도는 장소당 1건씩 받으므로
+      #   행 수 상한에도 걸리지 않는다.
       - PUBLIC_DATA_CITY_CONGESTION_DELAY=${PUBLIC_DATA_CITY_CONGESTION_DELAY:-PT3M}
+      # 재난문자 2분 = 하루 720회. 이쪽은 별개 기관(safetydata.go.kr DSSP-IF-00247)이고
+      #   1일 1,000회 제한이 공식 문서에 명시돼 있다. 720회가 72%이고 남는 280회가
+      #   S15P11A503-67 재시도 예산이다. 재시도를 넣을 때 요청당 상한만 정하면 장시간 장애
+      #   시 매 틱이 3배로 소모되므로(3시간 장애 = 90틱 × 3회 = 270회) 일일 총량 상한이나
+      #   서킷 브레이커가 함께 필요하다.
       - PUBLIC_DATA_DISASTER_MESSAGE_DELAY=${PUBLIC_DATA_DISASTER_MESSAGE_DELAY:-PT2M}
-      # 행사 수집은 하루 1회(04:00)라 배포 직후에는 결과를 볼 수 없다.
-      # 검증할 때만 임시로 주기를 당기고 확인 후 원복한다.
+      # 행사는 하루 1회(04:00, 121회). S15P11A503-67 본문의 합의값이다(S15P11A503-101).
+      #   한도 제약은 없지만 주기를 바꾸려면 그 합의를 다시 확인해야 한다.
+      #   하루 1회라 배포 직후에는 결과를 볼 수 없으니, 검증할 때만 .env로 임시로 당기고
+      #   확인 후 원복한다.
       - "PUBLIC_DATA_CULTURAL_EVENT_CRON=${PUBLIC_DATA_CULTURAL_EVENT_CRON:-0 0 4 * * *}"
     depends_on:
       - db
