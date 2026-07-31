@@ -124,7 +124,7 @@ public class ReportQueryService {
 		return new ReportDetailView(
 				report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
 				report.getDescription(), report.getLatitude(), report.getLongitude(),
-				report.getAddress(), report.getStatus(), report.getRoutingStatus(),
+				report.getAddress(), report.getStatus(), report.isCancellable(), report.getRoutingStatus(),
 				area == null ? null : area.getId(), area == null ? null : area.getCode(), area == null ? null : area.getName(),
 				assignedCenter,
 				report.getReportedAt(), report.getCreatedAt(), report.getUpdatedAt(), images,
@@ -163,7 +163,7 @@ public class ReportQueryService {
 			AdministrativeArea area = report.getAdministrativeArea();
 			return new ReportListItemView(
 					report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
-					report.getDescription(), report.getAddress(), report.getStatus(),
+					report.getDescription(), report.getAddress(), report.getStatus(), report.isCancellable(),
 					report.getRoutingStatus(), area == null ? null : area.getName(), report.getReportedAt(),
 					images.size(), representative
 			);

@@ -42,7 +42,7 @@ class CancelReportServiceTest {
 	void cancelsOwnedReceivedReport() {
 		Report report = report();
 		ReportCenterRoute route = org.mockito.Mockito.mock(ReportCenterRoute.class);
-		when(reportRepository.findByIdAndReporterId(42L, 1L)).thenReturn(Optional.of(report));
+		when(reportRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(report));
 		when(routeRepository.findByReport_IdAndStatus(42L, ReportCenterRouteStatus.ACTIVE))
 				.thenReturn(Optional.of(route));
 
@@ -63,7 +63,8 @@ class CancelReportServiceTest {
 
 	@Test
 	void hidesReportNotOwnedByUser() {
-		when(reportRepository.findByIdAndReporterId(42L, 1L)).thenReturn(Optional.empty());
+		// 다른 사람 제보는 잠금 조회 후 소유자 검사에서 걸러져 404 로 숨긴다.
+		when(reportRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(report()));
 
 		assertThatThrownBy(() -> new CancelReportService(
 				reportRepository,
@@ -73,7 +74,7 @@ class CancelReportServiceTest {
 				realtimeNotifier,
 				eventPublisher,
 				Clock.systemUTC()
-		).cancel(1L, 42L))
+		).cancel(2L, 42L))
 				.isInstanceOf(BusinessException.class);
 	}
 

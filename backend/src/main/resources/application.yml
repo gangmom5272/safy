@@ -67,6 +67,12 @@ app:
     scheduler-delay: ${REPORT_ROUTING_SCHEDULER_DELAY:PT30S}
   report-assignment:
     scheduler-delay: ${REPORT_ASSIGNMENT_SCHEDULER_DELAY:PT30S}
+    assigned-timeout: ${REPORT_ASSIGNMENT_ASSIGNED_TIMEOUT:PT5M}
+    timeout-sweep-delay: ${REPORT_ASSIGNMENT_TIMEOUT_SWEEP_DELAY:PT30S}
+  presence:
+    offline-grace: ${PRESENCE_OFFLINE_GRACE:PT90S}
+    in-progress-release-grace: ${PRESENCE_IN_PROGRESS_RELEASE_GRACE:PT3M}
+    sweep-delay: ${PRESENCE_SWEEP_DELAY:PT30S}
   public-data:
     base-url: ${PUBLIC_DATA_BASE_URL:http://localhost:8000}
     connect-timeout: ${PUBLIC_DATA_CONNECT_TIMEOUT:PT2S}

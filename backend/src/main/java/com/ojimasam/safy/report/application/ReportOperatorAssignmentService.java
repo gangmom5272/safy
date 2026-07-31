@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
+import com.ojimasam.safy.admin.domain.OperatorPresence;
+import com.ojimasam.safy.admin.domain.OperatorPresenceRepository;
 import com.ojimasam.safy.admin.domain.type.MembershipStatus;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
@@ -30,6 +32,7 @@ import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
 import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
+import com.ojimasam.safy.report.domain.type.ReportAssignmentCancelReason;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
@@ -45,7 +48,6 @@ import com.ojimasam.safy.report.application.event.ReportTerminatedEvent;
 public class ReportOperatorAssignmentService {
 	private static final Set<ReportOperatorAssignmentStatus> ACTIVE_STATUSES = Set.of(
 			ReportOperatorAssignmentStatus.ASSIGNED,
-			ReportOperatorAssignmentStatus.ACCEPTED,
 			ReportOperatorAssignmentStatus.IN_PROGRESS
 	);
 
@@ -54,6 +56,7 @@ public class ReportOperatorAssignmentService {
 	private final AdminCenterMembershipRepository membershipRepository;
 	private final ReportOperatorAssignmentRepository assignmentRepository;
 	private final ReportStatusHistoryRepository historyRepository;
+	private final OperatorPresenceRepository presenceRepository;
 	private final ReportRealtimeNotifier realtimeNotifier;
 	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
@@ -65,11 +68,12 @@ public class ReportOperatorAssignmentService {
 			AdminCenterMembershipRepository membershipRepository,
 			ReportOperatorAssignmentRepository assignmentRepository,
 			ReportStatusHistoryRepository historyRepository,
+			OperatorPresenceRepository presenceRepository,
 			ReportRealtimeNotifier realtimeNotifier,
 			ApplicationEventPublisher eventPublisher
 	) {
 		this(reportRepository, routeRepository, membershipRepository, assignmentRepository, historyRepository,
-				realtimeNotifier, eventPublisher, Clock.systemUTC());
+				presenceRepository, realtimeNotifier, eventPublisher, Clock.systemUTC());
 	}
 
 	ReportOperatorAssignmentService(
@@ -78,6 +82,7 @@ public class ReportOperatorAssignmentService {
 			AdminCenterMembershipRepository membershipRepository,
 			ReportOperatorAssignmentRepository assignmentRepository,
 			ReportStatusHistoryRepository historyRepository,
+			OperatorPresenceRepository presenceRepository,
 			ReportRealtimeNotifier realtimeNotifier,
 			ApplicationEventPublisher eventPublisher,
 			Clock clock
@@ -87,6 +92,7 @@ public class ReportOperatorAssignmentService {
 		this.membershipRepository = membershipRepository;
 		this.assignmentRepository = assignmentRepository;
 		this.historyRepository = historyRepository;
+		this.presenceRepository = presenceRepository;
 		this.realtimeNotifier = realtimeNotifier;
 		this.eventPublisher = eventPublisher;
 		this.clock = clock;
@@ -102,10 +108,15 @@ public class ReportOperatorAssignmentService {
 		if (assignmentRepository.existsByReport_IdAndStatusIn(report.getId(), ACTIVE_STATUSES)) {
 			return Optional.empty();
 		}
-		// 이 제보를 이미 놓아준(재배정으로 CANCELLED된) 담당자는 즉시·스케줄러 경로 모두에서 제외해 되돌아옴 방지
+		// 스스로 놓아준(재배정 요청·이관) 담당자만 되돌아옴 방지로 제외한다. 무응답 회수(타임아웃·
+		// 오프라인)까지 영구 제외하면 후보가 말라 배정이 조용히 죽으므로, 그쪽은 excludeOperatorId 로
+		// 직후 재배정만 피한다 — 같은 담당자에게 다시 가는 것이 아무에게도 안 가는 것보다 낫다.
 		Set<Long> excludedOperatorIds = new HashSet<>();
 		if (excludeOperatorId != null) excludedOperatorIds.add(excludeOperatorId);
 		assignmentRepository.findAllByReport_IdAndStatus(report.getId(), ReportOperatorAssignmentStatus.CANCELLED)
+				.stream()
+				.filter(cancelled -> cancelled.getCancelReason() != null
+						&& cancelled.getCancelReason().isVoluntaryRelease())
 				.forEach(cancelled -> excludedOperatorIds.add(cancelled.getOperator().getId()));
 
 		List<AdminCenterMembership> memberships = membershipRepository.findEligibleOperatorsForAssignment(
@@ -114,8 +125,11 @@ public class ReportOperatorAssignmentService {
 				UserRole.OPERATOR,
 				UserStatus.ACTIVE
 		);
+		// 자동 배정은 근무중(ON_DUTY)인 담당자에게만 간다. 접속 이력이 없으면 오프라인으로 본다.
+		Set<Long> onDutyOperatorIds = onDutyOperatorIds(memberships);
 		Optional<User> selected = memberships.stream()
 				.map(AdminCenterMembership::getUser)
+				.filter(operator -> onDutyOperatorIds.contains(operator.getId()))
 				.filter(operator -> !excludedOperatorIds.contains(operator.getId()))
 				.map(this::candidate)
 				.min(Comparator.comparingLong(OperatorCandidate::activeWorkload)
@@ -226,7 +240,7 @@ public class ReportOperatorAssignmentService {
 		Instant now = clock.instant();
 		ReportStatus previous = report.getStatus();
 		try {
-			assignment.cancel(now);
+			assignment.cancel(now, ReportAssignmentCancelReason.REPORT_REJECTED);
 			report.reject(now);
 			assignment.getRoute().close(now);
 		} catch (IllegalArgumentException | IllegalStateException exception) {
@@ -254,7 +268,7 @@ public class ReportOperatorAssignmentService {
 		Instant now = clock.instant();
 		ReportStatus previous = report.getStatus();
 		try {
-			assignment.cancel(now);
+			assignment.cancel(now, ReportAssignmentCancelReason.REASSIGN_REQUESTED);
 			report.releaseForReassignment();
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
@@ -266,6 +280,85 @@ public class ReportOperatorAssignmentService {
 		routeRepository.findByReport_IdAndStatus(reportId, ReportCenterRouteStatus.ACTIVE)
 				.ifPresent(route -> assignAutomatically(report, route, operatorId));
 		return OperatorAssignmentResponse.from(assignment);
+	}
+
+	/**
+	 * 공용 큐에서 담당자가 직접 담당(claim)한다. 자동 배정과 달리 본인이 손을 든 것이므로
+	 * 근무 상태나 과거에 이 제보를 놓아준 이력(제외 목록)을 따지지 않는다.
+	 * 동시에 두 명이 누르면 제보 잠금으로 한 명만 통과하고 나머지는 409를 받는다.
+	 */
+	@Transactional
+	public OperatorAssignmentResponse claim(Long operatorId, Long reportId) {
+		Report report = reportForUpdate(reportId);
+		if (report.getStatus() != ReportStatus.RECEIVED
+				|| assignmentRepository.existsByReport_IdAndStatusIn(reportId, ACTIVE_STATUSES)) {
+			throw new BusinessException(CommonErrorCode.CONFLICT, "이미 다른 담당자가 담당한 제보입니다.");
+		}
+		ReportCenterRoute route = routeRepository
+				.findByReport_IdAndStatus(reportId, ReportCenterRouteStatus.ACTIVE)
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.CONFLICT, "배정 가능한 관제센터 라우팅이 없습니다."));
+		AdminCenterMembership membership = membershipRepository.findByUserIdAndIsPrimaryTrue(operatorId)
+				.filter(found -> found.getStatus() == MembershipStatus.ACTIVE)
+				.filter(found -> found.getControlCenterId().equals(route.getControlCenter().getId()))
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.CONFLICT, "현재 관제센터 소속 담당자가 아닙니다."));
+
+		Instant now = clock.instant();
+		ReportStatus previous = report.getStatus();
+		report.assign();
+		ReportOperatorAssignment assignment = assignmentRepository.save(
+				ReportOperatorAssignment.claimed(report, route, membership.getUser(), now)
+		);
+		historyRepository.save(ReportStatusHistory.record(
+				report, previous, report.getStatus(), membership.getUser(), "OPERATOR_CLAIMED", now
+		));
+		// 큐에서 손을 든 것 자체가 접속 신호다. 오프라인 상태로 남아 있으면 스위퍼가
+		// 방금 담당한 건까지 회수하므로, 근무중으로 복귀시켜 둔다.
+		presenceRepository.findByOperatorId(operatorId)
+				.ifPresent(presence -> presence.markConnected(now));
+		return OperatorAssignmentResponse.from(assignment);
+	}
+
+	/**
+	 * 담당자 무응답(오프라인 전환·미확인 방치)으로 배정을 회수해 재배정 대상으로 되돌린다.
+	 * 별도 트랜잭션에서 제보를 잠근 뒤 현재 상태를 다시 확인하므로,
+	 * 그 사이 처리·종결된 제보는 건드리지 않는다. 멱등.
+	 */
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void releaseStaleAssignment(Long reportId, Long operatorId,
+			ReportOperatorAssignmentStatus expectedStatus, ReportAssignmentCancelReason reason) {
+		Report report = reportRepository.findByIdForUpdate(reportId).orElse(null);
+		if (report == null) return;
+		ReportOperatorAssignment assignment = assignmentRepository
+				.findByReport_IdAndStatusIn(reportId, ACTIVE_STATUSES).orElse(null);
+		if (assignment == null || assignment.getStatus() != expectedStatus) return;
+		if (!assignment.getOperator().getId().equals(operatorId)) return;
+
+		Instant now = clock.instant();
+		ReportStatus previous = report.getStatus();
+		try {
+			report.releaseForReassignment();
+			assignment.cancel(now, reason);
+		} catch (IllegalArgumentException | IllegalStateException exception) {
+			return;
+		}
+		historyRepository.save(ReportStatusHistory.record(
+				report, previous, report.getStatus(), assignment.getOperator(), reason.name(), now
+		));
+		realtimeNotifier.reportReassigned(report.getId(), report.getReporterId());
+		routeRepository.findByReport_IdAndStatus(reportId, ReportCenterRouteStatus.ACTIVE)
+				.ifPresent(route -> assignAutomatically(report, route, operatorId));
+	}
+
+	private Set<Long> onDutyOperatorIds(List<AdminCenterMembership> memberships) {
+		List<Long> operatorIds = memberships.stream()
+				.map(membership -> membership.getUser().getId())
+				.toList();
+		if (operatorIds.isEmpty()) return Set.of();
+		Set<Long> onDuty = new HashSet<>();
+		for (OperatorPresence presence : presenceRepository.findAllByOperatorIdIn(operatorIds)) {
+			if (presence.isOnDuty()) onDuty.add(presence.getOperatorId());
+		}
+		return onDuty;
 	}
 
 	private Report reportForUpdate(Long reportId) {

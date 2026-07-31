@@ -24,6 +24,13 @@ public interface ReportOperatorAssignmentRepository {
 	 */
 	List<ReportOperatorAssignment> findAllByReport_IdAndOperator_Id(Long reportId, Long operatorId);
 
+	/** 무응답 담당자의 배정 회수(오프라인 전환·타임아웃)에 사용한다. */
+	List<ReportOperatorAssignment> findAllByOperator_IdAndStatus(Long operatorId, ReportOperatorAssignmentStatus status);
+
+	/** 배정된 뒤 한 번도 확인되지 않은 채 유예를 넘긴 배정. 타임아웃 스케줄러가 오래된 것부터 회수한다. */
+	List<ReportOperatorAssignment> findTop50ByStatusAndAssignedAtBeforeOrderByAssignedAtAsc(
+			ReportOperatorAssignmentStatus status, java.time.Instant cutoff);
+
 	long countByOperator_IdAndStatusIn(
 			Long operatorId,
 			Collection<ReportOperatorAssignmentStatus> statuses

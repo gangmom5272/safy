@@ -106,6 +106,44 @@ public class ReportCenterRoute extends BaseEntity {
 		);
 	}
 
+	/**
+	 * 다른 관제센터로 이관된 후속 라우트. 담당자 신청(MANUAL) 또는 근무자 0명
+	 * 자동 이관(FAILOVER)에서 만들어지며, previousRoute 체인으로 되돌아옴을 막는다.
+	 */
+	public static ReportCenterRoute reroute(
+			ReportCenterRoute previousRoute,
+			ControlCenter controlCenter,
+			ReportCenterRouteType routeType,
+			int priority,
+			String routingReason,
+			Instant routedAt
+	) {
+		if (previousRoute == null) throw new IllegalArgumentException("이전 라우팅은 필수입니다.");
+		if (routeType != ReportCenterRouteType.MANUAL && routeType != ReportCenterRouteType.FAILOVER) {
+			throw new IllegalArgumentException("이관 라우팅 유형은 MANUAL 또는 FAILOVER 여야 합니다.");
+		}
+		validate(previousRoute.getReport(), controlCenter, priority, routingReason, routedAt);
+		return new ReportCenterRoute(
+				previousRoute.getReport(),
+				previousRoute,
+				controlCenter,
+				routeType,
+				priority,
+				routingReason.trim(),
+				routedAt
+		);
+	}
+
+	/** 다른 센터로 이관되어 이 라우트를 닫는다. CLOSED(처리 종결)와 구분한다. */
+	public void markRerouted(Instant reroutedAt) {
+		if (reroutedAt == null || reroutedAt.isBefore(routedAt)) {
+			throw new IllegalArgumentException("이관 시각이 올바르지 않습니다.");
+		}
+		if (status != ReportCenterRouteStatus.ACTIVE) return;
+		this.status = ReportCenterRouteStatus.REROUTED;
+		this.closedAt = reroutedAt;
+	}
+
 	private static void validate(
 			Report report,
 			ControlCenter controlCenter,

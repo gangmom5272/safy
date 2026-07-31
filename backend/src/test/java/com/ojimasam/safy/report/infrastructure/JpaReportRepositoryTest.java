@@ -3,16 +3,30 @@ package com.ojimasam.safy.report.infrastructure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ojimasam.safy.common.config.JpaAuditingConfig;
+import com.ojimasam.safy.controlcenter.domain.ControlCenter;
+import com.ojimasam.safy.controlcenter.domain.type.ControlCenterType;
+import com.ojimasam.safy.report.application.OperatorReportAccessService;
 import com.ojimasam.safy.report.domain.Report;
+import com.ojimasam.safy.report.domain.ReportCenterRoute;
+import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
+import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
+import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
+import com.ojimasam.safy.user.domain.User;
+import com.ojimasam.safy.user.domain.type.UserRole;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -20,6 +34,9 @@ import com.ojimasam.safy.report.domain.type.ReportStatus;
 class JpaReportRepositoryTest {
 	@Autowired
 	private JpaReportRepository reportRepository;
+
+	@Autowired
+	private TestEntityManager entityManager;
 
 	@Test
 	void savesAndLoadsImageReport() {
@@ -47,5 +64,62 @@ class JpaReportRepositoryTest {
 		assertThat(found.getLongitude()).isEqualByComparingTo("126.9780000");
 		assertThat(found.getStatus()).isEqualTo(ReportStatus.RECEIVED);
 		assertThat(found.getCreatedAt()).isNotNull();
+	}
+
+	@Test
+	void centerQueueReturnsOnlyUnassignedRoutedReportsOfCenterOldestFirst() {
+		Instant now = Instant.parse("2026-07-30T00:00:00Z");
+		ControlCenter myCenter = entityManager.persist(
+				ControlCenter.create("GN", "강남 관제센터", ControlCenterType.DISTRICT, null, null, null));
+		ControlCenter otherCenter = entityManager.persist(
+				ControlCenter.create("SC", "서초 관제센터", ControlCenterType.DISTRICT, null, null, null));
+		User operator = entityManager.persist(User.operator("담당자", UserRole.OPERATOR));
+
+		Report oldUnassigned = routedReport("오래된 미배정", now.minusSeconds(600));
+		Report newUnassigned = routedReport("새 미배정", now.minusSeconds(60));
+		Report taken = routedReport("배정된 제보", now.minusSeconds(300));
+		Report otherCenters = routedReport("다른 센터 제보", now.minusSeconds(300));
+
+		route(oldUnassigned, myCenter, now);
+		route(newUnassigned, myCenter, now);
+		ReportCenterRoute takenRoute = route(taken, myCenter, now);
+		route(otherCenters, otherCenter, now);
+		entityManager.persist(ReportOperatorAssignment.automatic(taken, takenRoute, operator, now));
+		entityManager.flush();
+
+		var result = reportRepository.findCenterQueue(
+				ReportRoutingStatus.ROUTED,
+				ReportStatus.RECEIVED,
+				myCenter.getId(),
+				ReportCenterRouteStatus.ACTIVE,
+				List.copyOf(OperatorReportAccessService.ACTIVE_ASSIGNMENT_STATUSES),
+				PageRequest.of(0, 10)
+		);
+
+		assertThat(result.getContent())
+				.extracting(Report::getDescription)
+				.containsExactly("오래된 미배정", "새 미배정");
+	}
+
+	private Report routedReport(String description, Instant reportedAt) {
+		Report report = Report.create(
+				1L,
+				com.ojimasam.safy.report.domain.type.ReportType.IMAGE,
+				com.ojimasam.safy.report.domain.type.ReportCategory.CROWD_CONGESTION,
+				com.ojimasam.safy.report.domain.type.ReportSubcategory.EXIT_CONGESTION,
+				description,
+				new BigDecimal("37.5665000"),
+				new BigDecimal("126.9780000"),
+				"서울특별시 강남구"
+		);
+		// 행정구역 엔티티는 SQL 시드 전용이라 라우팅 완료 상태만 직접 만든다.
+		ReflectionTestUtils.setField(report, "routingStatus", ReportRoutingStatus.ROUTED);
+		ReflectionTestUtils.setField(report, "reportedAt", reportedAt);
+		return entityManager.persist(report);
+	}
+
+	private ReportCenterRoute route(Report report, ControlCenter center, Instant routedAt) {
+		return entityManager.persist(
+				ReportCenterRoute.createInitial(report, center, 1, "테스트 라우팅", routedAt));
 	}
 }

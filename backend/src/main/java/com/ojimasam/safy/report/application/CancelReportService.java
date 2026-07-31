@@ -15,6 +15,7 @@ import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
 import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
+import com.ojimasam.safy.report.domain.type.ReportAssignmentCancelReason;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.ReportStatusHistory;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
@@ -63,7 +64,10 @@ public class CancelReportService {
 
 	@Transactional
 	public void cancel(Long reporterId, Long reportId) {
-		Report report = reportRepository.findByIdAndReporterId(reportId, reporterId)
+		// claim·자동 배정과 같은 행 잠금으로 직렬화한다. Report 에 @Version 이 없어
+		// 잠금 없이는 취소(CANCELLED)와 배정(ASSIGNED) 커밋이 서로를 덮어쓸 수 있다.
+		Report report = reportRepository.findByIdForUpdate(reportId)
+				.filter(found -> found.getReporterId().equals(reporterId))
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
 		ReportStatus previous = report.getStatus();
 		Instant now = clock.instant();
@@ -77,7 +81,7 @@ public class CancelReportService {
 				.findByReport_IdAndStatusIn(reportId, OperatorReportAccessService.ACTIVE_ASSIGNMENT_STATUSES)
 				.map(assignment -> {
 					Long operatorId = assignment.getOperator().getId();
-					assignment.cancel(now);
+					assignment.cancel(now, ReportAssignmentCancelReason.REPORTER_CANCELLED);
 					return operatorId;
 				})
 				.orElse(null);

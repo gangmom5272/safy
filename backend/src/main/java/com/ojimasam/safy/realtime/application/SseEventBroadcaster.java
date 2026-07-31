@@ -30,6 +30,12 @@ public class SseEventBroadcaster {
 		return emitter;
 	}
 
+	/** 근무 상태 스위퍼가 담당자의 연결 생존 여부를 확인할 때 사용한다. */
+	public boolean isConnected(Long userId) {
+		List<SseEmitter> userEmitters = emitters.get(userId);
+		return userEmitters != null && !userEmitters.isEmpty();
+	}
+
 	public void broadcast(Long userId, RealtimeEventView event) {
 		for (SseEmitter emitter : emitters.getOrDefault(userId, new CopyOnWriteArrayList<>())) {
 			send(emitter, event);

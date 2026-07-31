@@ -17,6 +17,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import com.ojimasam.safy.report.domain.type.ReportAssignmentCancelReason;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 
 @Entity
@@ -67,6 +68,10 @@ public class ReportOperatorAssignment extends BaseEntity {
 	@Column(name = "cancelled_at", columnDefinition = "timestamp(6) with time zone")
 	private Instant cancelledAt;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "cancel_reason", length = 30)
+	private ReportAssignmentCancelReason cancelReason;
+
 	protected ReportOperatorAssignment() {
 	}
 
@@ -90,6 +95,16 @@ public class ReportOperatorAssignment extends BaseEntity {
 			Instant assignedAt
 	) {
 		return new ReportOperatorAssignment(report, route, operator, null, assignedAt);
+	}
+
+	/** 담당자가 공용 큐에서 직접 담당(claim)한 배정. 본인이 배정자다. */
+	public static ReportOperatorAssignment claimed(
+			Report report,
+			ReportCenterRoute route,
+			User operator,
+			Instant assignedAt
+	) {
+		return new ReportOperatorAssignment(report, route, operator, operator, assignedAt);
 	}
 
 	/**
@@ -117,11 +132,13 @@ public class ReportOperatorAssignment extends BaseEntity {
 		this.completedAt = time;
 	}
 
-	public void cancel(Instant cancelledAt) {
+	public void cancel(Instant cancelledAt, ReportAssignmentCancelReason cancelReason) {
+		if (cancelReason == null) throw new IllegalArgumentException("배정 취소 사유는 필수입니다.");
 		if (status == ReportOperatorAssignmentStatus.COMPLETED
 				|| status == ReportOperatorAssignmentStatus.CANCELLED) return;
 		this.status = ReportOperatorAssignmentStatus.CANCELLED;
 		this.cancelledAt = requireTime(cancelledAt);
+		this.cancelReason = cancelReason;
 	}
 
 	private void requireOperator(Long operatorId) {
@@ -154,4 +171,5 @@ public class ReportOperatorAssignment extends BaseEntity {
 	public Instant getStartedAt() { return startedAt; }
 	public Instant getCompletedAt() { return completedAt; }
 	public Instant getCancelledAt() { return cancelledAt; }
+	public ReportAssignmentCancelReason getCancelReason() { return cancelReason; }
 }
