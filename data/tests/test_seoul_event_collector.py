@@ -196,6 +196,83 @@ def test_fetch_raises_error_when_api_result_fails(
         collector.fetch("광화문·덕수궁")
 
 
+# RESULT 안의 키가 CODE·MESSAGE로 오는 형태를 검증한다.
+# RESULT.CODE 폴백 추가(eb08847) 이후 이 경로의 테스트가 사라졌다.
+def test_fetch_accepts_plain_result_code_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "RESULT": {
+            "CODE": "INFO-000",
+            "MESSAGE": "정상 처리되었습니다.",
+        },
+        "CITYDATA": {
+            "AREA_NM": "광화문·덕수궁",
+            "AREA_CD": "POI001",
+            "EVENT_STTS": [
+                {
+                    "EVENT_NM": "광화문 문화행사",
+                    "EVENT_PERIOD": "2026-07-21~2026-07-25",
+                    "EVENT_PLACE": "광화문광장",
+                    "EVENT_X": 126.9760053,
+                    "EVENT_Y": 37.5726241,
+                    "PAY_YN": None,
+                    "THUMBNAIL": None,
+                    "URL": "https://example.com/event",
+                    "EVENT_ETC_DETAIL": None,
+                }
+            ],
+        },
+    }
+    fake_client = FakeClient(payload)
+
+    monkeypatch.setattr(
+        collector_module.httpx2,
+        "Client",
+        lambda timeout: fake_client,
+    )
+
+    collector = SeoulEventCollector(
+        base_url="http://openapi.seoul.go.kr:8088",
+        api_key="test-api-key",
+    )
+
+    result = collector.fetch("광화문·덕수궁")
+
+    assert result.area_code == "POI001"
+    assert len(result.events) == 1
+    assert result.events[0].event_name == "광화문 문화행사"
+
+
+def test_fetch_raises_error_with_plain_result_code_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "RESULT": {
+            "CODE": "INFO-100",
+            "MESSAGE": "인증키가 유효하지 않습니다.",
+        }
+    }
+    fake_client = FakeClient(payload)
+
+    monkeypatch.setattr(
+        collector_module.httpx2,
+        "Client",
+        lambda timeout: fake_client,
+    )
+
+    collector = SeoulEventCollector(
+        base_url="http://openapi.seoul.go.kr:8088",
+        api_key="invalid-api-key",
+    )
+
+    with pytest.raises(
+        SeoulEventAPIError,
+        match="INFO-100",
+    ):
+        collector.fetch("광화문·덕수궁")
+
+
 def test_fetch_wraps_timeout_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
