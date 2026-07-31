@@ -103,6 +103,19 @@ services:
       - SUPER_ADMIN_LOGIN_ID=${SUPER_ADMIN_LOGIN_ID:-}
       - SUPER_ADMIN_PASSWORD=${SUPER_ADMIN_PASSWORD:-}
       - SUPER_ADMIN_DISPLAY_NAME=${SUPER_ADMIN_DISPLAY_NAME:-Super Admin}
+      # 공공데이터 수집을 요청할 data 서비스 주소.
+      # application.yml의 기본값 http://localhost:8000은 backend 컨테이너 자신을 가리켜
+      # 절대 닿지 않는다(2026-07-31 실측: 2분마다 ConnectException 반복). 브리지 이름으로 지정한다.
+      - PUBLIC_DATA_BASE_URL=${PUBLIC_DATA_BASE_URL:-http://data:8000}
+      # 서울시 API의 일일 호출 한도가 공개 문서에 없어(2026-07-31 담당자 확인, 부서 문의 중)
+      # 주기를 .env로 조절할 수 있게 노출한다. 기본 3분은 장소 121곳 × 480회 = 하루 58,080회다.
+      # 한도 초과는 data_collection_runs.error_details에 서울시 응답 원문으로 남으므로,
+      # 보수적인 주기로 켜서 관측한 뒤 줄인다.
+      - PUBLIC_DATA_CITY_CONGESTION_DELAY=${PUBLIC_DATA_CITY_CONGESTION_DELAY:-PT3M}
+      - PUBLIC_DATA_DISASTER_MESSAGE_DELAY=${PUBLIC_DATA_DISASTER_MESSAGE_DELAY:-PT2M}
+      # 행사 수집은 하루 1회(04:00)라 배포 직후에는 결과를 볼 수 없다.
+      # 검증할 때만 임시로 주기를 당기고 확인 후 원복한다.
+      - "PUBLIC_DATA_CULTURAL_EVENT_CRON=${PUBLIC_DATA_CULTURAL_EVENT_CRON:-0 0 4 * * *}"
     depends_on:
       - db
       - redis
@@ -232,6 +245,45 @@ services:
       start_period: 60s
     # CPU 실측 결과를 반영한 서비스다. 현재 자동 배포 명령에는 포함하지 않으며,
     # 백엔드 호출 배선과 모델 저장소 설정을 확인한 뒤 별도로 활성화한다.
+
+  # ==========================================
+  # Data 서버 (FastAPI) — 공공데이터 수집
+  # ==========================================
+  # backend의 PublicDataCollectionScheduler가 이 서비스에 수집을 요청하고, 받은 결과를
+  # 직접 DB에 적재한다. 이 서비스는 DB에 붙지 않고 파일도 쓰지 않는 무상태 서비스라
+  # 볼륨이 필요 없다(app 전체에 쓰기 호출 0건, 2026-07-31 확인).
+  #
+  # ai-server와 같이 아직 자동 배포 명령에는 포함하지 않는다. CI 배포 목록 추가는
+  # AI 배포와 함께 팀 확정 후 진행한다.
+  data:
+    build: ../data
+    image: safy-data:${DEPLOY_TAG:-latest}
+    ports:
+      # 8000은 ai-server가 쓰므로 비켜서 8002에 게시한다(서버 LISTEN 목록에 없음, 실측).
+      # backend는 브리지 내부 이름 data:8000으로 접근하므로 이 매핑은 서버에서
+      # curl로 수집을 직접 호출해 확인할 때만 쓴다. 그래서 127.0.0.1 바인딩이다.
+      - "127.0.0.1:${DATA_SERVER_PORT:-8002}:8000"
+    environment:
+      - SEOUL_CITYDATA_BASE_URL=${SEOUL_CITYDATA_BASE_URL:-http://openapi.seoul.go.kr:8088}
+      - SEOUL_CITYDATA_API_KEY=${SEOUL_CITYDATA_API_KEY}
+      - DISASTER_API_BASE_URL=${DISASTER_API_BASE_URL}
+      - DISASTER_API_KEY=${DISASTER_API_KEY}
+      # 혼잡도·행사는 장소 121곳을 나눠 조회하는 동안 대기하므로 넉넉히 둔다.
+      # backend의 read-timeout(기본 PT2M)보다 짧아야 backend가 먼저 끊지 않는다.
+      - COLLECTION_TIMEOUT_SECONDS=${COLLECTION_TIMEOUT_SECONDS:-100}
+      - DISASTER_COLLECTION_TIMEOUT_SECONDS=${DISASTER_COLLECTION_TIMEOUT_SECONDS:-30}
+    restart: unless-stopped
+    logging: *default-logging
+    labels: *loki-logging
+    healthcheck:
+      # /health는 수집기를 만들지 않으므로 API 키가 비어 있어도 200을 준다.
+      # 즉 이 헬스체크는 프로세스 기동만 확인하고, 수집 가능 여부는
+      # data_collection_runs의 status로 판단한다.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   # ==========================================
   # Nginx (reverse proxy + 정적 파일 서빙) - 확정
