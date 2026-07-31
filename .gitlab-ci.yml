@@ -88,8 +88,10 @@ data:
   stage: test
   image: python:3.11-slim
   rules:
+    # 잡 정의 자체가 바뀔 때도 돌려서 CI 설정 변경을 검증한다.
     - changes:
         - data/**/*
+        - .gitlab-ci.yml
   cache:
     key: data-pip
     paths:
