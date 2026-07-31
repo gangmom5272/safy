@@ -57,8 +57,12 @@ class SeoulEventCollectionRequest(AreaCollectionRequest):
 
 
 class DisasterMessageCollectionRequest(BaseModel):
+    # 재난문자 API는 오래된 순으로 응답하므로 상한에 걸리면 최신 건이 잘린다.
+    # 백엔드가 조회 시작일(crtDt)에 어제 날짜를 넣어 최대 이틀치를 받고,
+    # 평상시 하루 200건 기준이면 400건 정도라 1000이면 여유가 있다.
+    # 호출 한도는 회수 기준이라 상한을 올려도 1회 호출로 동일하다.
     page_no: int = Field(default=1, ge=1)
-    num_of_rows: int = Field(default=100, ge=1, le=1000)
+    num_of_rows: int = Field(default=1000, ge=1, le=1000)
     start_date: date | None = None
     region: str | None = None
 

@@ -106,7 +106,7 @@ class FakeDisasterMessagePipeline:
         region: str | None,
     ) -> list[dict[str, object]]:
         assert page_no == 1
-        assert num_of_rows == 100
+        assert num_of_rows == 1000
         assert start_date is None
         assert region is None
 
@@ -201,6 +201,60 @@ def test_collect_disaster_messages() -> None:
     assert payload["collection_run"]["status"] == "SUCCESS"
     assert payload["items"][0]["external_id"] == "205355"
     assert payload["items"][0]["regions"] == ["서울특별시"]
+
+
+class RecordingDisasterMessagePipeline:
+    def __init__(self) -> None:
+        self.received: dict[str, object] = {}
+
+    def run(
+        self,
+        page_no: int,
+        num_of_rows: int,
+        start_date: date | None,
+        region: str | None,
+    ) -> list[dict[str, object]]:
+        self.received = {
+            "page_no": page_no,
+            "num_of_rows": num_of_rows,
+            "start_date": start_date,
+            "region": region,
+        }
+
+        return []
+
+
+def test_collect_disaster_messages_passes_request_body() -> (
+    None
+):
+    # 백엔드가 조회 시작일을 바디로 보내기로 했다.
+    # 그 값이 파이프라인까지 닿지 않으면 crtDt가 빠져
+    # 가장 오래된 재난문자를 받게 된다.
+    pipeline = RecordingDisasterMessagePipeline()
+    app.dependency_overrides[
+        get_disaster_message_pipeline
+    ] = lambda: pipeline
+
+    try:
+        response = TestClient(app).post(
+            "/api/v1/collections/disaster-messages",
+            json={
+                "page_no": 2,
+                "num_of_rows": 500,
+                "start_date": "2026-07-30",
+                "region": "서울특별시",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert pipeline.received == {
+        "page_no": 2,
+        "num_of_rows": 500,
+        "start_date": date(2026, 7, 30),
+        "region": "서울특별시",
+    }
 
 
 def test_collection_run_keeps_error_details_as_json() -> None:
