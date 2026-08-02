@@ -87,31 +87,56 @@ mc cp \
 
 컨테이너 시작 스크립트는 MinIO SDK나 자격증명을 직접 다루지 않는다.
 `prepare_p2pnet_assets()`는 URL과(선택적) 단일 인증 헤더만 받는 범용
-다운로더이므로, 다음 두 방식 중 하나로 접근 가능한 URL만 넘기면 된다.
+다운로더이므로, 접근 가능한 URL만 넘기면 된다.
 
-1. **presigned URL**(권장): 인프라가 `mc share download`로 장기 유효
-   presigned URL을 발급해 `P2PNET_SHADOW_WEIGHT_URL`에 넣는다. 서명이
-   URL에 포함되므로 `P2PNET_ASSET_AUTH_HEADER_NAME`/`VALUE`는 비워둔다.
-   URL 만료 전에 인프라가 재발급해 `.env`를 갱신해야 한다.
-2. **서비스 계정 헤더 검증**: nginx(`infra/nginx/minio.conf`)가 특정
-   헤더 값을 검사한 뒤에만 MinIO로 프록시하도록 규칙을 추가하고, 그
-   헤더 이름과 값을 `P2PNET_ASSET_AUTH_HEADER_NAME`/`VALUE`로 전달한다.
-   presigned URL 재발급이 번거로울 때의 대안이다.
+### 확정된 접근 방식: 내부 익명 + 외부 차단
 
-어느 방식을 쓸지, 정확한 헤더 이름/값은 인프라 담당자가 최종 결정하고
-서버 `.env`에만 저장한다. 토큰, 서명 URL 또는 인증 헤더 값은 Git, Docker
-이미지, 로그에 기록하지 않는다.
+인프라 담당자가 다음 방식으로 확정했다.
+
+```text
+ai-server  ->  http://minio:9000  (컨테이너 내부망, 익명 download)
+외부 9200  ->  /safy-ai-models 를 404 로 차단
+```
+
+- `safy-ai-models` 버킷의 `p2pnet` prefix 에만 익명 download 정책을 부여한다.
+- 외부에서 `9200` 으로 접근하면 nginx 가 `404` 를 반환한다. `/safy-reports`
+  는 기존대로 `403` 을 유지한다.
+- `P2PNET_ASSET_AUTH_HEADER_NAME`/`VALUE` 는 비워둔다.
+
+인프라가 82.39MB 더미 파일로 배선을 선행 검증했다. 내부 익명 `GET` 이 `200`,
+`86,390,702` 바이트, `0.08초`였고 외부 `404` 와 `/safy-reports` `403` 이
+유지됐다. 검증 후 더미는 삭제하고 정책만 남겼다.
+
+### presigned URL 을 쓰지 않는 이유
+
+초기 설계는 presigned URL 을 권장했으나 채택하지 않았다. `mc share download`
+의 만료 상한이 **7일**이어서(`--expire 169h` 를 넣으면 거부된다) 리허설이나
+시연 직전에 재발급해야 하는 상황이 생긴다. 운영 중 URL 만료로 P2PNet 자산
+준비가 실패하는 것을 피하기 위해 내부 익명 방식을 택했다.
+
+`p2pnet_assets.py` 는 URL 과 단일 인증 헤더만 받는 범용 다운로더이므로 두
+방식 모두 코드 변경 없이 지원한다. 나중에 presigned 로 전환하려면 `.env` 의
+`P2PNET_SHADOW_WEIGHT_URL` 만 바꾸면 된다.
+
+토큰, 서명 URL 또는 인증 헤더 값은 Git, Docker 이미지, 로그에 기록하지 않는다.
 
 ## 시작 시 다운로드와 캐시
 
-배포 서버의 `infra/.env`에 다음 값을 설정한다(presigned URL 방식 예시).
+배포 서버의 `infra/.env`에 다음 값을 설정한다. 인프라 담당자가 확정한 값이다.
 
 ```dotenv
 P2PNET_SHADOW_ENABLED=true
-P2PNET_SHADOW_WEIGHT_URL=https://i15a503.p.ssafy.io:9200/safy-ai-models/p2pnet/safy-p2pnet-v2-epoch3/epoch-003.pth?<presigned-query-params>
+P2PNET_SHADOW_WEIGHT_URL=http://minio:9000/safy-ai-models/p2pnet/safy-p2pnet-v2-epoch3/epoch-003.pth
 P2PNET_ASSET_AUTH_HEADER_NAME=
 P2PNET_ASSET_AUTH_HEADER_VALUE=
 ```
+
+`minio:9000` 은 컨테이너 내부망 주소다. 외부 `9200` 으로는 이 경로에 접근할 수
+없다.
+
+첫 배포는 `P2PNET_SHADOW_ENABLED=false` 로 진행했다. `.env` 에 `P2PNET` 키가
+하나도 없으면 Compose 기본값 `false` 가 적용된다. 안정을 확인한 뒤 `true` 로
+전환하는 순서를 권한다.
 
 컨테이너 시작 시 다음 순서로 처리한다.
 
@@ -238,15 +263,69 @@ python -m scripts.verify_deployment_isolation
 검증 결과 원본은 `runs/deployment-isolation-report.json`에 저장되며 Git에는
 포함하지 않는다.
 
+### 실제 서버 검증 결과
+
+위 검증은 로컬 uvicorn 기준이었다. 인프라 담당자가 배포 서버에서 임시 컨테이너로
+자산 실패 3케이스를 재현해 격리를 확인했다. 운영 `ai-server` 는 건드리지 않았다.
+
+| 주입한 실패 | `p2pnetShadow.status` | `/health` | YOLO 공식 분석 |
+|---|---|---|---|
+| URL 없음 | `P2PNET_WEIGHT_URL_MISSING` | `ok` 200 | `COMPLETED`, 4명, C=1.88 |
+| 없는 URL | `P2PNET_WEIGHT_DOWNLOAD_FAILED` | `ok` 200 | `COMPLETED`, 4명, C=1.88 |
+| 체크섬 불일치 | `P2PNET_WEIGHT_CHECKSUM_MISMATCH` | `ok` 200 | `COMPLETED`, 4명, C=1.88 |
+
+세 경우 모두 `congestionSource=YOLO` 로 동일했다. **P2PNet 만 꺼지고 공식
+경로는 영향이 없다.**
+
+부수로 확인된 것이 있다. 세 케이스 모두 `modelVersion` 이
+`safy-p2pnet-v2-epoch3` 로 채워졌다. 소스가 어긋나면 `P2PNET_SOURCE_MISSING`
+이나 `P2PNET_SOURCE_VERSION_MISMATCH` 에서 먼저 걸리므로, **manifest 로드와
+`/opt/p2pnet` 고정 커밋 대조가 통과했다는 뜻**이다. 이미지 안의 P2PNet 소스는
+정상이다.
+
+### 서버 런타임 실측 (`S15P11A503-106`)
+
+같은 배포에서 측정했다. 왕복은 네트워크를 포함하고 `processingTimeMs` 는 YOLO
+추론 시간만이다.
+
+| 표본 | n | 왕복 mean / p95 | 추론 mean / p95 |
+|---|---:|---|---|
+| 1280×720 합성 | 30 | 83.9 / 86.4 ms | 60.5 / 63.0 ms |
+| `bus.jpg` (4명) | 30 | 95.0 / 107.0 ms | 71.7 / 84.0 ms |
+| 3840×2160 | 20 | 173.6 / 176.4 ms | 61.0 / 63.0 ms |
+
+```text
+컨테이너 RSS      410.5 MiB (유휴 202 MiB)
+첫 요청           processingTimeMs 2151 (모델 로드, 배포 직후 1회)
+```
+
+읽을 점이 세 가지다.
+
+- **사람이 탐지되면 추론이 약 11ms 늘어난다**(60.5 → 71.7).
+- **4K 추론 시간이 720p 와 같다**(61ms). YOLO 가 내부에서 리사이즈하기
+  때문이다. 왕복 차이 112ms 는 1.3MB 업로드와 디코드다. 큰 프레임에서는
+  네트워크·디코드가 지배적이다. 이는 `frame-quality-v0.3` 수정의 가치를
+  뒷받침한다. **4K 를 받아도 추론 비용이 같은데 v0.2 는 그 프레임을
+  `TOO_BLURRY` 로 거부했으므로 순수한 손실이었다.**
+- **서버 4 vCPU 가 노트북 CPU 추론보다 느리지 않다.** 노트북 추론 p95 는
+  68.81ms 였고 서버는 63.0ms 로 약 8% 빠르다. 따라서 노트북 P2PNet CPU 측정값을
+  서버 예상치로 거의 그대로 쓸 수 있다.
+
+YOLO 추론 p95 63ms 는 5초 프레임 예산의 **1.3%** 다. **YOLO 기준으로 CPU 단독
+배포는 충분하다.**
+
 ### 아직 검증하지 못한 항목
 
-다음은 Docker가 필요하므로 이 검증 범위에 포함되지 않았다.
-
-- CPU 이미지 빌드와 YOLO 가중치 체크섬 다운로드
-- `p2pnet_model_cache` 볼륨 재사용(2회 기동 시 재다운로드 생략)
-- 비루트 사용자(uid 10001) 실행
-- Compose `healthcheck`의 `start_period` 동작
-- 컨테이너 RSS와 동시 요청 처리량 (`S15P11A503-106`)
+- P2PNet 실제 가중치 기준 지연시간과 RSS. 가중치 게시 후 측정한다. 이 값이
+  C·L 보정 활성화 판단의 선행 조건이다.
+- **P2PNet 동시 요청 시 대기열.** `shadow_analysis` 에 추론 락이 있어 P2PNet 은
+  직렬화된다. 노트북 기준 고밀도 프레임이 1.73초이므로 동시 스트림 3개면 5.2초로
+  5초 예산을 넘는다. 단일 요청 지연보다 이것이 보정 활성화 판단에 결정적이다.
+- Egress 트랜스코딩과 겹쳤을 때 메모리. 라이브 세션이 없어 측정하지 못했다.
+  `S15P11A503-95` 브라우저 라이브 제보 검증 때 함께 측정한다.
+- `p2pnet_model_cache` 볼륨 재사용(2회 기동 시 재다운로드 생략).
+- 비루트 사용자(uid 10001) 실행.
+- Compose `healthcheck` 의 `start_period` 동작.
 
 ## 비활성화와 롤백
 
