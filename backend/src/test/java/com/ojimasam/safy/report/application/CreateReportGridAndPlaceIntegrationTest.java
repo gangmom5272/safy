@@ -20,7 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ojimasam.safy.grid.domain.GridCell;
 import com.ojimasam.safy.grid.infrastructure.JpaGridCellRepository;
-import com.ojimasam.safy.place.application.PlaceLocator;
+import com.ojimasam.safy.place.application.PlaceBoundaries;
 import com.ojimasam.safy.place.domain.Place;
 import com.ojimasam.safy.place.domain.PlaceRepository;
 import com.ojimasam.safy.report.application.dto.CreateReportCommand;
@@ -53,7 +53,7 @@ class CreateReportGridAndPlaceIntegrationTest {
 	@Autowired ReportRepository reports;
 	@Autowired JpaReportRepository reportRepository;
 	@Autowired PlaceRepository places;
-	@Autowired PlaceLocator placeLocator;
+	@Autowired PlaceBoundaries placeBoundaries;
 	@Autowired JpaGridCellRepository gridCells;
 	@Autowired DataSource dataSource;
 
@@ -66,8 +66,8 @@ class CreateReportGridAndPlaceIntegrationTest {
 		if (places.findAllByActiveTrueOrderByNameAsc().isEmpty()) {
 			new JdbcTemplate(dataSource).execute(placeInsertStatement());
 		}
-		// PlaceLocator 는 첫 호출에 캐시한다. 다른 테스트가 빈 목록을 캐시했을 수 있어 비운다.
-		ReflectionTestUtils.setField(placeLocator, "boundaries", null);
+		// 경계는 첫 호출에 캐시된다. 다른 테스트가 빈 목록을 캐시했을 수 있어 비운다.
+		ReflectionTestUtils.setField(placeBoundaries, "cached", null);
 	}
 
 	@Test

@@ -9,5 +9,7 @@ public interface GridCellRepository {
 
 	List<GridCell> findAllByGridCodeIn(Collection<String> gridCodes);
 
+	List<GridCell> findAll();
+
 	GridCell save(GridCell gridCell);
 }
