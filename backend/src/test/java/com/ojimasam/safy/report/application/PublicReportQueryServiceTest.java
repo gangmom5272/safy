@@ -42,6 +42,7 @@ class PublicReportQueryServiceTest {
 
 	@Mock ReportRepository reportRepository;
 	@Mock MediaObjectStorage mediaObjectStorage;
+	@Mock ReportAnalysisQueryService reportAnalysisQueryService;
 
 	@Test
 	void trimsExtraRowAndReportsNextCursor() {
@@ -152,6 +153,7 @@ class PublicReportQueryServiceTest {
 
 	private PublicReportQueryService service() {
 		return new PublicReportQueryService(reportRepository, mediaObjectStorage,
+				reportAnalysisQueryService,
 				Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 

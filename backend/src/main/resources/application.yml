@@ -124,6 +124,13 @@ minio:
   secret-key: ${MINIO_SECRET_KEY:}
   upload-bucket: ${MINIO_UPLOAD_BUCKET:safy}
 
+ai:
+  server:
+    base-url: ${AI_SERVER_BASE_URL:http://localhost:8000}
+    connect-timeout: ${AI_CONNECT_TIMEOUT:PT2S}
+    # 운영 4 vCPU 실측 전 임시 기본값이다. processingTimeMs는 네트워크·디코딩 시간을 포함하지 않는다.
+    read-timeout: ${AI_READ_TIMEOUT:PT10S}
+
 live:
   recording:
     # Egress 컨테이너가 없는 환경에서는 false로 두면 라이브는 그대로 동작하고 녹화만 생략된다.
@@ -141,3 +148,4 @@ live:
     frame-interval: ${LIVE_FRAME_INTERVAL:PT5S}
     frame-width: ${LIVE_FRAME_WIDTH:1280}
     frame-height: ${LIVE_FRAME_HEIGHT:720}
+    frame-poll-delay: ${LIVE_FRAME_POLL_DELAY:PT2S}

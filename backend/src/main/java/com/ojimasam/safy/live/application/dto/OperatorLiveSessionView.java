@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.ojimasam.safy.analysis.application.dto.RiskSummaryView;
 import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.type.ReportCategory;
@@ -23,13 +24,14 @@ public record OperatorLiveSessionView(
 		Instant startedAt,
 		Instant endedAt,
 		Instant expiresAt,
-		Instant createdAt
+		Instant createdAt,
+		RiskSummaryView risk
 ) {
-	public static OperatorLiveSessionView from(LiveSession session, Report report) {
+	public static OperatorLiveSessionView from(LiveSession session, Report report, RiskSummaryView risk) {
 		return new OperatorLiveSessionView(session.getId(), session.getReportId(),
 				StreamStatus.from(session.getStatus()), report.getCategory(), report.getSubcategory(),
 				report.getDescription(), report.getLatitude(),
 				report.getLongitude(), report.getAddress(), session.getStartedAt(), session.getEndedAt(),
-				session.getExpiresAt(), session.getCreatedAt());
+				session.getExpiresAt(), session.getCreatedAt(), risk);
 	}
 }

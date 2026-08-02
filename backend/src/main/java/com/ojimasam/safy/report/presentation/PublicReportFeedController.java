@@ -75,7 +75,7 @@ public class PublicReportFeedController {
 
 	@GetMapping("/reports/{reportId}/analysis")
 	@Operation(summary = "공개 제보 분석 결과 조회",
-			description = "공개된 제보의 AI 분석 결과를 조회합니다. 미연동 상태에서는 NOT_STARTED를 반환합니다.")
+			description = "공개된 제보의 AI 분석·위험도 결과를 조회합니다. 아직 결과가 없으면 NOT_STARTED를 반환합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 분석 결과 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "공개된 제보를 찾을 수 없음", content = @Content)

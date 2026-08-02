@@ -17,6 +17,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ojimasam.safy.analysis.domain.MediaBlurResult;
+import com.ojimasam.safy.analysis.domain.MediaBlurResultRepository;
+import com.ojimasam.safy.analysis.domain.type.MediaBlurStatus;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.media.application.MediaObjectStorage;
@@ -50,6 +53,8 @@ public class ReportQueryService {
 	private final ReportStatusHistoryRepository historyRepository;
 	private final OperatorReportAccessService operatorAccessService;
 	private final ReportOperatorAssignmentRepository assignmentRepository;
+	private final MediaBlurResultRepository blurResultRepository;
+	private final com.ojimasam.safy.media.domain.MediaAssetRepository mediaAssetRepository;
 	private final Clock clock;
 
 	@Autowired
@@ -60,16 +65,20 @@ public class ReportQueryService {
 			ReportCenterRouteRepository routeRepository,
 			ReportStatusHistoryRepository historyRepository,
 			OperatorReportAccessService operatorAccessService,
-			ReportOperatorAssignmentRepository assignmentRepository
+			ReportOperatorAssignmentRepository assignmentRepository,
+			MediaBlurResultRepository blurResultRepository,
+			com.ojimasam.safy.media.domain.MediaAssetRepository mediaAssetRepository
 	) {
 		this(reports, images, storage, routeRepository, historyRepository, operatorAccessService,
-				assignmentRepository, Clock.systemUTC());
+				assignmentRepository, blurResultRepository, mediaAssetRepository, Clock.systemUTC());
 	}
 
 	ReportQueryService(ReportRepository reports, ReportImageRepository images, MediaObjectStorage storage,
 			ReportCenterRouteRepository routeRepository, ReportStatusHistoryRepository historyRepository,
 			OperatorReportAccessService operatorAccessService,
-			ReportOperatorAssignmentRepository assignmentRepository, Clock clock) {
+			ReportOperatorAssignmentRepository assignmentRepository,
+			MediaBlurResultRepository blurResultRepository,
+			com.ojimasam.safy.media.domain.MediaAssetRepository mediaAssetRepository, Clock clock) {
 		this.reportRepository = reports;
 		this.reportImageRepository = images;
 		this.mediaObjectStorage = storage;
@@ -77,6 +86,8 @@ public class ReportQueryService {
 		this.historyRepository = historyRepository;
 		this.operatorAccessService = operatorAccessService;
 		this.assignmentRepository = assignmentRepository;
+		this.blurResultRepository = blurResultRepository;
+		this.mediaAssetRepository = mediaAssetRepository;
 		this.clock = clock;
 	}
 
@@ -84,7 +95,7 @@ public class ReportQueryService {
 	public ReportDetailView getMine(Long reporterId, Long reportId) {
 		Report report = reportRepository.findByIdAndReporterId(reportId, reporterId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
-		return detail(report);
+		return detail(report, null, false);
 	}
 
 	@Transactional(readOnly = true)
@@ -92,7 +103,7 @@ public class ReportQueryService {
 		operatorAccessService.requireAccess(operatorId, reportId);
 		Report report = reportRepository.findOneById(reportId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
-		return detail(report, myAssignmentStatus(operatorId, reportId));
+		return detail(report, myAssignmentStatus(operatorId, reportId), true);
 	}
 
 	/** 재배정 이력이 있으면 배정이 여러 건 남으므로 가장 최근 것을 내 처리 결과로 본다. */
@@ -103,15 +114,14 @@ public class ReportQueryService {
 				.orElse(null);
 	}
 
-	private ReportDetailView detail(Report report) {
-		return detail(report, null);
-	}
-
-	private ReportDetailView detail(Report report, ReportOperatorAssignmentStatus myAssignmentStatus) {
+	private ReportDetailView detail(Report report, ReportOperatorAssignmentStatus myAssignmentStatus,
+			boolean exposeOriginal) {
 		Long reportId = report.getId();
 		Instant expiresAt = clock.instant().plus(PREVIEW_URL_EXPIRY);
-		List<ReportImageView> images = reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(reportId)
-				.stream().map(image -> toImageView(image, expiresAt)).toList();
+		List<ReportImage> reportImages = reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(reportId);
+		List<ReportImageView> images = exposeOriginal
+				? reportImages.stream().map(image -> toImageView(image, image.getMediaAsset(), expiresAt)).toList()
+				: blurredImageViews(reportImages, expiresAt);
 		AdministrativeArea area = report.getAdministrativeArea();
 		var currentRoute = routeRepository.findByReport_IdAndStatus(reportId, ReportCenterRouteStatus.ACTIVE)
 				.or(() -> routeRepository.findTopByReport_IdOrderByRoutedAtDesc(reportId));
@@ -159,7 +169,9 @@ public class ReportQueryService {
 		Instant expiresAt = clock.instant().plus(PREVIEW_URL_EXPIRY);
 		List<ReportListItemView> content = reports.getContent().stream().map(report -> {
 			List<ReportImage> images = imagesByReportId.getOrDefault(report.getId(), List.of());
-			ReportImageView representative = images.isEmpty() ? null : toImageView(images.getFirst(), expiresAt);
+			MediaAsset blurred = report.getRepresentativeBlurAsset();
+			ReportImageView representative = images.isEmpty() || blurred == null ? null
+					: toImageView(images.getFirst(), blurred, expiresAt);
 			AdministrativeArea area = report.getAdministrativeArea();
 			return new ReportListItemView(
 					report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
@@ -171,8 +183,26 @@ public class ReportQueryService {
 		return new PageImpl<>(content, pageable, reports.getTotalElements());
 	}
 
-	private ReportImageView toImageView(ReportImage reportImage, Instant expiresAt) {
-		MediaAsset asset = reportImage.getMediaAsset();
+	private List<ReportImageView> blurredImageViews(List<ReportImage> reportImages, Instant expiresAt) {
+		if (reportImages.isEmpty()) return List.of();
+		List<Long> sourceIds = reportImages.stream().map(image -> image.getMediaAsset().getId()).toList();
+		Map<Long, Long> blurredIdsBySource = new HashMap<>();
+		blurResultRepository.findAllBySourceMediaAssetIdIn(sourceIds).stream()
+				.filter(result -> result.getStatus() == MediaBlurStatus.COMPLETED)
+				.filter(result -> result.getBlurredMediaAssetId() != null)
+				.forEach(result -> blurredIdsBySource.put(
+						result.getSourceMediaAssetId(), result.getBlurredMediaAssetId()));
+		Map<Long, MediaAsset> blurredAssets = new HashMap<>();
+		mediaAssetRepository.findAllById(blurredIdsBySource.values())
+				.forEach(asset -> blurredAssets.put(asset.getId(), asset));
+		return reportImages.stream().map(reportImage -> {
+			Long blurredId = blurredIdsBySource.get(reportImage.getMediaAsset().getId());
+			MediaAsset blurred = blurredId == null ? null : blurredAssets.get(blurredId);
+			return blurred == null ? toImageViewWithoutPreview(reportImage) : toImageView(reportImage, blurred, expiresAt);
+		}).toList();
+	}
+
+	private ReportImageView toImageView(ReportImage reportImage, MediaAsset asset, Instant expiresAt) {
 		String previewUrl = asset.getStorageStatus() == MediaStorageStatus.AVAILABLE
 				? mediaObjectStorage.createPresignedGetUrl(asset.getBucketName(), asset.getObjectKey(), PREVIEW_URL_EXPIRY)
 				: null;
@@ -181,5 +211,12 @@ public class ReportQueryService {
 				asset.getContentType(), asset.getFileSize(), asset.getStorageStatus(), previewUrl,
 				previewUrl == null ? null : expiresAt
 		);
+	}
+
+	private ReportImageView toImageViewWithoutPreview(ReportImage reportImage) {
+		MediaAsset source = reportImage.getMediaAsset();
+		return new ReportImageView(reportImage.getId(), source.getId(), reportImage.getDisplayOrder(),
+				source.getOriginalFilename(), source.getContentType(), source.getFileSize(),
+				source.getStorageStatus(), null, null);
 	}
 }

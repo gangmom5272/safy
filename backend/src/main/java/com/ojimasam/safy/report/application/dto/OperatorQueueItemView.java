@@ -3,6 +3,7 @@ package com.ojimasam.safy.report.application.dto;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import com.ojimasam.safy.analysis.application.dto.RiskSummaryView;
 import com.ojimasam.safy.report.domain.type.ReportCategory;
 import com.ojimasam.safy.report.domain.type.ReportSubcategory;
 import com.ojimasam.safy.report.domain.type.ReportType;
@@ -22,6 +23,7 @@ public record OperatorQueueItemView(
 		String address,
 		Instant reportedAt,
 		DashboardImageView image,
-		DashboardLiveView live
+		DashboardLiveView live,
+		RiskSummaryView risk
 ) {
 }

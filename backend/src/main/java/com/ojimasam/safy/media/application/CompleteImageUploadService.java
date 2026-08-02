@@ -8,6 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
+import com.ojimasam.safy.analysis.domain.MediaProcessingJob;
+import com.ojimasam.safy.analysis.domain.MediaProcessingJobRepository;
+import com.ojimasam.safy.analysis.domain.type.MediaProcessingJobType;
 import com.ojimasam.safy.media.domain.MediaAsset;
 import com.ojimasam.safy.media.domain.MediaAssetRepository;
 import com.ojimasam.safy.report.domain.Report;
@@ -27,24 +30,26 @@ public class CompleteImageUploadService {
 	private final MediaAssetRepository mediaAssetRepository;
 	private final MediaObjectStorage mediaObjectStorage;
 	private final ReportRealtimeNotifier realtimeNotifier;
+	private final MediaProcessingJobRepository processingJobRepository;
 	private final Clock clock;
 
 	@Autowired
 	public CompleteImageUploadService(ReportRepository reportRepository, ReportImageRepository reportImageRepository,
 			MediaAssetRepository mediaAssetRepository, MediaObjectStorage mediaObjectStorage,
-			ReportRealtimeNotifier realtimeNotifier) {
+			ReportRealtimeNotifier realtimeNotifier, MediaProcessingJobRepository processingJobRepository) {
 		this(reportRepository, reportImageRepository, mediaAssetRepository, mediaObjectStorage,
-				realtimeNotifier, Clock.systemUTC());
+				realtimeNotifier, processingJobRepository, Clock.systemUTC());
 	}
 
 	CompleteImageUploadService(ReportRepository reportRepository, ReportImageRepository reportImageRepository,
 			MediaAssetRepository mediaAssetRepository, MediaObjectStorage mediaObjectStorage,
-			ReportRealtimeNotifier realtimeNotifier, Clock clock) {
+			ReportRealtimeNotifier realtimeNotifier, MediaProcessingJobRepository processingJobRepository, Clock clock) {
 		this.reportRepository = reportRepository;
 		this.reportImageRepository = reportImageRepository;
 		this.mediaAssetRepository = mediaAssetRepository;
 		this.mediaObjectStorage = mediaObjectStorage;
 		this.realtimeNotifier = realtimeNotifier;
+		this.processingJobRepository = processingJobRepository;
 		this.clock = clock;
 	}
 
@@ -81,6 +86,8 @@ public class CompleteImageUploadService {
 			}
 			asset.markAvailable(actual.size());
 			reportImageRepository.save(ReportImage.create(report, asset, Math.toIntExact(imageCount)));
+			processingJobRepository.save(MediaProcessingJob.create(
+					asset.getId(), MediaProcessingJobType.ANALYZE_AND_BLUR, clock.instant()));
 			realtimeNotifier.imageReady(report.getId(), asset.getId());
 		} catch (IllegalArgumentException exception) {
 			throw new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE, exception.getMessage());

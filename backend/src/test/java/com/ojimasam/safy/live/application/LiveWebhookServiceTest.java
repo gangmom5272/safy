@@ -35,12 +35,13 @@ class LiveWebhookServiceTest {
 	@Mock LiveSessionRepository repository;
 	@Mock ReportRealtimeNotifier realtimeNotifier;
 	@Mock LiveRecordingService recordingService;
+	@Mock LiveFrameIngestService frameIngestService;
 
 	private LiveWebhookService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new LiveWebhookService(parser, repository, realtimeNotifier, recordingService,
+		service = new LiveWebhookService(parser, repository, realtimeNotifier, recordingService, frameIngestService,
 				Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 

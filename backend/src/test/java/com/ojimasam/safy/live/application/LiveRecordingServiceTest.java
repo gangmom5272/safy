@@ -70,8 +70,10 @@ class LiveRecordingServiceTest {
 		ArgumentCaptor<LiveRecordingRequest> request = ArgumentCaptor.forClass(LiveRecordingRequest.class);
 		verify(mediaGateway).startRecording(request.capture());
 		assertThat(request.getValue().roomName()).isEqualTo(session.getRoomName());
-		assertThat(request.getValue().recordingObjectKey()).startsWith("recordings/" + REPORT_ID + "/");
-		assertThat(request.getValue().framePrefix()).isEqualTo("frames/%d/%s/".formatted(REPORT_ID, session.getId()));
+		assertThat(request.getValue().recordingObjectKey())
+				.isEqualTo("recordings/%d/%s/%d.mp4".formatted(REPORT_ID, session.getId(), NOW.toEpochMilli()));
+		assertThat(request.getValue().framePrefix())
+				.isEqualTo("frames/%d/%s/%d/".formatted(REPORT_ID, session.getId(), NOW.toEpochMilli()));
 		verify(recordingRepository).save(any(StreamRecording.class));
 	}
 
@@ -172,6 +174,6 @@ class LiveRecordingServiceTest {
 
 	private StreamRecording recording() {
 		return StreamRecording.start(java.util.UUID.randomUUID(), REPORT_ID, EGRESS_ID,
-				"recordings/10/a.mp4", NOW.minusSeconds(30));
+				"recordings/10/a.mp4", "frames/10/a/", NOW.minusSeconds(30));
 	}
 }

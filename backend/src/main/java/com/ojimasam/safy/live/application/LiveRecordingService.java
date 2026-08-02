@@ -70,12 +70,14 @@ public class LiveRecordingService {
 		if (recordingRepository.existsByLiveSessionIdAndStatusIn(session.getId(), IN_FLIGHT)) return;
 
 		Instant now = clock.instant();
-		String objectKey = recordingObjectKey(session, now);
+		String recordingToken = Long.toString(now.toEpochMilli());
+		String objectKey = recordingObjectKey(session, recordingToken);
+		String framePrefix = framePrefix(session, recordingToken);
 		try {
 			String egressId = mediaGateway.startRecording(new LiveRecordingRequest(
-					session.getRoomName(), participantIdentity, objectKey, framePrefix(session)));
+					session.getRoomName(), participantIdentity, objectKey, framePrefix));
 			recordingRepository.save(StreamRecording.start(
-					session.getId(), session.getReportId(), egressId, objectKey, now));
+					session.getId(), session.getReportId(), egressId, objectKey, framePrefix, now));
 		} catch (LiveMediaException exception) {
 			log.warn("Failed to start recording for live session {}", session.getId(), exception);
 		}
@@ -134,11 +136,11 @@ public class LiveRecordingService {
 		recording.complete(asset.getId(), file.durationMs(), now);
 	}
 
-	private String recordingObjectKey(LiveSession session, Instant now) {
-		return "recordings/%d/%s/%d.mp4".formatted(session.getReportId(), session.getId(), now.toEpochMilli());
+	private String recordingObjectKey(LiveSession session, String recordingToken) {
+		return "recordings/%d/%s/%s.mp4".formatted(session.getReportId(), session.getId(), recordingToken);
 	}
 
-	private String framePrefix(LiveSession session) {
-		return "frames/%d/%s/".formatted(session.getReportId(), session.getId());
+	private String framePrefix(LiveSession session, String recordingToken) {
+		return "frames/%d/%s/%s/".formatted(session.getReportId(), session.getId(), recordingToken);
 	}
 }

@@ -19,6 +19,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
+import com.ojimasam.safy.analysis.domain.RiskAssessmentRepository;
+import com.ojimasam.safy.analysis.domain.RiskAssessment;
+import com.ojimasam.safy.analysis.domain.risk.RiskLevel;
+import com.ojimasam.safy.analysis.domain.type.RiskAssessmentStatus;
 import com.ojimasam.safy.live.application.StreamStatus;
 import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
@@ -48,6 +52,7 @@ class OperatorDashboardServiceTest {
 	@Mock OperatorReportAccessService accessService;
 	@Mock com.ojimasam.safy.report.domain.ReportRepository reportRepository;
 	@Mock com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository membershipRepository;
+	@Mock RiskAssessmentRepository riskAssessmentRepository;
 
 	@Test
 	void returnsImageAndLiveTilesInOnePageForAssignedOperator() {
@@ -64,6 +69,12 @@ class OperatorDashboardServiceTest {
 				.thenReturn(List.of(image));
 		when(liveSessionRepository.findAllByReportIdIn(List.of(10L, 11L)))
 				.thenReturn(List.of(liveSession));
+		RiskAssessment risk = mock(RiskAssessment.class);
+		when(risk.getReportId()).thenReturn(11L);
+		when(risk.getAssessmentStatus()).thenReturn(RiskAssessmentStatus.COMPLETED);
+		when(risk.getFinalRiskScore()).thenReturn(84.5);
+		when(risk.getRiskLevel()).thenReturn(RiskLevel.VERY_HIGH);
+		when(riskAssessmentRepository.findAllByReportIdIn(List.of(10L, 11L))).thenReturn(List.of(risk));
 		when(mediaObjectStorage.createPresignedGetUrl("safy", "reports/10/image.png",
 				java.time.Duration.ofMinutes(10))).thenReturn("https://storage/thumbnail");
 
@@ -82,6 +93,8 @@ class OperatorDashboardServiceTest {
 		assertThat(liveTile.image()).isNull();
 		assertThat(liveTile.live().streamRoomId()).isEqualTo(liveSession.getId());
 		assertThat(liveTile.live().status()).isEqualTo(StreamStatus.LIVE);
+		assertThat(liveTile.risk().score()).isEqualTo(84.5);
+		assertThat(liveTile.risk().level()).isEqualTo(RiskLevel.VERY_HIGH);
 		verify(accessService).requireActiveOperator(30L);
 	}
 
@@ -128,6 +141,7 @@ class OperatorDashboardServiceTest {
 	private OperatorDashboardService service() {
 		return new OperatorDashboardService(assignmentRepository, imageRepository, liveSessionRepository,
 				mediaObjectStorage, accessService, reportRepository, membershipRepository,
+				riskAssessmentRepository,
 				Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 

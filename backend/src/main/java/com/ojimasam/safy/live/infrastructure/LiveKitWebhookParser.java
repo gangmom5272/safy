@@ -36,7 +36,7 @@ public class LiveKitWebhookParser implements LiveWebhookParser {
 			event = new WebhookReceiver(properties.apiKey(), properties.apiSecret())
 					.receive(rawBody, authorizationHeader);
 		} catch (RuntimeException exception) {
-			throw new LiveMediaException("Webhook signature verification failed", exception);
+			throw new LiveMediaException("Webhook verification failed: " + exception.getMessage(), exception);
 		}
 		if (event == null) throw new LiveMediaException("Webhook payload could not be parsed");
 		LiveWebhookEvent.Type type = toType(event.getEvent());

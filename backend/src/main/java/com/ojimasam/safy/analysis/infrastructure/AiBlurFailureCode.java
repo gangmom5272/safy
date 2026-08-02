@@ -1,0 +1,12 @@
+package com.ojimasam.safy.analysis.infrastructure;
+
+public enum AiBlurFailureCode {
+	UNSUPPORTED_MEDIA_TYPE,
+	EMPTY_IMAGE,
+	IMAGE_DECODE_FAILED,
+	IMAGE_ENCODING_FAILED,
+	IMAGE_BLUR_FAILED,
+	AI_CONNECTION_FAILED,
+	AI_TIMEOUT,
+	INVALID_AI_RESPONSE
+}

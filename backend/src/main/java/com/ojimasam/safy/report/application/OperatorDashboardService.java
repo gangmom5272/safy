@@ -15,6 +15,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ojimasam.safy.analysis.application.dto.RiskSummaryView;
+import com.ojimasam.safy.analysis.domain.RiskAssessmentRepository;
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
 import com.ojimasam.safy.admin.domain.type.MembershipStatus;
@@ -52,6 +54,7 @@ public class OperatorDashboardService {
 	private final OperatorReportAccessService accessService;
 	private final ReportRepository reportRepository;
 	private final AdminCenterMembershipRepository membershipRepository;
+	private final RiskAssessmentRepository riskAssessmentRepository;
 	private final Clock clock;
 
 	@Autowired
@@ -61,9 +64,10 @@ public class OperatorDashboardService {
 			MediaObjectStorage mediaObjectStorage,
 			OperatorReportAccessService accessService,
 			ReportRepository reportRepository,
-			AdminCenterMembershipRepository membershipRepository) {
+			AdminCenterMembershipRepository membershipRepository,
+			RiskAssessmentRepository riskAssessmentRepository) {
 		this(assignmentRepository, imageRepository, liveSessionRepository, mediaObjectStorage, accessService,
-				reportRepository, membershipRepository, Clock.systemUTC());
+				reportRepository, membershipRepository, riskAssessmentRepository, Clock.systemUTC());
 	}
 
 	OperatorDashboardService(ReportOperatorAssignmentRepository assignmentRepository,
@@ -73,6 +77,7 @@ public class OperatorDashboardService {
 			OperatorReportAccessService accessService,
 			ReportRepository reportRepository,
 			AdminCenterMembershipRepository membershipRepository,
+			RiskAssessmentRepository riskAssessmentRepository,
 			Clock clock) {
 		this.assignmentRepository = assignmentRepository;
 		this.imageRepository = imageRepository;
@@ -81,6 +86,7 @@ public class OperatorDashboardService {
 		this.accessService = accessService;
 		this.reportRepository = reportRepository;
 		this.membershipRepository = membershipRepository;
+		this.riskAssessmentRepository = riskAssessmentRepository;
 		this.clock = clock;
 	}
 
@@ -105,9 +111,11 @@ public class OperatorDashboardService {
 				.toList();
 		Map<Long, List<ReportImage>> imagesByReportId = imagesByReportId(reportIds);
 		Map<Long, LiveSession> liveByReportId = liveByReportId(reportIds);
+		Map<Long, RiskSummaryView> risksByReportId = risksByReportId(reportIds);
 		Instant thumbnailExpiresAt = clock.instant().plus(THUMBNAIL_URL_EXPIRY);
 		List<OperatorDashboardTileView> tiles = assignments.getContent().stream()
-				.map(assignment -> tile(assignment, imagesByReportId, liveByReportId, thumbnailExpiresAt))
+				.map(assignment -> tile(assignment, imagesByReportId, liveByReportId,
+						risksByReportId, thumbnailExpiresAt))
 				.toList();
 		return new PageImpl<>(tiles, pageable, assignments.getTotalElements());
 	}
@@ -139,9 +147,11 @@ public class OperatorDashboardService {
 		List<Long> reportIds = reports.getContent().stream().map(Report::getId).toList();
 		Map<Long, List<ReportImage>> imagesByReportId = imagesByReportId(reportIds);
 		Map<Long, LiveSession> liveByReportId = liveByReportId(reportIds);
+		Map<Long, RiskSummaryView> risksByReportId = risksByReportId(reportIds);
 		Instant thumbnailExpiresAt = clock.instant().plus(THUMBNAIL_URL_EXPIRY);
 		List<OperatorQueueItemView> items = reports.getContent().stream()
-				.map(report -> queueItem(report, imagesByReportId, liveByReportId, thumbnailExpiresAt))
+				.map(report -> queueItem(report, imagesByReportId, liveByReportId,
+						risksByReportId, thumbnailExpiresAt))
 				.toList();
 		return new PageImpl<>(items, pageable, reports.getTotalElements());
 	}
@@ -149,6 +159,7 @@ public class OperatorDashboardService {
 	private OperatorQueueItemView queueItem(Report report,
 			Map<Long, List<ReportImage>> imagesByReportId,
 			Map<Long, LiveSession> liveByReportId,
+			Map<Long, RiskSummaryView> risksByReportId,
 			Instant thumbnailExpiresAt) {
 		DashboardImageView image = report.getType() == ReportType.IMAGE
 				? image(imagesByReportId.getOrDefault(report.getId(), List.of()), thumbnailExpiresAt)
@@ -161,7 +172,7 @@ public class OperatorDashboardService {
 		return new OperatorQueueItemView(
 				report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
 				report.getDescription(), report.getLatitude(), report.getLongitude(), report.getAddress(),
-				report.getReportedAt(), image, live
+				report.getReportedAt(), image, live, risksByReportId.get(report.getId())
 		);
 	}
 
@@ -183,9 +194,18 @@ public class OperatorDashboardService {
 		return result;
 	}
 
+	private Map<Long, RiskSummaryView> risksByReportId(List<Long> reportIds) {
+		if (reportIds.isEmpty()) return Map.of();
+		Map<Long, RiskSummaryView> result = new HashMap<>();
+		riskAssessmentRepository.findAllByReportIdIn(reportIds)
+				.forEach(assessment -> result.put(assessment.getReportId(), RiskSummaryView.from(assessment)));
+		return result;
+	}
+
 	private OperatorDashboardTileView tile(ReportOperatorAssignment assignment,
 			Map<Long, List<ReportImage>> imagesByReportId,
 			Map<Long, LiveSession> liveByReportId,
+			Map<Long, RiskSummaryView> risksByReportId,
 			Instant thumbnailExpiresAt) {
 		Report report = assignment.getReport();
 		DashboardImageView image = report.getType() == ReportType.IMAGE
@@ -201,7 +221,8 @@ public class OperatorDashboardService {
 				report.getDescription(), report.getLatitude(), report.getLongitude(), report.getAddress(),
 				report.getStatus(), assignment.getStatus(), assignment.getRoute().getControlCenter().getId(),
 				assignment.getRoute().getControlCenter().getName(), assignment.getOperator().getId(),
-				assignment.getOperator().getDisplayName(), assignment.getAssignedAt(), image, live);
+				assignment.getOperator().getDisplayName(), assignment.getAssignedAt(), image, live,
+				risksByReportId.get(report.getId()));
 	}
 
 	private DashboardImageView image(List<ReportImage> images, Instant thumbnailExpiresAt) {

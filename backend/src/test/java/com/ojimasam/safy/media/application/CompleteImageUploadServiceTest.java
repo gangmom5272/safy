@@ -19,6 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ojimasam.safy.media.domain.MediaAsset;
+import com.ojimasam.safy.analysis.domain.MediaProcessingJob;
+import com.ojimasam.safy.analysis.domain.MediaProcessingJobRepository;
 import com.ojimasam.safy.media.domain.MediaAssetRepository;
 import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
 import com.ojimasam.safy.report.domain.Report;
@@ -38,6 +40,7 @@ class CompleteImageUploadServiceTest {
 	@Mock MediaAssetRepository mediaAssetRepository;
 	@Mock MediaObjectStorage mediaObjectStorage;
 	@Mock ReportRealtimeNotifier realtimeNotifier;
+	@Mock MediaProcessingJobRepository processingJobRepository;
 
 	@Test
 	void verifiesUploadedObjectAndConnectsItToReport() {
@@ -59,7 +62,7 @@ class CompleteImageUploadServiceTest {
 
 		CompleteImageUploadService service = new CompleteImageUploadService(
 				reportRepository, reportImageRepository, mediaAssetRepository, mediaObjectStorage,
-				realtimeNotifier,
+				realtimeNotifier, processingJobRepository,
 				Clock.fixed(now, ZoneOffset.UTC)
 		);
 		service.complete(new CompleteImageUploadCommand(1L, 42L, 10L));
@@ -71,5 +74,8 @@ class CompleteImageUploadServiceTest {
 		assertThat(asset.getStorageStatus()).isEqualTo(MediaStorageStatus.AVAILABLE);
 		assertThat(asset.getFileSize()).isEqualTo(1024L);
 		verify(realtimeNotifier).imageReady(42L, 10L);
+		ArgumentCaptor<MediaProcessingJob> jobCaptor = ArgumentCaptor.forClass(MediaProcessingJob.class);
+		verify(processingJobRepository).save(jobCaptor.capture());
+		assertThat(jobCaptor.getValue().getMediaAssetId()).isEqualTo(10L);
 	}
 }

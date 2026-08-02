@@ -28,20 +28,24 @@ public class LiveWebhookService {
 	private final LiveSessionRepository repository;
 	private final ReportRealtimeNotifier realtimeNotifier;
 	private final LiveRecordingService recordingService;
+	private final LiveFrameIngestService frameIngestService;
 	private final Clock clock;
 
 	@Autowired
 	public LiveWebhookService(LiveWebhookParser parser, LiveSessionRepository repository,
-			ReportRealtimeNotifier realtimeNotifier, LiveRecordingService recordingService) {
-		this(parser, repository, realtimeNotifier, recordingService, Clock.systemUTC());
+			ReportRealtimeNotifier realtimeNotifier, LiveRecordingService recordingService,
+			LiveFrameIngestService frameIngestService) {
+		this(parser, repository, realtimeNotifier, recordingService, frameIngestService, Clock.systemUTC());
 	}
 
 	LiveWebhookService(LiveWebhookParser parser, LiveSessionRepository repository,
-			ReportRealtimeNotifier realtimeNotifier, LiveRecordingService recordingService, Clock clock) {
+			ReportRealtimeNotifier realtimeNotifier, LiveRecordingService recordingService,
+			LiveFrameIngestService frameIngestService, Clock clock) {
 		this.parser = parser;
 		this.repository = repository;
 		this.realtimeNotifier = realtimeNotifier;
 		this.recordingService = recordingService;
+		this.frameIngestService = frameIngestService;
 		this.clock = clock;
 	}
 
@@ -80,7 +84,10 @@ public class LiveWebhookService {
 				if (event.egress() != null) recordingService.markActive(event.egress().egressId());
 			}
 			case EGRESS_ENDED -> {
-				if (event.egress() != null) recordingService.complete(event.egress().egressId(), event.egress());
+				if (event.egress() != null) {
+					frameIngestService.ingest(event.egress().egressId());
+					recordingService.complete(event.egress().egressId(), event.egress());
+				}
 			}
 			case UNSUPPORTED -> { }
 		}

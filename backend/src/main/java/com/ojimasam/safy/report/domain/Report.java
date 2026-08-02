@@ -7,6 +7,7 @@ import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.common.persistence.BaseEntity;
 import com.ojimasam.safy.grid.domain.GridCellCode;
 import com.ojimasam.safy.media.domain.MediaAsset;
+import com.ojimasam.safy.media.domain.type.MediaVariantType;
 
 import org.hibernate.annotations.ColumnDefault;
 import jakarta.persistence.Column;
@@ -300,6 +301,15 @@ public class Report extends BaseEntity {
 	 */
 	public void withhold() {
 		this.publicVisibility = ReportPublicVisibility.WITHHELD;
+	}
+
+	/** 블러본만 공개 대표 이미지로 지정한다. 위험도 재집계 시 더 적절한 프레임으로 교체할 수 있다. */
+	public void applyRepresentativeBlurAsset(MediaAsset asset) {
+		if (asset == null || asset.getVariantType() != MediaVariantType.BLURRED) {
+			throw new IllegalArgumentException("블러 처리된 미디어만 대표 이미지로 지정할 수 있습니다.");
+		}
+		if (!id.equals(asset.getReportId())) throw new IllegalArgumentException("다른 제보의 미디어입니다.");
+		representativeBlurAsset = asset;
 	}
 
 	/**
