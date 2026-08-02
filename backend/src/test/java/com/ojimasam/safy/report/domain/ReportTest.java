@@ -174,6 +174,46 @@ class ReportTest {
 				.hasMessage("제보 카테고리와 세부 상황이 일치하지 않습니다.");
 	}
 
+	@Test
+	void assignsGridCellCodeFromCoordinatesOnCreate() {
+		Report report = Report.create(
+				1L,
+				ReportType.IMAGE,
+				ReportCategory.CROWD_CONGESTION,
+				ReportSubcategory.EXIT_CONGESTION,
+				"홍대입구역 혼잡",
+				new BigDecimal("37.5572000"),
+				new BigDecimal("126.9254000"),
+				null
+		);
+
+		assertThat(report.getGridCellCode()).isEqualTo("S100-r174-c199");
+	}
+
+	@Test
+	void keepsCoordinatesAndGridCellCodeConsistent() {
+		// 같은 셀 안에서 조금 움직인 좌표는 같은 셀이 된다.
+		Report sameCell = reportAt("37.5573000", "126.9256000");
+		// 북쪽으로 100m 옮기면 다른 셀이 된다.
+		Report northCell = reportAt("37.5581000", "126.9254000");
+
+		assertThat(sameCell.getGridCellCode()).isEqualTo("S100-r174-c199");
+		assertThat(northCell.getGridCellCode()).isEqualTo("S100-r175-c199");
+	}
+
+	private Report reportAt(String latitude, String longitude) {
+		return Report.create(
+				1L,
+				ReportType.IMAGE,
+				ReportCategory.CROWD_CONGESTION,
+				ReportSubcategory.EXIT_CONGESTION,
+				"제보 내용",
+				new BigDecimal(latitude),
+				new BigDecimal(longitude),
+				null
+		);
+	}
+
 	private Report handledReport() {
 		Report report = Report.create(1L, ReportType.IMAGE,
 				ReportCategory.FACILITY_ROAD, ReportSubcategory.ROAD_DAMAGE, "제보 내용",
