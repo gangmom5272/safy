@@ -45,6 +45,35 @@ checkout한다. 현재 PyTorch·torchvision과의 호환을 위해
 
 표식이 매니페스트와 다르면 P2PNet 그림자 분석만 비활성화된다.
 
+### 패치 파일 줄바꿈
+
+`git apply`는 패치와 대상 파일의 줄바꿈이 일치해야 적용한다. 컨테이너 안에서
+새로 복제한 `/opt/p2pnet/util/misc.py`는 항상 LF이므로 패치도 LF여야 한다.
+
+Windows에서 `core.autocrlf=true`로 체크아웃하면 패치가 CRLF로 변환되어
+`git apply --check`가 거부한다. 실제 조합별 결과는 다음과 같다.
+
+| 대상 파일 | 패치 | 결과 |
+|---|---|---|
+| LF | LF | 적용 |
+| LF | CRLF | **거부** |
+| CRLF | LF | 거부 |
+| CRLF | CRLF | 적용 |
+
+CI 리눅스 러너는 LF로 체크아웃하므로 영향이 없다. 문제가 되는 경우는
+Windows에서 로컬 `docker build`를 실행할 때다.
+
+`ai/.gitattributes`에 `*.patch text eol=lf`를 지정해 예방한다. 저장소의 패치
+파일이 `ai/deploy` 하나뿐이므로 루트 공유 파일을 늘리지 않고 `ai/` 범위로
+좁혔다. 이미
+CRLF로 체크아웃된 워킹트리 파일은 속성 추가만으로 바뀌지 않으므로 다시
+체크아웃해야 한다.
+
+```bash
+rm ai/deploy/p2pnet-compatibility.patch
+git checkout -- ai/deploy/p2pnet-compatibility.patch
+```
+
 ## 가중치 저장 정책
 
 약 82.39MB인 P2PNet 가중치는 Git에 커밋하지 않는다. 기존에 운영 중인
