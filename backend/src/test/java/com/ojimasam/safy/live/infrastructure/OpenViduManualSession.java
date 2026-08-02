@@ -24,11 +24,18 @@ public final class OpenViduManualSession {
 		LiveKitMediaGateway gateway = new LiveKitMediaGateway(properties,
 				new com.ojimasam.safy.live.application.LiveRecordingProperties(
 						false, "safy", "http://localhost:9000", "key", "secret", null, null, 0, 0));
-		String roomName = "safy-manual-" + UUID.randomUUID();
+		String configuredRoomName = System.getenv("OPENVIDU_MANUAL_ROOM_NAME");
+		String roomName = configuredRoomName == null || configuredRoomName.isBlank()
+				? "safy-manual-" + UUID.randomUUID()
+				: configuredRoomName;
+		String configuredReporterIdentity = System.getenv("OPENVIDU_MANUAL_REPORTER_IDENTITY");
+		String reporterIdentity = configuredReporterIdentity == null || configuredReporterIdentity.isBlank()
+				? "manual-reporter"
+				: configuredReporterIdentity;
 		gateway.createRoom(roomName);
 
 		String reporterToken = gateway.issueToken(
-				roomName, "manual-reporter", LiveParticipantRole.REPORTER, manualSessionTtl);
+				roomName, reporterIdentity, LiveParticipantRole.REPORTER, manualSessionTtl);
 		String viewerToken = gateway.issueToken(
 				roomName, "manual-viewer", LiveParticipantRole.VIEWER, manualSessionTtl);
 

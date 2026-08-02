@@ -50,6 +50,10 @@ public class ReportRealtimeNotifier {
 		notifyAssignedOperator(RealtimeEventType.LIVE_ENDED, reportId, null);
 	}
 
+	public void riskAssessmentUpdated(Long reportId) {
+		notifyAssignedOperator(RealtimeEventType.RISK_ASSESSMENT_UPDATED, reportId, null);
+	}
+
 	/** 담당자 종료로 라이브가 끊김 → 제보자에게 알림(송출 중단 유도). */
 	public void liveEndedToReporter(Long reportId, Long reporterId) {
 		eventService.record(reporterId, RealtimeEventType.LIVE_ENDED, reportId, null, null);

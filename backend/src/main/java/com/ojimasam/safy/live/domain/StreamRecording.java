@@ -54,6 +54,13 @@ public class StreamRecording extends BaseEntity {
 	@Column(name = "object_key", nullable = false, length = 500)
 	private String objectKey;
 
+	/** 과거 녹화 행과의 스키마 호환을 위해 DB nullable이며, 신규 녹화 생성 시에는 필수다. */
+	@Column(name = "frame_prefix", length = 500)
+	private String framePrefix;
+
+	@Column(name = "last_ingested_frame_key", length = 500)
+	private String lastIngestedFrameKey;
+
 	@Column(name = "started_at", columnDefinition = "timestamp(6) with time zone")
 	private Instant startedAt;
 
@@ -69,17 +76,19 @@ public class StreamRecording extends BaseEntity {
 	protected StreamRecording() {
 	}
 
-	private StreamRecording(UUID liveSessionId, Long reportId, String providerEgressId, String objectKey,
+	private StreamRecording(UUID liveSessionId, Long reportId, String providerEgressId, String objectKey, String framePrefix,
 			Instant startedAt) {
 		this.liveSessionId = liveSessionId;
 		this.reportId = reportId;
 		this.providerEgressId = providerEgressId;
 		this.objectKey = objectKey;
+		this.framePrefix = framePrefix;
 		this.status = StreamRecordingStatus.STARTING;
 		this.startedAt = startedAt;
 	}
 
 	public static StreamRecording start(UUID liveSessionId, Long reportId, String providerEgressId, String objectKey,
+			String framePrefix,
 			Instant startedAt) {
 		if (liveSessionId == null) throw new IllegalArgumentException("라이브 세션 ID는 필수입니다.");
 		if (reportId == null) throw new IllegalArgumentException("제보 ID는 필수입니다.");
@@ -87,8 +96,18 @@ public class StreamRecording extends BaseEntity {
 			throw new IllegalArgumentException("녹화 작업 ID는 필수입니다.");
 		}
 		if (objectKey == null || objectKey.isBlank()) throw new IllegalArgumentException("객체 키는 필수입니다.");
+		if (framePrefix == null || framePrefix.isBlank()) throw new IllegalArgumentException("프레임 prefix는 필수입니다.");
 		if (startedAt == null) throw new IllegalArgumentException("시작 시각은 필수입니다.");
-		return new StreamRecording(liveSessionId, reportId, providerEgressId, objectKey, startedAt);
+		return new StreamRecording(liveSessionId, reportId, providerEgressId, objectKey, framePrefix, startedAt);
+	}
+
+	public void advanceFrameCursor(String objectKey) {
+		if (objectKey == null || !objectKey.startsWith(framePrefix)) {
+			throw new IllegalArgumentException("녹화 구간에 속하지 않는 프레임입니다.");
+		}
+		if (lastIngestedFrameKey == null || objectKey.compareTo(lastIngestedFrameKey) > 0) {
+			lastIngestedFrameKey = objectKey;
+		}
 	}
 
 	public void markActive() {
@@ -145,6 +164,8 @@ public class StreamRecording extends BaseEntity {
 	public String getProviderEgressId() { return providerEgressId; }
 	public StreamRecordingStatus getStatus() { return status; }
 	public String getObjectKey() { return objectKey; }
+	public String getFramePrefix() { return framePrefix; }
+	public String getLastIngestedFrameKey() { return lastIngestedFrameKey; }
 	public Instant getStartedAt() { return startedAt; }
 	public Instant getEndedAt() { return endedAt; }
 	public Long getDurationMs() { return durationMs; }

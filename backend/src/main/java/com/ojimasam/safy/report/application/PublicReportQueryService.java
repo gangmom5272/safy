@@ -37,16 +37,20 @@ public class PublicReportQueryService {
 
 	private final ReportRepository reportRepository;
 	private final MediaObjectStorage mediaObjectStorage;
+	private final ReportAnalysisQueryService reportAnalysisQueryService;
 	private final Clock clock;
 
 	@Autowired
-	public PublicReportQueryService(ReportRepository reportRepository, MediaObjectStorage mediaObjectStorage) {
-		this(reportRepository, mediaObjectStorage, Clock.systemUTC());
+	public PublicReportQueryService(ReportRepository reportRepository, MediaObjectStorage mediaObjectStorage,
+			ReportAnalysisQueryService reportAnalysisQueryService) {
+		this(reportRepository, mediaObjectStorage, reportAnalysisQueryService, Clock.systemUTC());
 	}
 
-	PublicReportQueryService(ReportRepository reportRepository, MediaObjectStorage mediaObjectStorage, Clock clock) {
+	PublicReportQueryService(ReportRepository reportRepository, MediaObjectStorage mediaObjectStorage,
+			ReportAnalysisQueryService reportAnalysisQueryService, Clock clock) {
 		this.reportRepository = reportRepository;
 		this.mediaObjectStorage = mediaObjectStorage;
+		this.reportAnalysisQueryService = reportAnalysisQueryService;
 		this.clock = clock;
 	}
 
@@ -77,7 +81,7 @@ public class PublicReportQueryService {
 
 	public ReportAnalysisResponse analysis(Long reportId) {
 		requirePublished(reportId);
-		return ReportAnalysisResponse.pending(reportId);
+		return reportAnalysisQueryService.get(reportId);
 	}
 
 	private Report requirePublished(Long reportId) {

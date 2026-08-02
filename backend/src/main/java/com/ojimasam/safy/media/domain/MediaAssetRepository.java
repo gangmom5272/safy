@@ -11,6 +11,7 @@ public interface MediaAssetRepository {
 	List<MediaAsset> findAllById(Iterable<Long> ids);
 	List<MediaAsset> findAllByIdForUpdate(Collection<Long> ids);
 	Optional<MediaAsset> findByIdForUpdate(Long id);
+	Optional<MediaAsset> findByBucketNameAndObjectKey(String bucketName, String objectKey);
 	long countByReportIdAndStorageStatusIn(Long reportId, Collection<MediaStorageStatus> storageStatuses);
 	long countByOwnerUserIdAndStorageStatusAndUploadExpiresAtAfter(Long ownerUserId,
 			MediaStorageStatus storageStatus, Instant now);

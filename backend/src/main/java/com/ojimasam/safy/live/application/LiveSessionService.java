@@ -5,13 +5,17 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
 
+import com.ojimasam.safy.analysis.application.dto.RiskSummaryView;
+import com.ojimasam.safy.analysis.domain.RiskAssessmentRepository;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionAccessDeniedException;
@@ -39,6 +43,7 @@ public class LiveSessionService {
 	private final ReportRealtimeNotifier realtimeNotifier;
 	private final LiveRecordingService recordingService;
 	private final OpenViduProperties properties;
+	private final RiskAssessmentRepository riskAssessmentRepository;
 	private final Clock clock;
 
 	@Autowired
@@ -46,16 +51,16 @@ public class LiveSessionService {
 			ReportRepository reportRepository, OperatorReportAccessService operatorAccessService,
 			ReportOperatorAssignmentService assignmentService,
 			ReportRealtimeNotifier realtimeNotifier, LiveRecordingService recordingService,
-			OpenViduProperties properties) {
+			OpenViduProperties properties, RiskAssessmentRepository riskAssessmentRepository) {
 		this(repository, mediaGateway, reportRepository, operatorAccessService, assignmentService, realtimeNotifier,
-				recordingService, properties, Clock.systemUTC());
+				recordingService, properties, riskAssessmentRepository, Clock.systemUTC());
 	}
 
 	LiveSessionService(LiveSessionRepository repository, LiveMediaGateway mediaGateway,
 			ReportRepository reportRepository, OperatorReportAccessService operatorAccessService,
 			ReportOperatorAssignmentService assignmentService,
 			ReportRealtimeNotifier realtimeNotifier, LiveRecordingService recordingService,
-			OpenViduProperties properties, Clock clock) {
+			OpenViduProperties properties, RiskAssessmentRepository riskAssessmentRepository, Clock clock) {
 		this.repository = repository;
 		this.mediaGateway = mediaGateway;
 		this.reportRepository = reportRepository;
@@ -64,6 +69,7 @@ public class LiveSessionService {
 		this.realtimeNotifier = realtimeNotifier;
 		this.recordingService = recordingService;
 		this.properties = properties;
+		this.riskAssessmentRepository = riskAssessmentRepository;
 		this.clock = clock;
 	}
 
@@ -169,7 +175,10 @@ public class LiveSessionService {
 				);
 		boolean hasNext = sessions.size() > size;
 		List<LiveSession> page = hasNext ? sessions.subList(0, size) : sessions;
-		List<OperatorLiveSessionView> content = page.stream().map(this::operatorView).toList();
+		Map<Long, RiskSummaryView> risks = risksByReportId(page.stream().map(LiveSession::getReportId).toList());
+		List<OperatorLiveSessionView> content = page.stream()
+				.map(session -> operatorView(session, risks.get(session.getReportId())))
+				.toList();
 		Instant nextCursor = hasNext && !page.isEmpty() ? page.get(page.size() - 1).getCreatedAt() : null;
 		return new LiveSessionCursorView(content, nextCursor, hasNext);
 	}
@@ -237,9 +246,23 @@ public class LiveSessionService {
 	}
 
 	private OperatorLiveSessionView operatorView(LiveSession session) {
+		RiskSummaryView risk = riskAssessmentRepository.findByReportId(session.getReportId())
+				.map(RiskSummaryView::from).orElse(null);
+		return operatorView(session, risk);
+	}
+
+	private OperatorLiveSessionView operatorView(LiveSession session, RiskSummaryView risk) {
 		Report report = reportRepository.findOneById(session.getReportId())
 				.orElseThrow(() -> new BusinessException(LiveSessionErrorCode.NOT_FOUND));
-		return OperatorLiveSessionView.from(session, report);
+		return OperatorLiveSessionView.from(session, report, risk);
+	}
+
+	private Map<Long, RiskSummaryView> risksByReportId(List<Long> reportIds) {
+		if (reportIds.isEmpty()) return Map.of();
+		Map<Long, RiskSummaryView> result = new HashMap<>();
+		riskAssessmentRepository.findAllByReportIdIn(reportIds)
+				.forEach(assessment -> result.put(assessment.getReportId(), RiskSummaryView.from(assessment)));
+		return result;
 	}
 
 	private LiveSession find(UUID id) {

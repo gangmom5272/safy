@@ -40,20 +40,24 @@ public class ReportFeedQueryService {
 
 	private final ReportRepository reportRepository;
 	private final LiveSessionRepository liveSessionRepository;
+	private final ReportAnalysisQueryService reportAnalysisQueryService;
 	private final Clock clock;
 
 	@Autowired
-	public ReportFeedQueryService(ReportRepository reportRepository, LiveSessionRepository liveSessionRepository) {
-		this(reportRepository, liveSessionRepository, Clock.systemUTC());
+	public ReportFeedQueryService(ReportRepository reportRepository, LiveSessionRepository liveSessionRepository,
+			ReportAnalysisQueryService reportAnalysisQueryService) {
+		this(reportRepository, liveSessionRepository, reportAnalysisQueryService, Clock.systemUTC());
 	}
 
 	ReportFeedQueryService(
 			ReportRepository reportRepository,
 			LiveSessionRepository liveSessionRepository,
+			ReportAnalysisQueryService reportAnalysisQueryService,
 			Clock clock
 	) {
 		this.reportRepository = reportRepository;
 		this.liveSessionRepository = liveSessionRepository;
+		this.reportAnalysisQueryService = reportAnalysisQueryService;
 		this.clock = clock;
 	}
 
@@ -91,7 +95,7 @@ public class ReportFeedQueryService {
 	public ReportAnalysisResponse analysis(Long reportId) {
 		reportRepository.findOneById(reportId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
-		return ReportAnalysisResponse.pending(reportId);
+		return reportAnalysisQueryService.get(reportId);
 	}
 
 	public ReportWebRtcResponse webrtc(Long reportId) {

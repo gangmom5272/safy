@@ -26,6 +26,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ojimasam.safy.common.exception.BusinessException;
+import com.ojimasam.safy.analysis.domain.RiskAssessmentRepository;
+import com.ojimasam.safy.analysis.domain.RiskAssessment;
+import com.ojimasam.safy.analysis.domain.risk.RiskLevel;
+import com.ojimasam.safy.analysis.domain.type.RiskAssessmentStatus;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.live.domain.LiveSession;
 import com.ojimasam.safy.live.domain.LiveSessionRepository;
@@ -53,6 +57,7 @@ class LiveSessionServiceTest {
 	@Mock ReportOperatorAssignmentService assignmentService;
 	@Mock ReportRealtimeNotifier realtimeNotifier;
 	@Mock LiveRecordingService recordingService;
+	@Mock RiskAssessmentRepository riskAssessmentRepository;
 
 	private LiveSessionService service;
 
@@ -63,6 +68,7 @@ class LiveSessionServiceTest {
 				Duration.ofMinutes(30), Duration.ofMinutes(1), Duration.ofSeconds(60));
 		service = new LiveSessionService(repository, mediaGateway, reportRepository,
 				operatorAccessService, assignmentService, realtimeNotifier, recordingService, properties,
+				riskAssessmentRepository,
 				Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
@@ -162,6 +168,25 @@ class LiveSessionServiceTest {
 		LiveTokenView token = service.issueViewerToken(30L, session.getId());
 
 		assertThat(token.token()).isEqualTo("viewer-jwt");
+		verify(operatorAccessService).requireAccess(30L, 10L);
+	}
+
+	@Test
+	void operatorLiveDetailIncludesRiskSummary() {
+		LiveSession session = session();
+		Report report = report();
+		RiskAssessment risk = org.mockito.Mockito.mock(RiskAssessment.class);
+		when(repository.findById(session.getId())).thenReturn(Optional.of(session));
+		when(reportRepository.findOneById(10L)).thenReturn(Optional.of(report));
+		when(riskAssessmentRepository.findByReportId(10L)).thenReturn(Optional.of(risk));
+		when(risk.getAssessmentStatus()).thenReturn(RiskAssessmentStatus.COMPLETED);
+		when(risk.getFinalRiskScore()).thenReturn(72.5);
+		when(risk.getRiskLevel()).thenReturn(RiskLevel.HIGH);
+
+		var result = service.getForOperator(30L, session.getId());
+
+		assertThat(result.risk().score()).isEqualTo(72.5);
+		assertThat(result.risk().level()).isEqualTo(RiskLevel.HIGH);
 		verify(operatorAccessService).requireAccess(30L, 10L);
 	}
 
