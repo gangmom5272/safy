@@ -5,6 +5,7 @@ import java.time.Instant;
 
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.common.persistence.BaseEntity;
+import com.ojimasam.safy.grid.domain.GridCellCode;
 import com.ojimasam.safy.media.domain.MediaAsset;
 
 import org.hibernate.annotations.ColumnDefault;
@@ -38,6 +39,10 @@ import com.ojimasam.safy.report.domain.type.ReportType;
 				@Index(
 						name = "idx_reports_public_feed",
 						columnList = "public_visibility, reported_at, id"
+				),
+				@Index(
+						name = "idx_reports_grid_cell_code",
+						columnList = "grid_cell_code"
 				)
 		}
 )
@@ -72,6 +77,33 @@ public class Report extends BaseEntity {
 
 	@Column(length = 500)
 	private String address;
+
+	/**
+	 * 좌표가 속한 100m 격자 셀 코드. 셀 단위 집계·필터에 쓴다.
+	 *
+	 * <p>좌표에서 도출되는 값이라 생성 시점에 함께 정한다. 나중에 채우는 방식으로 두면
+	 * 좌표와 셀이 어긋난 행이 생길 수 있다.
+	 *
+	 * <p>좌표를 이 컬럼으로 대체하지 않는다. 셀 코드만 남기면 셀 크기를 100m 에서
+	 * 바꿀 때 백필할 근거가 사라진다.
+	 *
+	 * <p>기존 행 때문에 nullable 이다. {@code ddl-auto: update} 는 값이 있는 테이블에
+	 * NOT NULL 컬럼을 추가하지 못한다. 백필은 db/seed/report-grid-cell-code.sql 에 있다.
+	 */
+	@Column(name = "grid_cell_code", length = 24)
+	private String gridCellCode;
+
+	/**
+	 * 좌표를 포함하는 서울 121장소. 좌표가 어느 장소에도 들지 않으면 NULL 이다.
+	 *
+	 * <p>격자 셀 코드와 달리 장소는 폴리곤 조회가 필요해 생성자에서 정할 수 없다.
+	 * 등록 흐름에서 판정한 뒤 채운다.
+	 *
+	 * <p>참조를 엔티티로 잡지 않고 ID 만 둔다. 제보를 읽을 때 장소까지 함께 끌고 올
+	 * 이유가 없고, {@code reporterId} 등 다른 집계 간 참조도 같은 방식이다.
+	 */
+	@Column(name = "place_id")
+	private Long placeId;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "administrative_area_id")
@@ -132,6 +164,7 @@ public class Report extends BaseEntity {
 		this.description = description;
 		this.latitude = latitude;
 		this.longitude = longitude;
+		this.gridCellCode = GridCellCode.of(latitude, longitude).value();
 		this.address = address;
 		this.status = status;
 		this.reportedAt = reportedAt;
@@ -300,6 +333,12 @@ public class Report extends BaseEntity {
 		this.address = resolvedAddress;
 	}
 
+	/** 좌표를 포함하는 장소를 채운다. 어느 장소에도 들지 않으면 호출하지 않는다. */
+	public void applyResolvedPlace(Long resolvedPlaceId) {
+		if (resolvedPlaceId == null) return;
+		this.placeId = resolvedPlaceId;
+	}
+
 	public void completeRouting(AdministrativeArea administrativeArea) {
 		if (administrativeArea == null) throw new IllegalArgumentException("행정구역은 필수입니다.");
 		if (routingStatus != ReportRoutingStatus.PENDING) return;
@@ -376,6 +415,14 @@ public class Report extends BaseEntity {
 
 	public String getAddress() {
 		return address;
+	}
+
+	public String getGridCellCode() {
+		return gridCellCode;
+	}
+
+	public Long getPlaceId() {
+		return placeId;
 	}
 
 	public ReportStatus getStatus() {
