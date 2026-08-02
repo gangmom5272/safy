@@ -17,7 +17,7 @@ import com.ojimasam.safy.place.domain.PlaceRepository;
 
 class PlaceLocatorTest {
 	private final PlaceRepository placeRepository = mock(PlaceRepository.class);
-	private final PlaceLocator locator = new PlaceLocator(placeRepository);
+	private final PlaceLocator locator = new PlaceLocator(new PlaceBoundaries(placeRepository));
 
 	/** 한 변 0.01도 정사각형. (37.50, 127.00) ~ (37.51, 127.01) */
 	private static final String SQUARE = polygon(
