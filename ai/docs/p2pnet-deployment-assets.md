@@ -187,6 +187,44 @@ docker compose logs --tail=100 ai-server
 "sourceCommit":"5c91a81ca062b1c7fd3db3ad1c55b1c21f0a7455"
 ```
 
+### 앱 로그 설정
+
+위 로그가 실제로 남으려면 앱 로깅 설정이 필요하다. uvicorn 기본 설정은
+`uvicorn`, `uvicorn.error`, `uvicorn.access` 세 로거만 다루고 root는 건드리지
+않는다. root에 핸들러가 없으면 앱 로그는 `logging.lastResort`가 처리하는데 그
+레벨이 `WARNING`이므로 **INFO 로그가 전부 버려진다.**
+
+그래서 초기 배포에서는 `p2pnet_asset_startup`과 P2PNet 그림자 비교 로그가
+운영에 한 줄도 남지 않았다. Loki 유입은 정상이었고 앱 로깅만 문제였다.
+
+`app/logging_config.py`의 `configure_logging()`이 앱 import 시점에 root
+핸들러를 stdout으로 추가한다. uvicorn의 `dictConfig`는
+`disable_existing_loggers=False`이고 root 설정을 포함하지 않으므로 이 핸들러는
+서버 기동 후에도 유지된다. `uvicorn`과 `uvicorn.access`는 `propagate=False`라
+중복 출력되지 않는다.
+
+로그 레벨은 `AI_LOG_LEVEL`로 조정한다. 기본값은 `INFO`다.
+
+```dotenv
+AI_LOG_LEVEL=INFO
+```
+
+이 변수를 운영에서 쓰려면 `infra/docker-compose.yml`의 `ai-server`
+`environment:`에 한 줄 추가해야 한다. 추가하지 않으면 기본값 `INFO`가
+적용되므로 현재 상태로도 필요한 로그는 모두 남는다.
+
+수정이 반영됐는지 확인하는 가장 간단한 방법은 `P2PNET_SHADOW_ENABLED=false`
+상태에서도 자산 준비 로그 한 줄이 남는지 보는 것이다. 비활성화 경로에서도
+`_log_preparation()`은 호출된다.
+
+```bash
+docker compose logs ai-server | grep p2pnet_asset_startup
+```
+
+```text
+INFO app.services.p2pnet_assets p2pnet_asset_startup {"event":"p2pnet_asset_startup","ready":false,"status":"DISABLED",...}
+```
+
 헬스체크는 `http://127.0.0.1:8000/health`를 사용한다. P2PNet 준비에
 실패해도 FastAPI와 YOLO 공식 분석은 계속 동작하므로 컨테이너 자체는
 정상 상태를 유지한다.
