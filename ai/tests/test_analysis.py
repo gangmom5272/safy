@@ -639,7 +639,7 @@ def test_correction_enabled_but_gate_blocks_keeps_yolo(monkeypatch) -> None:
     assert payload["visualCongestionScore"] == 0.94
 
 
-def test_correction_enabled_with_failed_shadow_keeps_yolo(monkeypatch) -> None:
+def test_correction_enabled_with_failed_shadow_returns_failed(monkeypatch) -> None:
     monkeypatch.setenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "true")
     monkeypatch.setattr(analysis, "inspect_frame_quality", fake_valid_quality)
     monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
@@ -664,6 +664,108 @@ def test_correction_enabled_with_failed_shadow_keeps_yolo(monkeypatch) -> None:
         files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
     ).json()
 
-    assert payload["analysisStatus"] == "COMPLETED"
+    assert payload["analysisStatus"] == "FAILED"
     assert payload["congestionSource"] == "YOLO"
-    assert payload["visualCongestionScore"] == 0.94
+    assert payload["personCount"] is None
+    assert payload["visualCongestionScore"] is None
+    assert payload["localPeakCongestionScore"] is None
+    assert payload["failureCodes"] == [
+        "MODEL_INFERENCE_FAILED",
+    ]
+
+
+def test_correction_enabled_without_available_p2pnet_returns_failed(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "true")
+    monkeypatch.setattr(analysis, "inspect_frame_quality", fake_valid_quality)
+    monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
+
+    class DisabledShadowService:
+        enabled = False
+
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        lambda: DisabledShadowService(),
+    )
+
+    payload = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
+    ).json()
+
+    assert payload["analysisStatus"] == "FAILED"
+    assert payload["personCount"] is None
+    assert payload["visualCongestionScore"] is None
+    assert payload["localPeakCongestionScore"] is None
+    assert payload["failureCodes"] == [
+        "MODEL_INFERENCE_FAILED",
+    ]
+
+
+def test_correction_enabled_with_incomplete_p2pnet_result_returns_failed(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "true")
+    monkeypatch.setattr(analysis, "inspect_frame_quality", fake_valid_quality)
+    monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
+
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        lambda: _build_shadow_service(
+            shadow_snapshot=_shadow_snapshot(
+                visual=None,
+                local_peak=None,
+                low_confidence=False,
+            ),
+            call_log=[],
+        ),
+    )
+
+    payload = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
+    ).json()
+
+    assert payload["analysisStatus"] == "FAILED"
+    assert payload["personCount"] is None
+    assert payload["visualCongestionScore"] is None
+    assert payload["localPeakCongestionScore"] is None
+    assert payload["failureCodes"] == [
+        "MODEL_INFERENCE_FAILED",
+    ]
+
+
+def test_correction_enabled_with_p2pnet_exception_returns_failed(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv(CONGESTION_CORRECTION_ENABLED_VARIABLE, "true")
+    monkeypatch.setattr(analysis, "inspect_frame_quality", fake_valid_quality)
+    monkeypatch.setattr(analysis, "detect_people", fake_detect_people)
+
+    class FailingShadowService:
+        enabled = True
+
+        async def analyze_and_log(self, **_) -> None:
+            raise RuntimeError("sensitive P2PNet failure")
+
+    monkeypatch.setattr(
+        analysis,
+        "get_shadow_analysis_service",
+        lambda: FailingShadowService(),
+    )
+
+    payload = client.post(
+        "/api/v1/analyze/frame",
+        files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
+    ).json()
+
+    assert payload["analysisStatus"] == "FAILED"
+    assert payload["personCount"] is None
+    assert payload["visualCongestionScore"] is None
+    assert payload["localPeakCongestionScore"] is None
+    assert payload["failureCodes"] == [
+        "MODEL_INFERENCE_FAILED",
+    ]
