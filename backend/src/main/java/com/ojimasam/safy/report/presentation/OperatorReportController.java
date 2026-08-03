@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Set;
 
 import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
@@ -26,6 +27,7 @@ import com.ojimasam.safy.report.application.ReportQueryService;
 import com.ojimasam.safy.report.application.ReportTransferService;
 import com.ojimasam.safy.report.application.dto.ReportDetailView;
 import com.ojimasam.safy.report.application.dto.ReportTransferResponse;
+import com.ojimasam.safy.report.application.dto.ReportTransferTargetResponse;
 import com.ojimasam.safy.report.presentation.dto.OperatorReportTransferRequest;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 
@@ -145,16 +147,33 @@ public class OperatorReportController {
 		return ApiResponse.success(assignmentService.reject(CurrentUser.id(jwt), reportId, request.reason()));
 	}
 
+	@GetMapping("/{reportId}/transfer-targets")
+	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "이관 대상 관제센터 목록",
+			description = "담당 중인 제보를 이관할 수 있는 관제센터 후보를 주 담당·우선순위 순으로 반환합니다. "
+					+ "현재 센터는 제외하며, 고를 수 없는 센터도 사유를 표시할 수 있도록 함께 내려주고 "
+					+ "선택 가능 여부는 transferable 로 판단합니다. 행정구역이 확정되지 않은 제보는 빈 배열입니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "현재 관제센터 소속 담당자가 아님", content = @Content)
+	public ApiResponse<List<ReportTransferTargetResponse>> transferTargets(
+			@AuthenticationPrincipal Jwt jwt,
+			@PathVariable Long reportId
+	) {
+		return ApiResponse.success(transferService.findTransferTargets(CurrentUser.id(jwt), reportId));
+	}
+
 	@PostMapping("/{reportId}/transfer")
 	@PreAuthorize("hasRole('OPERATOR')")
 	@Operation(summary = "다른 관제센터로 이관",
 			description = "담당 중인 제보를 같은 행정구역을 담당(커버리지 등록)하는 다른 관제센터로 이관합니다. "
-					+ "이미 거쳐온 센터로는 되돌릴 수 없으며, 이관 후 대상 센터에서 자동 배정을 시도하고 "
-					+ "실패하면 대상 센터 공용 큐에 남습니다. 사유 필수.")
+					+ "이미 거쳐온 센터로는 근무중 담당자가 있을 때만 되돌릴 수 있으며, 이관 후 대상 센터에서 "
+					+ "자동 배정을 시도하고 실패하면 대상 센터 공용 큐에 남습니다. 사유 필수. "
+					+ "선택지는 transfer-targets 로 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "이관 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "사유 누락 또는 대상 센터가 행정구역을 담당하지 않음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이관할 수 없는 상태이거나 이미 거쳐온 센터", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이관할 수 없는 상태이거나 근무자 없는 거쳐온 센터", content = @Content)
 	public ApiResponse<ReportTransferResponse> transfer(
 			@AuthenticationPrincipal Jwt jwt,
 			@PathVariable Long reportId,
