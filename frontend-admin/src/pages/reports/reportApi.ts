@@ -8,6 +8,7 @@ import {
 } from '../../mocks/adminApiMocks'
 import type { ApiResponse, PageResponse } from '../../api/types'
 import type { AdminReport, LiveStreamStatus, ReportStatus, ReportType } from '../../types/admin'
+import { verificationFromAssignmentStatus } from '../../utils/adminVerification'
 
 type BackendReportStatus =
   | 'RECEIVED' | 'ASSIGNED' | 'ACCEPTED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 'CANCELLED'
@@ -40,7 +41,7 @@ export interface OperatorDashboardTile {
   longitude: number | null
   address: string | null
   reportStatus: BackendReportStatus
-  assignmentStatus: string
+  assignmentStatus: AssignmentStatus
   controlCenterId: number | null
   controlCenterName: string | null
   operatorId: number | null
@@ -89,7 +90,9 @@ export function toAdminReport(tile: OperatorDashboardTile): AdminReport {
     riskLevel: null,
     riskScore: null,
     reportedAt: tile.assignedAt,
+    assignedAt: tile.assignedAt,
     status: toUiStatus(tile.reportStatus),
+    verificationStatus: verificationFromAssignmentStatus(tile.assignmentStatus),
     reviewStatus: null,
     aiAnalysisStatus: null,
     managerName: tile.operatorName ?? '미배정',
@@ -234,7 +237,9 @@ export function assignmentToAdminReport(assignment: OperatorAssignment): AdminRe
     riskLevel: null,
     riskScore: null,
     reportedAt: assignment.assignedAt,
+    assignedAt: assignment.assignedAt,
     status: toAssignmentOutcome(assignment),
+    verificationStatus: verificationFromAssignmentStatus(assignment.assignmentStatus),
     reviewStatus: null,
     aiAnalysisStatus: null,
     managerName: assignment.operatorName ?? '미배정',
@@ -267,6 +272,19 @@ export async function getReportAnalysis(reportId: number) {
 
   const response = await apiClient.get<ApiResponse<ReportAnalysis>>(`/reports/${reportId}/analysis`)
   return response.data.data
+}
+
+/**
+ * 제보를 '관리자 확인'으로 표시하는 연동 지점.
+ *
+ * 백엔드에 전용 확인 API 는 없다. 담당자가 상세를 조회하면(GET /operator/reports/{reportId})
+ * 서버가 ASSIGNED → IN_PROGRESS 로 전이시키고 확인 시각(assignment.startedAt)과
+ * 'OPERATOR_VIEWING' 이력을 남기므로, 상세 이동 자체가 확인 처리를 겸한다.
+ * 지금은 네트워크 호출 없이 화면 상태만 맞추고, 전용 API 가 생기면 이 함수만 교체한다.
+ */
+export function markReportChecked(reportId: number): Promise<void> {
+  void reportId
+  return Promise.resolve()
 }
 
 export async function completeReport(reportId: number) {
