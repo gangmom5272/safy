@@ -14,6 +14,11 @@ public enum ReportAssignmentCancelReason {
 	ASSIGNMENT_TIMEOUT(false),
 	/** 담당자가 오프라인으로 전환되어 회수됨. */
 	OPERATOR_OFFLINE(false),
+	/**
+	 * 담당자가 자리비움으로 전환되어 회수됨. 곧 돌아올 사람이므로 제외 목록에는 넣지 않는다
+	 * — 자리비움 동안에는 근무 상태 필터가 이미 후보에서 빼준다.
+	 */
+	OPERATOR_AWAY(false),
 	/** 제보자가 제보를 취소함. */
 	REPORTER_CANCELLED(false),
 	/** 제보가 반려(REJECTED)로 종결됨. */
