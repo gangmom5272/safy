@@ -33,6 +33,8 @@ public class LiveFrameIngestService {
 	private static final Set<StreamRecordingStatus> IN_FLIGHT =
 			Set.of(StreamRecordingStatus.STARTING, StreamRecordingStatus.ACTIVE);
 	private static final String JPEG = "image/jpeg";
+	/** 블러 파생본이 저장되는 하위 경로. 원본 프레임과 같은 prefix 아래에 놓인다. */
+	private static final String BLURRED_SEGMENT = "/blurred/";
 
 	private final StreamRecordingRepository recordings;
 	private final LiveSessionRepository sessions;
@@ -71,6 +73,9 @@ public class LiveFrameIngestService {
 			return;
 		}
 		for (StoredMediaObject object : objects) {
+			// 블러 파생본은 건너뛰고 커서도 전진시키지 않는다. 키 정렬상 blurred/ 가 타임스탬프
+			// 프레임보다 뒤에 오므로, 커서가 여기까지 가면 이후 새 프레임이 모두 무시된다.
+			if (isBlurred(object.objectKey())) continue;
 			if (object.size() <= 0 || !isJpeg(object.objectKey())) continue;
 			transactions.executeWithoutResult(status -> register(providerEgressId, object));
 		}
@@ -98,6 +103,10 @@ public class LiveFrameIngestService {
 
 	private Instant capturedAt(StoredMediaObject object) {
 		return object.lastModified() == null ? clock.instant() : object.lastModified();
+	}
+
+	private boolean isBlurred(String key) {
+		return key.contains(BLURRED_SEGMENT);
 	}
 
 	private boolean isJpeg(String key) {
