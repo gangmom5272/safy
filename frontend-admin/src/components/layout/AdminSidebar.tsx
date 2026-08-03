@@ -7,6 +7,7 @@ type SidebarIconName =
   | 'shield'
   | 'home'
   | 'reports'
+  | 'queue'
   | 'monitoring'
   | 'map'
   | 'settings'
@@ -26,6 +27,12 @@ function SidebarIcon({ name, className }: SidebarIconProps) {
       <>
         <path d="M9 6h11M9 12h11M9 18h11" />
         <path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2" />
+      </>
+    ),
+    queue: (
+      <>
+        <path d="M5 4h14l2 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6l2-8Z" />
+        <path d="M3 12h4.5l1.5 3h6l1.5-3H21" />
       </>
     ),
     monitoring: (
@@ -80,6 +87,7 @@ function SidebarIcon({ name, className }: SidebarIconProps) {
 const sidebarItems = [
   { label: '홈', path: ROUTE_PATHS.DASHBOARD, end: true, icon: 'home' },
   { label: '제보 목록', path: ROUTE_PATHS.REPORTS, end: false, icon: 'reports' },
+  { label: '공용 큐', path: ROUTE_PATHS.QUEUE, end: true, icon: 'queue' },
   { label: '실시간 모니터링', path: ROUTE_PATHS.MONITORING, end: true, icon: 'monitoring' },
   { label: '위험도 지도', path: ROUTE_PATHS.RISK_MAP, end: true, icon: 'map' },
   { label: '시스템 설정', path: ROUTE_PATHS.SETTINGS, end: true, icon: 'settings' },

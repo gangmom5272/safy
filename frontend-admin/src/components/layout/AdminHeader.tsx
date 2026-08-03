@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { AdminModal } from '../admin/AdminModal'
+import { OperatorPresenceToggle } from './OperatorPresenceToggle'
 import { adminReports, emergencyBanner } from '../../mocks/adminMockData'
 import { ROUTE_PATHS } from '../../router/paths'
 import { isEmergencyRisk } from '../../utils/adminRisk'
@@ -9,6 +10,7 @@ import { formatLastUpdated, formatSeoulDateTime } from '../../utils/adminDate'
 const pageTitleByPath: Record<string, string> = {
   [ROUTE_PATHS.DASHBOARD]: '홈',
   [ROUTE_PATHS.REPORTS]: '제보 목록',
+  [ROUTE_PATHS.QUEUE]: '공용 큐',
   [ROUTE_PATHS.MONITORING]: '실시간 모니터링',
   [ROUTE_PATHS.RISK_MAP]: '위험도 지도',
   [ROUTE_PATHS.SETTINGS]: '시스템 설정',
@@ -107,6 +109,7 @@ export function AdminHeader({ lastDashboardUpdatedAt }: AdminHeaderProps) {
             />
           </form>
         )}
+        <OperatorPresenceToggle />
         <button
           type="button"
           className="emergency-alert-button"
