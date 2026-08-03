@@ -1,6 +1,6 @@
 // 목 모드에서 API 대신 돌려줄 응답들.
 // 화면용 목 데이터(adminMockData)를 백엔드 응답 형태로 옮겨 담는다.
-import type { OperatorReportDetail, ReportAnalysis } from '../pages/reports/reportApi'
+import type { OperatorReportDetail, ReportAnalysis, TransferTarget } from '../pages/reports/reportApi'
 import type { OperatorLiveSession } from '../pages/monitoring/monitoringApi'
 import type { AdminReport, ReportType } from '../types/admin'
 import { adminReports, mockPhoto } from './adminMockData'
@@ -54,6 +54,39 @@ export function mockReportDetail(reportId: number): OperatorReportDetail {
         }))
       : [],
   }
+}
+
+// 이관 모달의 세 가지 표시 상태(선택 가능·근무자 없음·거쳐와서 불가)를 모두 보여준다.
+export function mockTransferTargets(): TransferTarget[] {
+  return [
+    {
+      controlCenterId: 21,
+      controlCenterName: '서초 관제센터',
+      coverageRole: 'PRIMARY',
+      priority: 2,
+      hasOnDutyOperator: true,
+      visited: false,
+      transferable: true,
+    },
+    {
+      controlCenterId: 22,
+      controlCenterName: '송파 관제센터',
+      coverageRole: 'BACKUP',
+      priority: 3,
+      hasOnDutyOperator: false,
+      visited: false,
+      transferable: true,
+    },
+    {
+      controlCenterId: 23,
+      controlCenterName: '관악 관제센터',
+      coverageRole: 'BACKUP',
+      priority: 4,
+      hasOnDutyOperator: false,
+      visited: true,
+      transferable: false,
+    },
+  ]
 }
 
 export function mockReportAnalysis(reportId: number): ReportAnalysis {

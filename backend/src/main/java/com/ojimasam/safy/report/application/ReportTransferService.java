@@ -28,6 +28,7 @@ import com.ojimasam.safy.realtime.application.RealtimeEventService;
 import com.ojimasam.safy.realtime.domain.RealtimeEventRepository;
 import com.ojimasam.safy.realtime.domain.type.RealtimeEventType;
 import com.ojimasam.safy.report.application.dto.ReportTransferResponse;
+import com.ojimasam.safy.report.application.dto.ReportTransferTargetResponse;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
@@ -123,6 +124,44 @@ public class ReportTransferService {
 		this.realtimeEventRepository = realtimeEventRepository;
 		this.userRepository = userRepository;
 		this.clock = clock;
+	}
+
+	/**
+	 * 담당자가 고를 수 있는 이관 대상 센터 목록. 현재 센터는 제외하고, 나머지는
+	 * 이관 가능 여부를 계산해 함께 준다(가능한 것만 남기지 않는 이유는, 왜 못 고르는지를
+	 * 화면에서 설명할 수 있어야 하기 때문이다).
+	 */
+	@Transactional(readOnly = true)
+	public List<ReportTransferTargetResponse> findTransferTargets(Long operatorId, Long reportId) {
+		ReportOperatorAssignment assignment = assignmentRepository
+				.findByReport_IdAndStatusIn(reportId, OperatorReportAccessService.ACTIVE_ASSIGNMENT_STATUSES)
+				.filter(found -> found.getOperator().getId().equals(operatorId))
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+		ReportCenterRoute currentRoute = assignment.getRoute();
+		validateActiveMembership(operatorId, currentRoute.getControlCenter().getId());
+		if (assignment.getReport().getAdministrativeArea() == null) {
+			return List.of();
+		}
+
+		Long currentCenterId = currentRoute.getControlCenter().getId();
+		Set<Long> visitedCenterIds = visitedCenterIds(currentRoute);
+		return controlCenterAreaRepository.findRoutingCandidates(
+						assignment.getReport().getAdministrativeArea().getId(), clock.instant(),
+						CoverageStatus.ACTIVE, ControlCenterStatus.ACTIVE, CoverageRole.PRIMARY
+				).stream()
+				.filter(coverage -> !coverage.getControlCenter().getId().equals(currentCenterId))
+				.map(coverage -> toTransferTarget(coverage, visitedCenterIds))
+				.toList();
+	}
+
+	private ReportTransferTargetResponse toTransferTarget(ControlCenterArea coverage, Set<Long> visitedCenterIds) {
+		ControlCenter center = coverage.getControlCenter();
+		boolean onDuty = hasOnDutyOperator(center.getId());
+		boolean visited = visitedCenterIds.contains(center.getId());
+		return new ReportTransferTargetResponse(
+				center.getId(), center.getName(), coverage.getCoverageRole(), coverage.getPriority(),
+				onDuty, visited, !visited || onDuty
+		);
 	}
 
 	/** 담당자가 사유를 적고 대상 센터를 골라 이관을 신청한다. */

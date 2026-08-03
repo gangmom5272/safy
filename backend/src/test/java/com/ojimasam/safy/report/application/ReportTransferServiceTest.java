@@ -2,6 +2,7 @@ package com.ojimasam.safy.report.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -32,10 +33,12 @@ import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterArea;
 import com.ojimasam.safy.controlcenter.domain.ControlCenterAreaRepository;
+import com.ojimasam.safy.controlcenter.domain.type.CoverageRole;
 import com.ojimasam.safy.realtime.application.RealtimeEventService;
 import com.ojimasam.safy.realtime.domain.RealtimeEventRepository;
 import com.ojimasam.safy.realtime.domain.type.RealtimeEventType;
 import com.ojimasam.safy.report.application.dto.ReportTransferResponse;
+import com.ojimasam.safy.report.application.dto.ReportTransferTargetResponse;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
@@ -53,6 +56,70 @@ import com.ojimasam.safy.user.domain.UserRepository;
 
 class ReportTransferServiceTest {
 	private static final Instant NOW = Instant.parse("2026-07-30T00:00:00Z");
+
+	@Test
+	void transferTargetsExcludeCurrentCenterAndMarkVisitedCenterWithoutOnDutyOperator() {
+		Fixture fixture = new Fixture();
+		Report report = fixture.routedReport(10L);
+		ControlCenter centerA = center(20L, "강남");
+		ControlCenter centerB = center(21L, "서초");
+		ControlCenter centerC = center(22L, "송파");
+		ControlCenter centerD = center(23L, "관악");
+		// D → B → A 로 두 번 거쳐온 체인. 이관 화면은 세 후보의 선택 가능 여부가 서로 달라야 한다.
+		ReportCenterRoute firstRoute = ReportCenterRoute.createInitial(report, centerD, 1, "AUTO", NOW.minusSeconds(180));
+		ReportCenterRoute secondRoute = ReportCenterRoute.reroute(
+				firstRoute, centerB, ReportCenterRouteType.MANUAL, 1, "이관", NOW.minusSeconds(120));
+		ReportCenterRoute currentRoute = ReportCenterRoute.reroute(
+				secondRoute, centerA, ReportCenterRouteType.MANUAL, 1, "이관", NOW.minusSeconds(60));
+		User operator = operator(30L);
+		ReportOperatorAssignment assignment =
+				ReportOperatorAssignment.automatic(report, currentRoute, operator, NOW.minusSeconds(30));
+		report.assign();
+		AdminCenterMembership membership = activeMembership(operator, 20L);
+		AdminCenterMembership membershipB = activeMembership(operator(40L), 21L);
+		AdminCenterMembership membershipD = activeMembership(operator(50L), 23L);
+		// 커버리지 mock 은 스터빙 밖에서 만든다(스터빙 인자 안에서 mock 을 만들면 UnfinishedStubbing).
+		List<ControlCenterArea> coverages = List.of(
+				coverage(centerA, 1), coverage(centerB, 2), coverage(centerC, 3), coverage(centerD, 4));
+		when(fixture.assignmentRepository.findByReport_IdAndStatusIn(any(), any()))
+				.thenReturn(Optional.of(assignment));
+		when(fixture.membershipRepository.findByUserIdAndIsPrimaryTrue(30L)).thenReturn(Optional.of(membership));
+		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(21L), any(), any(), any()))
+				.thenReturn(List.of(membershipB));
+		when(fixture.presenceRepository.findAllByOperatorIdIn(List.of(40L))).thenReturn(List.of());
+		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(22L), any(), any(), any()))
+				.thenReturn(List.of());
+		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(23L), any(), any(), any()))
+				.thenReturn(List.of(membershipD));
+		when(fixture.presenceRepository.findAllByOperatorIdIn(List.of(50L)))
+				.thenReturn(List.of(OperatorPresence.connect(50L, NOW)));
+		when(fixture.controlCenterAreaRepository.findRoutingCandidates(any(), any(), any(), any(), any()))
+				.thenReturn(coverages);
+
+		List<ReportTransferTargetResponse> targets = fixture.service.findTransferTargets(30L, 10L);
+
+		assertThat(targets).extracting(
+						ReportTransferTargetResponse::controlCenterId,
+						ReportTransferTargetResponse::hasOnDutyOperator,
+						ReportTransferTargetResponse::visited,
+						ReportTransferTargetResponse::transferable)
+				.containsExactly(
+						// 거쳐온 데다 근무자도 없으면 되돌려도 또 멈춘다.
+						tuple(21L, false, true, false),
+						// 처음 가는 센터는 근무자가 없어도 고를 수 있다(화면에서 경고만 한다).
+						tuple(22L, false, false, true),
+						// 거쳐왔어도 근무자가 복귀했으면 다시 후보다.
+						tuple(23L, true, true, true));
+	}
+
+	@Test
+	void transferTargetsRejectOperatorWithoutActiveAssignment() {
+		Fixture fixture = new Fixture();
+		when(fixture.assignmentRepository.findByReport_IdAndStatusIn(any(), any())).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> fixture.service.findTransferTargets(30L, 10L))
+				.isInstanceOf(BusinessException.class);
+	}
 
 	@Test
 	void manualTransferMovesReportToTargetCenterAndKeepsChain() {
@@ -383,6 +450,7 @@ class ReportTransferServiceTest {
 		ControlCenterArea coverage = mock(ControlCenterArea.class);
 		when(coverage.getControlCenter()).thenReturn(center);
 		when(coverage.getPriority()).thenReturn(priority);
+		when(coverage.getCoverageRole()).thenReturn(CoverageRole.PRIMARY);
 		return coverage;
 	}
 }

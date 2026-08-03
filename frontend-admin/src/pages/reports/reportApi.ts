@@ -1,6 +1,11 @@
 import apiClient from '../../api/client'
 import { mockResponse, USE_MOCK_API } from '../../api/mockMode'
-import { mockDashboardReports, mockReportAnalysis, mockReportDetail } from '../../mocks/adminApiMocks'
+import {
+  mockDashboardReports,
+  mockReportAnalysis,
+  mockReportDetail,
+  mockTransferTargets,
+} from '../../mocks/adminApiMocks'
 import type { ApiResponse, PageResponse } from '../../api/types'
 import type { AdminReport, LiveStreamStatus, ReportStatus, ReportType } from '../../types/admin'
 
@@ -280,4 +285,32 @@ export async function reassignReport(reportId: number, reason: string) {
   if (USE_MOCK_API) return mockResponse(undefined)
 
   await apiClient.patch(`/operator/reports/${reportId}/reassign`, { reason })
+}
+
+export interface TransferTarget {
+  controlCenterId: number
+  controlCenterName: string
+  coverageRole: 'PRIMARY' | 'BACKUP'
+  priority: number
+  hasOnDutyOperator: boolean
+  /** 이 제보가 이미 거쳐온 센터. */
+  visited: boolean
+  /** 선택 가능 여부. 판정 규칙은 서버가 갖고 있으므로 여기서 다시 계산하지 않는다. */
+  transferable: boolean
+}
+
+/** 담당자는 관제센터 목록 API 권한이 없어서 이관 선택지는 이 API 로만 채운다. */
+export async function getTransferTargets(reportId: number) {
+  if (USE_MOCK_API) return mockResponse(mockTransferTargets())
+
+  const response = await apiClient.get<ApiResponse<TransferTarget[]>>(
+    `/operator/reports/${reportId}/transfer-targets`,
+  )
+  return response.data.data
+}
+
+export async function transferReport(reportId: number, targetControlCenterId: number, reason: string) {
+  if (USE_MOCK_API) return mockResponse(undefined)
+
+  await apiClient.post(`/operator/reports/${reportId}/transfer`, { targetControlCenterId, reason })
 }
