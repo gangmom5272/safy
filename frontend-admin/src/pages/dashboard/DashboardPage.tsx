@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type KeyboardEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useOutletContext } from 'react-router'
 import { reportStatusLabels } from '../../mocks/adminMockData'
 import type { AdminReport, WebRTCConnection } from '../../types/admin'
 import { ROUTE_PATHS, createMonitoringDetailPath, createReportDetailPath } from '../../router/paths'
@@ -11,9 +11,11 @@ import { getDashboardReports } from '../reports/reportApi'
 import { getLiveSessions } from '../monitoring/monitoringApi'
 import { LiveViewer } from '../monitoring/LiveViewer'
 import { subscribeToRealtimeSignals } from '../../api/realtime'
+import type { AdminLayoutOutletContext } from '../../layouts/AdminLayout'
 
 export function DashboardPage() {
   const navigate = useNavigate()
+  const { markDashboardUpdated } = useOutletContext<AdminLayoutOutletContext>()
   const [reports, setReports] = useState<AdminReport[]>([])
   const [connections, setConnections] = useState<WebRTCConnection[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -28,12 +30,13 @@ export function DashboardPage() {
       setReports(loadedReports)
       setConnections(loadedConnections)
       setLoadError('')
+      markDashboardUpdated()
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : '대시보드 정보를 불러오지 못했습니다.')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [markDashboardUpdated])
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadDashboard(), 0)

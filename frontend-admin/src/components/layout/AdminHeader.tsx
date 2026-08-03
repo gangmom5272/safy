@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { useAuth } from '../../auth/useAuth'
 import { AdminModal } from '../admin/AdminModal'
 import { adminReports, emergencyBanner } from '../../mocks/adminMockData'
 import { ROUTE_PATHS } from '../../router/paths'
 import { isEmergencyRisk } from '../../utils/adminRisk'
+import { formatLastUpdated, formatSeoulDateTime } from '../../utils/adminDate'
 
 const pageTitleByPath: Record<string, string> = {
   [ROUTE_PATHS.DASHBOARD]: '홈',
@@ -35,55 +35,78 @@ function SirenIcon() {
   )
 }
 
-function LogOutIcon() {
+interface AdminHeaderProps {
+  lastDashboardUpdatedAt: number | null
+}
+
+function SearchIcon() {
   return (
-    <svg className="header-action-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="M10 17l5-5-5-5M15 12H3" />
-      <path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
+    <svg className="admin-header__search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m16 16 4 4" />
     </svg>
   )
 }
 
-export function AdminHeader() {
+export function AdminHeader({ lastDashboardUpdatedAt }: AdminHeaderProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { adminName, logout } = useAuth()
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
-  const profileRef = useRef<HTMLDivElement>(null)
+  const [currentTime, setCurrentTime] = useState(() => new Date())
+  const [searchQuery, setSearchQuery] = useState('')
   const dangerReports = adminReports.filter((report) => isEmergencyRisk(report.riskLevel))
-  const displayName = adminName || '관리자'
+  const isDashboard = pathname === ROUTE_PATHS.DASHBOARD
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const normalizedQuery = searchQuery.trim()
+    if (!normalizedQuery) return
+
+    setSearchQuery(normalizedQuery)
+    // TODO: 관리자 전체 검색 API 또는 검색 결과 페이지와 연결
+  }
 
   useEffect(() => {
-    if (!isProfileOpen) return
+    if (!isDashboard) return
 
-    const closeOnOutsideClick = (event: PointerEvent) => {
-      if (!profileRef.current?.contains(event.target as Node)) setIsProfileOpen(false)
-    }
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsProfileOpen(false)
-    }
-
-    document.addEventListener('pointerdown', closeOnOutsideClick)
-    document.addEventListener('keydown', closeOnEscape)
+    const updateCurrentTime = () => setCurrentTime(new Date())
+    const initialUpdate = window.setTimeout(updateCurrentTime, 0)
+    const timer = window.setInterval(updateCurrentTime, 1000)
     return () => {
-      document.removeEventListener('pointerdown', closeOnOutsideClick)
-      document.removeEventListener('keydown', closeOnEscape)
+      window.clearTimeout(initialUpdate)
+      window.clearInterval(timer)
     }
-  }, [isProfileOpen])
-
-  const handleLogout = () => {
-    logout()
-    navigate(ROUTE_PATHS.LOGIN, { replace: true })
-  }
+  }, [isDashboard])
 
   return (
     <header className="admin-header">
-      <div>
-        <p className="admin-header__eyebrow">SAFY Admin Console</p>
+      <div className="admin-header__left">
         <h1>{getPageTitle(pathname)}</h1>
+        {isDashboard && (
+          <div className="admin-header__status" aria-label="대시보드 갱신 정보">
+            <time dateTime={currentTime.toISOString()}>{formatSeoulDateTime(currentTime)}</time>
+            <span className="admin-header__divider" aria-hidden="true" />
+            <span className="admin-header__updated">
+              {formatLastUpdated(lastDashboardUpdatedAt, currentTime.getTime())}
+            </span>
+          </div>
+        )}
       </div>
       <div className="admin-header__actions">
+        {isDashboard && (
+          <form className="admin-header__search" role="search" onSubmit={handleSearch}>
+            <button type="submit" aria-label="전체 검색 실행">
+              <SearchIcon />
+            </button>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="전체 검색 (지역 · 제보 ID · 담당자)"
+              aria-label="관리자 전체 검색"
+            />
+          </form>
+        )}
         <button
           type="button"
           className="emergency-alert-button"
@@ -94,26 +117,6 @@ export function AdminHeader() {
           <span>긴급 위험 알림</span>
           <strong>{dangerReports.length}건</strong>
         </button>
-        <div className="admin-profile-menu" ref={profileRef}>
-          <button
-            type="button"
-            className="admin-profile-trigger"
-            onClick={() => setIsProfileOpen((current) => !current)}
-            aria-haspopup="menu"
-            aria-expanded={isProfileOpen}
-            aria-label="관리자 계정 메뉴 열기"
-          >
-            {displayName} 관리자님
-          </button>
-          {isProfileOpen && (
-            <div className="admin-profile-dropdown" role="menu">
-              <button type="button" role="menuitem" onClick={handleLogout}>
-                <LogOutIcon />
-                <span>로그아웃</span>
-              </button>
-            </div>
-          )}
-        </div>
       </div>
       <AdminModal
         open={isEmergencyOpen}
