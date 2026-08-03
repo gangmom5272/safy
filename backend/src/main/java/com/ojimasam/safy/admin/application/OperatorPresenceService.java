@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.admin.application.dto.OperatorPresenceResponse;
-import com.ojimasam.safy.admin.application.event.OperatorWentOfflineEvent;
+import com.ojimasam.safy.admin.application.event.OperatorUnavailableEvent;
 import com.ojimasam.safy.admin.domain.OperatorPresence;
 import com.ojimasam.safy.admin.domain.OperatorPresenceRepository;
 import com.ojimasam.safy.admin.domain.type.OperatorPresenceStatus;
@@ -69,19 +69,24 @@ public class OperatorPresenceService {
 			if (presence.getStatus() == OperatorPresenceStatus.OFFLINE) return;
 			if (!presence.getLastSeenAt().isBefore(lastSeenBefore)) return;
 			presence.change(OperatorPresenceStatus.OFFLINE, clock.instant());
-			eventPublisher.publishEvent(new OperatorWentOfflineEvent(operatorId));
+			eventPublisher.publishEvent(new OperatorUnavailableEvent(operatorId, OperatorPresenceStatus.OFFLINE));
 		});
 	}
 
+	/**
+	 * 담당자가 직접 근무 상태를 바꾼다. 제보를 받을 수 없는 상태(자리비움·오프라인)로
+	 * 새로 넘어갈 때마다 미확인 배정 회수를 트리거한다 — 자리를 비운 사람이 확인도 안 한
+	 * 제보를 들고 있으면 타임아웃이 돌 때까지 아무도 보지 않는다.
+	 */
 	@Transactional
 	public OperatorPresenceResponse changeStatus(Long operatorId, OperatorPresenceStatus status) {
 		if (status == null) throw new IllegalArgumentException("근무 상태는 필수입니다.");
 		Instant now = clock.instant();
 		OperatorPresence presence = findOrCreate(operatorId, now);
-		boolean wentOffline = status == OperatorPresenceStatus.OFFLINE
-				&& presence.getStatus() != OperatorPresenceStatus.OFFLINE;
+		boolean becameUnavailable = status != OperatorPresenceStatus.ON_DUTY
+				&& presence.getStatus() != status;
 		presence.change(status, now);
-		if (wentOffline) eventPublisher.publishEvent(new OperatorWentOfflineEvent(operatorId));
+		if (becameUnavailable) eventPublisher.publishEvent(new OperatorUnavailableEvent(operatorId, status));
 		return OperatorPresenceResponse.from(presence);
 	}
 

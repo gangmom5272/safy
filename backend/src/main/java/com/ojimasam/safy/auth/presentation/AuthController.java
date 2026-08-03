@@ -20,7 +20,11 @@ import com.ojimasam.safy.auth.presentation.dto.SocialCodeExchangeRequest;
 import com.ojimasam.safy.auth.application.dto.TokenResponse;
 import com.ojimasam.safy.auth.domain.type.AuthErrorCode;
 import com.ojimasam.safy.auth.application.AuthService;
+import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
 import com.ojimasam.safy.auth.infrastructure.security.LogoutAccessTokenService;
+import com.ojimasam.safy.admin.application.OperatorPresenceService;
+import com.ojimasam.safy.admin.domain.type.OperatorPresenceStatus;
+import com.ojimasam.safy.user.domain.type.UserRole;
 
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,12 +40,14 @@ public class AuthController {
 	private final AuthService authService;
 	private final AuthProperties properties;
 	private final LogoutAccessTokenService logoutAccessTokenService;
+	private final OperatorPresenceService presenceService;
 
 	public AuthController(AuthService authService, AuthProperties properties,
-			LogoutAccessTokenService logoutAccessTokenService) {
+			LogoutAccessTokenService logoutAccessTokenService, OperatorPresenceService presenceService) {
 		this.authService = authService;
 		this.properties = properties;
 		this.logoutAccessTokenService = logoutAccessTokenService;
+		this.presenceService = presenceService;
 	}
 
 	@GetMapping("/social/{provider}/login")
@@ -88,7 +94,10 @@ public class AuthController {
 	}
 
 	@PostMapping("/logout")
-	@Operation(summary = "현재 기기 로그아웃", description = "Bearer Access Token이 전달되면 즉시 폐기하고, Refresh Token과 쿠키를 삭제합니다.",
+	@Operation(summary = "현재 기기 로그아웃",
+			description = "Bearer Access Token이 전달되면 즉시 폐기하고, Refresh Token과 쿠키를 삭제합니다. "
+					+ "담당자(OPERATOR)라면 근무 상태를 오프라인으로 내려 아직 확인하지 않은 배정을 "
+					+ "즉시 회수합니다. 이 처리가 없으면 퇴근 후에도 스위퍼가 감지할 때까지 배정이 옵니다.",
 			parameters = @Parameter(name = "SAFY_REFRESH_TOKEN", in = ParameterIn.COOKIE,
 					description = "선택 사항인 Refresh Token"))
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그아웃 완료")
@@ -96,7 +105,10 @@ public class AuthController {
 			@RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorization,
 			@Parameter(hidden = true)
 			@CookieValue(name = "SAFY_REFRESH_TOKEN", required = false) String refreshToken) {
-		logoutAccessTokenService.revokeIfValid(authorization);
+		logoutAccessTokenService.revokeIfValid(authorization)
+				.filter(jwt -> UserRole.OPERATOR.name().equals(jwt.getClaimAsString("role")))
+				.ifPresent(jwt -> presenceService.changeStatus(
+						CurrentUser.id(jwt), OperatorPresenceStatus.OFFLINE));
 		authService.logout(refreshToken);
 		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, deleteCookie().toString())
 				.body(ApiResponse.successWithoutData());

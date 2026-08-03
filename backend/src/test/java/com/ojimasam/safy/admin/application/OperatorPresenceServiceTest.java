@@ -2,6 +2,7 @@ package com.ojimasam.safy.admin.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -18,7 +19,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import com.ojimasam.safy.admin.application.dto.OperatorPresenceResponse;
-import com.ojimasam.safy.admin.application.event.OperatorWentOfflineEvent;
+import com.ojimasam.safy.admin.application.event.OperatorUnavailableEvent;
 import com.ojimasam.safy.admin.domain.OperatorPresence;
 import com.ojimasam.safy.admin.domain.OperatorPresenceRepository;
 import com.ojimasam.safy.admin.domain.type.OperatorPresenceStatus;
@@ -92,7 +93,8 @@ class OperatorPresenceServiceTest {
 		service.markOffline(30L, NOW.minusSeconds(90));
 
 		assertThat(presence.getStatus()).isEqualTo(OperatorPresenceStatus.OFFLINE);
-		verify(eventPublisher).publishEvent(new OperatorWentOfflineEvent(30L));
+		verify(eventPublisher).publishEvent(
+				new OperatorUnavailableEvent(30L, OperatorPresenceStatus.OFFLINE));
 	}
 
 	@Test
@@ -104,7 +106,7 @@ class OperatorPresenceServiceTest {
 		service.markOffline(30L, NOW.minusSeconds(90));
 
 		assertThat(presence.getStatus()).isEqualTo(OperatorPresenceStatus.ON_DUTY);
-		verify(eventPublisher, never()).publishEvent(any(OperatorWentOfflineEvent.class));
+		verify(eventPublisher, never()).publishEvent(any(OperatorUnavailableEvent.class));
 	}
 
 	@Test
@@ -115,18 +117,45 @@ class OperatorPresenceServiceTest {
 		OperatorPresenceResponse response = service.changeStatus(30L, OperatorPresenceStatus.OFFLINE);
 
 		assertThat(response.status()).isEqualTo(OperatorPresenceStatus.OFFLINE);
-		verify(eventPublisher).publishEvent(new OperatorWentOfflineEvent(30L));
+		verify(eventPublisher).publishEvent(
+				new OperatorUnavailableEvent(30L, OperatorPresenceStatus.OFFLINE));
 	}
 
 	@Test
-	void manualChangeBetweenOnDutyAndAwayDoesNotPublishOfflineEvent() {
+	void manualChangeToAwayPublishesEventSoUnconfirmedAssignmentsAreReleased() {
+		// 자리를 비운 사람이 확인도 안 한 제보를 들고 있으면 5분 타임아웃까지 아무도 보지 않는다.
+		OperatorPresence presence = OperatorPresence.connect(30L, NOW);
+		when(repository.findByOperatorId(30L)).thenReturn(Optional.of(presence));
+
+		OperatorPresenceResponse response = service.changeStatus(30L, OperatorPresenceStatus.AWAY);
+
+		assertThat(response.status()).isEqualTo(OperatorPresenceStatus.AWAY);
+		verify(eventPublisher).publishEvent(
+				new OperatorUnavailableEvent(30L, OperatorPresenceStatus.AWAY));
+	}
+
+	@Test
+	void returningToOnDutyDoesNotPublishEvent() {
+		OperatorPresence presence = OperatorPresence.connect(30L, NOW);
+		when(repository.findByOperatorId(30L)).thenReturn(Optional.of(presence));
+		service.changeStatus(30L, OperatorPresenceStatus.AWAY);
+		clearInvocations(eventPublisher);
+
+		service.changeStatus(30L, OperatorPresenceStatus.ON_DUTY);
+
+		verify(eventPublisher, never()).publishEvent(any(OperatorUnavailableEvent.class));
+	}
+
+	@Test
+	void repeatingSameUnavailableStatusPublishesOnce() {
 		OperatorPresence presence = OperatorPresence.connect(30L, NOW);
 		when(repository.findByOperatorId(30L)).thenReturn(Optional.of(presence));
 
 		service.changeStatus(30L, OperatorPresenceStatus.AWAY);
-		service.changeStatus(30L, OperatorPresenceStatus.ON_DUTY);
+		service.changeStatus(30L, OperatorPresenceStatus.AWAY);
 
-		verify(eventPublisher, never()).publishEvent(any(OperatorWentOfflineEvent.class));
+		verify(eventPublisher).publishEvent(
+				new OperatorUnavailableEvent(30L, OperatorPresenceStatus.AWAY));
 	}
 
 	@Test
