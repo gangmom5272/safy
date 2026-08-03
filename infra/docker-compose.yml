@@ -290,6 +290,40 @@ services:
     #     = 5초 프레임 예산의 약 4%. 단 사람 0명 프레임 기준이고 P2PNet 은 미측정이다.
 
   # ==========================================
+  # AI 터널 중계 — 노트북 GPU AI 서버로 가는 경로
+  # ==========================================
+  # 서버에 GPU 가 없어 P2PNet CPU 추론이 4.58초다(2026-08-03 실측). 그래서 AI 담당자가
+  # RTX 4050 노트북에서 AI 서버를 돌리고 배포 서버로 리버스 SSH 터널을 연결했다.
+  #
+  #   노트북 127.0.0.1:8000  ←ssh -R←  배포 서버 127.0.0.1:18000
+  #
+  # 그 터널은 호스트 루프백에만 바인딩되므로(sshd 기본값 GatewayPorts no) 컨테이너가
+  # 직접 쓸 수 없다. 이 서비스가 host 네트워크로 돌면서 호스트 루프백에 닿고, 도커
+  # 브리지 게이트웨이 172.17.0.1:18001 에 리스너를 열어 backend 가 접근하게 한다.
+  # 설정은 ./nginx-ai-tunnel/ai-tunnel.conf 에 있다.
+  #
+  # 호스트 방화벽에 규칙이 필요하다(2026-08-03, 서버에 수동 적용):
+  #   sudo ufw allow from 172.16.0.0/12 to 172.17.0.1 port 18001 proto tcp
+  # 컨테이너에서 호스트로 가는 트래픽은 INPUT 체인을 타고 정책이 DROP 이라, 이 규칙이
+  # 없으면 컨테이너에서 타임아웃된다(실측). 중계 방식을 바꿔도 우회되지 않는다.
+  #
+  # 실측(2026-08-03, 1280x720 287KB, n=20): 터널 왕복 평균 548.7ms, p95 1,151.9ms,
+  # 최대 1,211.2ms. GPU YOLO 추론은 9~14ms(서버 CPU 68ms), 콜드 스타트 2.6~5.7초.
+  # 5초 프레임 예산의 23%(p95)라 정확도 우선 모드가 성립한다.
+  #
+  # 노트북이나 터널이 끊기면 이 중계는 살아 있어도 502 가 된다. 폴백은 .env 의
+  # AI_SERVER_BASE_URL 을 http://ai-server:8000 으로 되돌려 backend 를 재시작한다.
+  # 그래서 서버 CPU ai-server 컨테이너를 지우지 않고 유지한다.
+  ai-tunnel:
+    image: nginx:alpine
+    network_mode: host
+    volumes:
+      - ./nginx-ai-tunnel:/etc/nginx/conf.d:ro
+    restart: unless-stopped
+    logging: *default-logging
+    labels: *loki-logging
+
+  # ==========================================
   # Data 서버 (FastAPI) — 공공데이터 수집
   # ==========================================
   # backend의 PublicDataCollectionScheduler가 이 서비스에 수집을 요청하고, 받은 결과를
