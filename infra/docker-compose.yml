@@ -134,6 +134,16 @@ services:
       # 들어오는 순간부터 AI 호출이 전건 실패한다. 아직 job이 0건이라 드러나지 않았다.
       # ai-server:8000 도달은 2026-08-03 실측(infra_default에서 /health 200).
       - AI_SERVER_BASE_URL=${AI_SERVER_BASE_URL:-http://ai-server:8000}
+      # 정확도 우선 모드(티켓 140)를 켜면 AI 가 P2PNet 을 응답 경로에서 기다린다.
+      # 그때 두 타임아웃의 순서가 중요하다 — AI 내부 타임아웃
+      # (P2PNET_SHADOW_TIMEOUT_SECONDS)이 이 값보다 작아야 AI 가 먼저 판단을
+      # 내리고, 백엔드는 그 응답을 받는다. 반대가 되면 백엔드가 먼저 끊어
+      # AI 가 계산을 마쳐도 결과가 버려진다.
+      # 기본값은 application.yml 과 같은 PT10S 로 두어 현재 동작을 바꾸지 않는다.
+      # 2026-08-03 실측: P2PNet 추론 4,524~4,684ms, 영상 2개에서 락 대기 최대
+      # 4,806ms, CI 빌드와 겹치면 6,496~10,856ms. 정확도 우선을 실제로 켤 때는
+      # AI 내부 타임아웃과 이 값을 함께 올려야 한다.
+      - AI_READ_TIMEOUT=${AI_READ_TIMEOUT:-PT10S}
     depends_on:
       - db
       - redis
