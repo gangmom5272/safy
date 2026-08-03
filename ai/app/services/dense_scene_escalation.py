@@ -19,7 +19,7 @@ import os
 from dataclasses import dataclass
 
 
-# 프로젝트 최종 위험등급 예외 규칙의 "L >= 80 → 최소 CAUTION" 기준을
+# 프로젝트 최종 위험등급 예외 규칙의 "L >= 80 → 최소 HIGH" 기준을
 # 그대로 사용한다. 신호가 먹이는 규칙과 같은 경계선을 쓰는 것이 의미가
 # 분명하기 때문이다.
 DENSE_SCENE_LOCAL_PEAK_THRESHOLD = 80.0
@@ -120,7 +120,7 @@ def correct_congestion_scores(
     3. P2PNet 값이 공식 값보다 크다(항목별로 판단).
 
     2번을 조건에 넣는 이유는 공식값 대체가 자동 위험등급을 직접 바꾸기
-    때문이다. 색종이를 사람으로 오인해 L=100이 된 프레임이 CAUTION을
+    때문이다. 색종이를 사람으로 오인해 L=100이 된 프레임이 HIGH를
     자동 발동시키면 안 된다. 진단용 `denseScene.suspected` 신호에는 이
     게이트를 적용하지 않으므로 사람은 여전히 고밀도 의심을 확인할 수 있다.
     """

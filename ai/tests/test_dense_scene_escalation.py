@@ -10,7 +10,7 @@ from app.services.dense_scene_escalation import (
 
 
 def test_threshold_matches_documented_risk_exception_rule() -> None:
-    """위험등급 예외 규칙의 'L >= 80 → 최소 CAUTION'과 같은 경계선을 쓴다."""
+    """위험등급 예외 규칙의 'L >= 80 → 최소 HIGH'와 같은 경계선을 쓴다."""
     assert DENSE_SCENE_LOCAL_PEAK_THRESHOLD == 80.0
 
 
