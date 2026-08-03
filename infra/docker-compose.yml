@@ -126,6 +126,14 @@ services:
       #   하루 1회라 배포 직후에는 결과를 볼 수 없으니, 검증할 때만 .env로 임시로 당기고
       #   확인 후 원복한다.
       - "PUBLIC_DATA_CULTURAL_EVENT_CRON=${PUBLIC_DATA_CULTURAL_EVENT_CRON:-0 0 4 * * *}"
+      # 프레임 분석·블러를 요청할 ai-server 주소. PUBLIC_DATA_BASE_URL과 같은 이유로
+      # 반드시 넘겨야 한다 — application.yml의 기본값 http://localhost:8000은 backend
+      # 컨테이너 자신을 가리키는데 backend는 컨테이너 안에서 8080만 LISTEN한다
+      # (2026-08-03 실측: docker port = 8080/tcp -> 127.0.0.1:8090, 8000은 미사용).
+      # MediaProcessingWorker가 2초 주기로 폴링하므로, 이 값이 없으면 실제 제보가
+      # 들어오는 순간부터 AI 호출이 전건 실패한다. 아직 job이 0건이라 드러나지 않았다.
+      # ai-server:8000 도달은 2026-08-03 실측(infra_default에서 /health 200).
+      - AI_SERVER_BASE_URL=${AI_SERVER_BASE_URL:-http://ai-server:8000}
     depends_on:
       - db
       - redis
