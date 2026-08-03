@@ -6,6 +6,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +22,11 @@ import com.ojimasam.safy.publicdata.domain.CityCongestionObservation;
 import com.ojimasam.safy.publicdata.domain.CityCongestionObservationRepository;
 
 class GridCongestionReaderTest {
+	private static final Instant WINDOW_END = Instant.parse("2026-08-03T12:00:00Z");
+	private static final Instant WINDOW_START = WINDOW_END.minus(Duration.ofMinutes(15));
+	/** 창 안에 들어오는 관측 시각. */
+	private static final Instant OBSERVED_AT = WINDOW_START.plus(Duration.ofMinutes(3));
+
 	private final CityCongestionObservationRepository observations =
 			mock(CityCongestionObservationRepository.class);
 	private final PlaceGridMappingRepository mappings = mock(PlaceGridMappingRepository.class);
@@ -31,7 +38,7 @@ class GridCongestionReaderTest {
 		givenObservations(observation(1L, CongestionLevel.CROWDED));
 		givenMappings(mapping(1L, 100L), mapping(1L, 101L), mapping(1L, 102L));
 
-		Map<Long, CongestionLevel> byCell = reader.latestByGridCell();
+		Map<Long, CongestionLevel> byCell = reader.latestByGridCell(WINDOW_START);
 
 		assertThat(byCell).containsOnlyKeys(100L, 101L, 102L);
 		assertThat(byCell.values()).containsOnly(CongestionLevel.CROWDED);
@@ -48,7 +55,7 @@ class GridCongestionReaderTest {
 		);
 		givenMappings(mapping(1L, 100L), mapping(2L, 100L), mapping(3L, 100L));
 
-		assertThat(reader.latestByGridCell()).containsEntry(100L, CongestionLevel.SLIGHTLY_CROWDED);
+		assertThat(reader.latestByGridCell(WINDOW_START)).containsEntry(100L, CongestionLevel.SLIGHTLY_CROWDED);
 	}
 
 	@Test
@@ -61,7 +68,7 @@ class GridCongestionReaderTest {
 		);
 		givenMappings(mapping(1L, 100L), mapping(2L, 100L));
 
-		assertThat(reader.latestByGridCell()).containsEntry(100L, CongestionLevel.CROWDED);
+		assertThat(reader.latestByGridCell(WINDOW_START)).containsEntry(100L, CongestionLevel.CROWDED);
 	}
 
 	@Test
@@ -70,10 +77,31 @@ class GridCongestionReaderTest {
 		givenObservations(observation(1L, CongestionLevel.NORMAL));
 		givenMappings(mapping(1L, 100L), mapping(2L, 200L));
 
-		Map<Long, CongestionLevel> byCell = reader.latestByGridCell();
+		Map<Long, CongestionLevel> byCell = reader.latestByGridCell(WINDOW_START);
 
 		// 200번 셀은 "혼잡도 0" 이 아니라 키가 없다 — 근거 없음과 여유는 다르다.
 		assertThat(byCell).containsOnlyKeys(100L);
+	}
+
+	@Test
+	@DisplayName("시간 창보다 오래된 관측은 쓰지 않는다")
+	void ignoresObservationOlderThanWindow() {
+		// findLatestPerPlace 는 시각과 무관하게 장소별 최신 1건을 준다. 수집이 멈추면
+		// 오래된 값이 계속 최신으로 잡히므로 창 밖은 여기서 걸러야 한다(명세 7.3).
+		givenObservations(observation(
+				1L, CongestionLevel.CROWDED, WINDOW_START.minus(Duration.ofMinutes(1))));
+		givenMappings(mapping(1L, 100L));
+
+		assertThat(reader.latestByGridCell(WINDOW_START)).isEmpty();
+	}
+
+	@Test
+	@DisplayName("창 시작과 같은 시각의 관측은 쓴다")
+	void includesObservationAtWindowStart() {
+		givenObservations(observation(1L, CongestionLevel.NORMAL, WINDOW_START));
+		givenMappings(mapping(1L, 100L));
+
+		assertThat(reader.latestByGridCell(WINDOW_START)).containsEntry(100L, CongestionLevel.NORMAL);
 	}
 
 	@Test
@@ -81,7 +109,7 @@ class GridCongestionReaderTest {
 	void skipsMappingsWhenNoObservation() {
 		givenObservations();
 
-		assertThat(reader.latestByGridCell()).isEmpty();
+		assertThat(reader.latestByGridCell(WINDOW_START)).isEmpty();
 		// 7,346행을 읽을 이유가 없다.
 		verify(mappings, never()).findAll();
 	}
@@ -95,12 +123,18 @@ class GridCongestionReaderTest {
 	}
 
 	private static CityCongestionObservation observation(Long placeId, CongestionLevel level) {
+		return observation(placeId, level, OBSERVED_AT);
+	}
+
+	private static CityCongestionObservation observation(
+			Long placeId, CongestionLevel level, Instant observedAt) {
 		Place place = mock(Place.class);
 		when(place.getId()).thenReturn(placeId);
 
 		CityCongestionObservation observation = mock(CityCongestionObservation.class);
 		when(observation.getPlace()).thenReturn(place);
 		when(observation.getCongestionLevel()).thenReturn(level);
+		when(observation.getObservedAt()).thenReturn(observedAt);
 		return observation;
 	}
 

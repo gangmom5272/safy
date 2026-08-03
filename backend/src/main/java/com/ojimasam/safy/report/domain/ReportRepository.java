@@ -58,6 +58,16 @@ public interface ReportRepository {
 	);
 	Optional<Report> findByIdAndPublicVisibility(Long id, ReportPublicVisibility publicVisibility);
 
+	/**
+	 * 격자 위험도 계산용. 시간 창 안에 접수된 제보를 셀 코드가 있는 것만 가져온다.
+	 *
+	 * <p>창을 자르는 기준은 {@code reportedAt} 이다. 라이브 제보는 프레임이 계속
+	 * 들어와 위험도 평가 시각이 갱신되므로, {@code assessedAt} 으로 자르면 30분 전
+	 * 제보가 현재 위험으로 잡힌다. "지금 이 격자에 무슨 일이 벌어지고 있나"를 재는
+	 * 값이라 접수 시각을 쓴다.
+	 */
+	List<Report> findByGridCellCodeIsNotNullAndReportedAtBetween(Instant from, Instant to);
+
 	long countByAdministrativeArea_IdAndStatusIn(Long administrativeAreaId, Collection<ReportStatus> statuses);
 	long countByAdministrativeArea_IdAndTypeAndStatusIn(
 			Long administrativeAreaId,

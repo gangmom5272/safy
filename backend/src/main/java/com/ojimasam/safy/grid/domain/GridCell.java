@@ -12,6 +12,7 @@ import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
@@ -41,7 +42,13 @@ import jakarta.persistence.UniqueConstraint;
 						name = "uk_grid_cells_row_column",
 						columnNames = {"row_index", "column_index"}
 				)
-		}
+		},
+		// 지도 뷰포트 조회가 중심 좌표 범위로 훑는다. 셀이 늘어나면 이 인덱스 없이는
+		// 공개 API 한 번이 전체 스캔이 된다.
+		indexes = @Index(
+				name = "idx_grid_cells_center",
+				columnList = "center_latitude, center_longitude"
+		)
 )
 @EntityListeners(AuditingEntityListener.class)
 public class GridCell {

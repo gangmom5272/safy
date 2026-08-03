@@ -99,6 +99,12 @@ app:
     # 지도는 최신 1건만 쓰고 위험도 추이도 몇 주면 충분하므로 보관 기간을 넘긴 행은 지운다.
     observation-retention: ${PUBLIC_DATA_OBSERVATION_RETENTION:P90D}
     observation-cleanup-cron: ${PUBLIC_DATA_OBSERVATION_CLEANUP_CRON:0 30 4 * * *}
+  grid-risk:
+    # 121곳 혼잡도 수집 주기(city-congestion-delay)와 같게 둔다. 더 자주 돌려도
+    # 공공데이터 쪽 입력은 바뀌지 않는다. 제보는 최대 이 간격만큼 늦게 반영되는데,
+    # 담당자 알림은 SSE 로 즉시 가고 격자는 배경 위험도라 감수한다.
+    # 이력은 값이 바뀔 때만 쌓이므로 주기를 줄여도 저장량이 비례해 늘지는 않는다.
+    scheduler-delay: ${GRID_RISK_SCHEDULER_DELAY:PT3M}
 springdoc:
   api-docs:
     path: /v3/api-docs
