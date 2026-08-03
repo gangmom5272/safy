@@ -31,7 +31,10 @@ interface KakaoMaps {
     position: KakaoLatLng
     content: HTMLElement | string
     map?: KakaoMap
+    // 핀 끝이 좌표와 맞도록 xAnchor 0.5 / yAnchor 1(요소의 아래쪽 가운데)을 쓴다.
+    xAnchor?: number
     yAnchor?: number
+    zIndex?: number
     clickable?: boolean
   }) => KakaoCustomOverlay
 }

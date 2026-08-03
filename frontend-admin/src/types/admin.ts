@@ -22,6 +22,12 @@ export type ReportStatus =
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected'
 
+/**
+ * 관리자 확인 상태. "담당자가 이 제보를 열어봤는가"만 나타낸다.
+ * ReportStatus(접수·확인 중·처리 중·완료…)와는 다른 축이므로 섞어 쓰지 않는다.
+ */
+export type VerificationStatus = 'NEW' | 'CHECKED'
+
 export type AiAnalysisStatus = 'queued' | 'analyzing' | 'detected' | 'completed'
 
 export type WebRTCConnectionStatus = 'live' | 'waiting' | 'requested' | 'ended'
@@ -46,6 +52,10 @@ export interface AdminReport {
   riskScore: number | null
   reportedAt: string
   status: ReportStatus
+  // 처리 상태와 별개인 관리자 확인 상태. 확인 여부를 알 수 없는 응답에서는 비어 있다.
+  verificationStatus?: VerificationStatus
+  // 배정 시각. reportedAt 과 달리 "내게 넘어온 시점"이라 최근 배정 정렬 기준으로 쓴다.
+  assignedAt?: string | null
   reviewStatus: ReviewStatus | null
   aiAnalysisStatus: AiAnalysisStatus | null
   managerName: string

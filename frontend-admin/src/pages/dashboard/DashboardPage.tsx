@@ -1,55 +1,21 @@
-import { useCallback, useEffect, useState, type KeyboardEvent } from 'react'
+import { useCallback, type KeyboardEvent } from 'react'
 import { useNavigate, useOutletContext } from 'react-router'
 import { reportStatusLabels } from '../../mocks/adminMockData'
-import type { AdminReport, WebRTCConnection } from '../../types/admin'
+import type { WebRTCConnection } from '../../types/admin'
 import { ROUTE_PATHS, createMonitoringDetailPath, createReportDetailPath } from '../../router/paths'
 import { AdminSection } from '../../components/admin/AdminSection'
 import { RiskBadge } from '../../components/admin/RiskBadge'
 import { ReportMap } from '../../components/admin/ReportMap'
 import { formatAdminTimestamp } from '../../utils/adminDate'
-import { getDashboardReports } from '../reports/reportApi'
-import { getLiveSessions } from '../monitoring/monitoringApi'
+import { isNewReport } from '../../utils/adminVerification'
 import { LiveViewer } from '../monitoring/LiveViewer'
-import { subscribeToRealtimeSignals } from '../../api/realtime'
+import { useDashboardReports } from './useDashboardReports'
 import type { AdminLayoutOutletContext } from '../../layouts/AdminLayout'
 
 export function DashboardPage() {
   const navigate = useNavigate()
   const { markDashboardUpdated } = useOutletContext<AdminLayoutOutletContext>()
-  const [reports, setReports] = useState<AdminReport[]>([])
-  const [connections, setConnections] = useState<WebRTCConnection[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-
-  const loadDashboard = useCallback(async () => {
-    try {
-      const [loadedReports, loadedConnections] = await Promise.all([
-        getDashboardReports(0, 5),
-        getLiveSessions(),
-      ])
-      setReports(loadedReports)
-      setConnections(loadedConnections)
-      setLoadError('')
-      markDashboardUpdated()
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : '대시보드 정보를 불러오지 못했습니다.')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [markDashboardUpdated])
-
-  useEffect(() => {
-    const initialLoad = window.setTimeout(() => void loadDashboard(), 0)
-    const unsubscribe = subscribeToRealtimeSignals((signal) => {
-      if (signal.kind === 'connected' || signal.event.eventType !== 'REPORT_MESSAGE') {
-        void loadDashboard()
-      }
-    })
-    return () => {
-      window.clearTimeout(initialLoad)
-      unsubscribe()
-    }
-  }, [loadDashboard])
+  const { reports, connections, isLoading, loadError, markChecked } = useDashboardReports(markDashboardUpdated)
 
   const activeConnections = connections.filter(
     (connection) => connection.connectionStatus !== 'ended',
@@ -58,6 +24,12 @@ export function DashboardPage() {
   const openMonitoring = (connection: WebRTCConnection) => {
     navigate(createMonitoringDetailPath(connection.id))
   }
+
+  // 상세로 이동하는 순간 확인 처리도 함께 반영해 지도와 테이블 표시가 동시에 바뀐다.
+  const openReportDetail = useCallback((reportId: number) => {
+    markChecked(reportId)
+    navigate(createReportDetailPath(reportId))
+  }, [markChecked, navigate])
 
   return (
     <section className="page-stack">
@@ -72,7 +44,8 @@ export function DashboardPage() {
           <ReportMap
             className="map-preview"
             reports={reports}
-            onSelect={(report) => navigate(createReportDetailPath(report.id))}
+            showLegend
+            onSelect={(report) => openReportDetail(report.id)}
           />
         </AdminSection>
 
@@ -92,10 +65,13 @@ export function DashboardPage() {
                 {reports.map((report) => (
                   <tr
                     key={report.id}
-                    className="clickable-row"
-                    onClick={() => navigate(createReportDetailPath(report.id))}
+                    className={`clickable-row${isNewReport(report) ? ' recent-reports-table__row--new' : ''}`}
+                    onClick={() => openReportDetail(report.id)}
                   >
-                    <td>{report.location}</td>
+                    <td>
+                      {report.location}
+                      {isNewReport(report) && <span className="new-badge">NEW</span>}
+                    </td>
                     <td>
                       <RiskBadge value={report.riskLevel} score={report.riskScore} />
                     </td>
@@ -107,7 +83,7 @@ export function DashboardPage() {
                         className="text-button"
                         onClick={(event) => {
                           event.stopPropagation()
-                          navigate(createReportDetailPath(report.id))
+                          openReportDetail(report.id)
                         }}
                       >
                         상세

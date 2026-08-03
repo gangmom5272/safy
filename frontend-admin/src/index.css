@@ -14,6 +14,10 @@
   --warning: #dc6803;
   --caution: #b54708;
   --safe: #027a48;
+  /* 관리자가 아직 확인하지 않은 신규 제보 강조색. 위험도 색과 구분되도록 보라색 계열을 쓴다. */
+  --new-report: #7c3aed;
+  --new-report-surface: #f5f0ff;
+  --new-report-surface-hover: #ebe1ff;
   --shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
   --home-map-row-height: 500px;
   --home-recent-row-height: 310px;
@@ -679,11 +683,18 @@ button:disabled {
 }
 
 .report-map {
+  position: relative;
   width: 100%;
   min-height: 330px;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
+}
+
+/* 카카오 SDK 가 크기를 직접 읽어가므로 부모를 그대로 채우게 둔다. */
+.report-map__canvas {
+  position: absolute;
+  inset: 0;
 }
 
 .report-map--error {
@@ -700,26 +711,183 @@ button:disabled {
   position: relative;
 }
 
-/* 카카오 오버레이는 SDK 가 위치를 잡으므로 절대 위치 지정을 해제한다. */
-.map-marker--overlay {
-  position: static;
-  transform: none;
-  cursor: pointer;
-  white-space: nowrap;
+/*
+ * 지도 위치 핀. 요소 박스가 정확히 핀 크기(30x40)라서 CustomOverlay 의
+ * xAnchor 0.5 / yAnchor 1 과 맞물려 핀 끝이 제보 좌표에 놓인다.
+ * 펄스와 NEW 배지는 absolute 로 띄워 박스 크기를 바꾸지 않는다.
+ */
+.map-pin {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pin-color, var(--accent));
+  line-height: 0;
 }
 
-.map-marker {
+.map-pin__svg {
+  display: block;
+  filter: drop-shadow(0 3px 4px rgba(15, 23, 42, 0.35));
+}
+
+.map-pin__body {
+  fill: var(--pin-color, var(--accent));
+}
+
+.map-pin__pulse {
   position: absolute;
-  transform: translate(-50%, -50%);
-  min-width: 36px;
-  padding: 6px 8px;
-  border: 2px solid #ffffff;
+  top: 15px;
+  left: 15px;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.map-pin--new .map-pin__pulse {
+  animation: map-pin-pulse 2.2s ease-out infinite;
+}
+
+.map-pin__badge {
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  padding: 1px 4px;
   border-radius: 999px;
+  background: var(--pin-color, var(--new-report));
   color: #ffffff;
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 800;
-  text-align: center;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+}
+
+@keyframes map-pin-pulse {
+  0% { transform: scale(0.5); opacity: 0.5; }
+  70% { transform: scale(2); opacity: 0; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pin--new .map-pin__pulse {
+    animation: none;
+  }
+}
+
+/* 마커를 클릭했을 때만 열리는 정보창. 핀 위로 올려 핀을 가리지 않게 한다. */
+.map-info {
+  display: grid;
+  gap: 6px;
+  width: 250px;
+  padding: 10px 12px;
+  transform: translateY(calc(-1 * var(--pin-height, 40px) - 6px));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.map-info__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-info__number {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.map-info__status {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.map-info__close {
+  margin-left: auto;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.map-info__address {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.map-info__rows {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.map-info__rows dt {
+  color: var(--text-muted);
+}
+
+.map-info__rows dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.map-info__detail {
+  justify-self: start;
+}
+
+.report-map__legend {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  max-width: calc(100% - 24px);
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.report-map__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* CSS 만으로 그린 물방울 핀 모양. 색은 인라인 color 로 받는다. */
+.report-map__legend-pin {
+  width: 9px;
+  height: 9px;
+  border-radius: 50% 50% 50% 0;
+  background: currentColor;
+  transform: rotate(-45deg);
+}
+
+.report-map__legend-risk i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
 .risk-badge {
@@ -1300,6 +1468,35 @@ button:disabled {
 
 .recent-reports-table {
   min-width: 620px;
+}
+
+/*
+ * 아직 확인하지 않은 신규 배정 제보.
+ * 배경을 td 에 칠해 tr 에 걸린 .clickable-row:hover 와 충돌하지 않게 한다.
+ */
+.recent-reports-table__row--new > td {
+  background: var(--new-report-surface);
+}
+
+.recent-reports-table__row--new:hover > td {
+  background: var(--new-report-surface-hover);
+}
+
+.recent-reports-table__row--new > td:first-child {
+  box-shadow: inset 3px 0 0 var(--new-report);
+}
+
+.new-badge {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--new-report);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  vertical-align: middle;
 }
 
 .risk-indicator {

@@ -44,6 +44,15 @@ function publishSignal(signal: RealtimeSignal) {
   signalTarget.dispatchEvent(new CustomEvent<RealtimeSignal>(signalName, { detail: signal }))
 }
 
+/**
+ * 개발 중 목 모드에서 신규 배정 흐름을 확인하기 위한 주입 지점.
+ * 운영 빌드에서는 아무 일도 하지 않으며, 자동으로 호출하는 타이머도 두지 않는다.
+ */
+export function emitRealtimeSignalForDev(signal: RealtimeSignal) {
+  if (!import.meta.env.DEV) return
+  publishSignal(signal)
+}
+
 function parseEventBlock(block: string): { id: string | null; data: string } | null {
   if (!block || block.startsWith(':')) return null
 

@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { AdminReport } from '../../types/admin'
-import { getRiskConfig } from '../../utils/adminRisk'
+import { RISK_LEVEL_CONFIG, RISK_LEVEL_ORDER } from '../../utils/adminRisk'
+import { VERIFICATION_CONFIG } from '../../utils/adminVerification'
 import { loadKakaoMaps, type KakaoCustomOverlay, type KakaoMap } from '../../services/kakaoMap'
 import { hasCoordinates } from '../../utils/reportGeo'
+import { createReportInfoWindow, createReportPin, PIN_HEIGHT } from './reportMapMarkers'
 
 interface ReportMapProps {
   reports: AdminReport[]
   className?: string
+  /** 신규/확인 핀과 위험도 색을 설명하는 범례를 지도 안에 표시한다. */
+  showLegend?: boolean
   /** 지도를 클릭했을 때 이동시킬 화면이 있으면 넘긴다. */
   onSelect?: (report: AdminReport) => void
 }
@@ -14,10 +18,13 @@ interface ReportMapProps {
 // 표시할 제보가 없을 때 보여줄 기본 위치(서울시청).
 const DEFAULT_CENTER = { latitude: 37.5665, longitude: 126.978 }
 
-export function ReportMap({ reports, className = '', onSelect }: ReportMapProps) {
+export function ReportMap({ reports, className = '', showLegend = false, onSelect }: ReportMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const overlaysRef = useRef<KakaoCustomOverlay[]>([])
+  const infoOverlayRef = useRef<KakaoCustomOverlay | null>(null)
+  // 실시간 이벤트로 목록이 갱신될 때마다 시야를 되돌리면 담당자가 확대·이동한 화면이 초기화된다.
+  const hasFitBoundsRef = useRef(false)
   const [loadError, setLoadError] = useState('')
 
   // 최신 콜백을 참조해 지도를 다시 만들지 않고도 클릭 동작을 갱신한다.
@@ -40,31 +47,61 @@ export function ReportMap({ reports, className = '', onSelect }: ReportMapProps)
         }
 
         const map = mapRef.current
+        const closeInfoWindow = () => {
+          infoOverlayRef.current?.setMap(null)
+          infoOverlayRef.current = null
+        }
+
+        closeInfoWindow()
         overlaysRef.current.forEach((overlay) => overlay.setMap(null))
         overlaysRef.current = []
 
         const plotted = reports.filter(hasCoordinates)
+        if (import.meta.env.DEV && plotted.length !== reports.length) {
+          const skipped = reports.filter((report) => !hasCoordinates(report)).map((report) => report.id)
+          console.warn('[ReportMap] 좌표가 없거나 잘못돼 지도에서 제외한 제보:', skipped)
+        }
+
         const bounds = new maps.LatLngBounds()
 
         plotted.forEach((report) => {
-          const position = new maps.LatLng(report.latitude as number, report.longitude as number)
-          const config = getRiskConfig(report.riskLevel, report.riskScore)
+          const position = new maps.LatLng(report.latitude, report.longitude)
 
-          const marker = document.createElement('button')
-          marker.type = 'button'
-          marker.className = 'map-marker map-marker--overlay'
-          marker.textContent = report.location
-          marker.style.backgroundColor = config?.markerColor ?? '#64748B'
-          marker.style.color = config?.markerTextColor ?? '#FFFFFF'
-          marker.addEventListener('click', () => onSelectRef.current?.(report))
+          const openInfoWindow = () => {
+            closeInfoWindow()
+            const content = createReportInfoWindow(report, {
+              onDetail: () => onSelectRef.current?.(report),
+              onClose: closeInfoWindow,
+            })
+            infoOverlayRef.current = new maps.CustomOverlay({
+              position,
+              content,
+              map,
+              xAnchor: 0.5,
+              yAnchor: 1,
+              zIndex: 20,
+              clickable: true,
+            })
+          }
 
-          const overlay = new maps.CustomOverlay({ position, content: marker, map, yAnchor: 1, clickable: true })
+          const pin = createReportPin(report, openInfoWindow)
+          const overlay = new maps.CustomOverlay({
+            position,
+            content: pin,
+            map,
+            xAnchor: 0.5,
+            yAnchor: 1,
+            clickable: true,
+          })
           overlaysRef.current.push(overlay)
           bounds.extend(position)
         })
 
-        // 제보가 있으면 전부 보이도록 맞추고, 없으면 기본 위치를 유지한다.
-        if (!bounds.isEmpty()) map.setBounds(bounds)
+        // 제보가 있으면 처음 한 번만 전부 보이도록 맞추고, 이후에는 담당자의 시야를 유지한다.
+        if (!bounds.isEmpty() && !hasFitBoundsRef.current) {
+          map.setBounds(bounds)
+          hasFitBoundsRef.current = true
+        }
         map.relayout()
       })
       .catch((error: unknown) => {
@@ -75,6 +112,8 @@ export function ReportMap({ reports, className = '', onSelect }: ReportMapProps)
   }, [reports])
 
   useEffect(() => () => {
+    infoOverlayRef.current?.setMap(null)
+    infoOverlayRef.current = null
     overlaysRef.current.forEach((overlay) => overlay.setMap(null))
     overlaysRef.current = []
     mapRef.current = null
@@ -89,5 +128,32 @@ export function ReportMap({ reports, className = '', onSelect }: ReportMapProps)
     )
   }
 
-  return <div ref={containerRef} className={`report-map ${className}`.trim()} role="application" aria-label="제보 위치 지도" />
+  return (
+    <div className={`report-map ${className}`.trim()} style={{ '--pin-height': `${PIN_HEIGHT}px` } as CSSProperties}>
+      <div ref={containerRef} className="report-map__canvas" role="application" aria-label="제보 위치 지도" />
+      {showLegend && (
+        <div className="report-map__legend">
+          <span>
+            <i className="report-map__legend-pin" style={{ color: VERIFICATION_CONFIG.NEW.pinColor }} aria-hidden="true" />
+            신규 제보
+          </span>
+          <span>
+            <i className="report-map__legend-pin" style={{ color: VERIFICATION_CONFIG.CHECKED.pinColor }} aria-hidden="true" />
+            확인한 제보
+          </span>
+          <span className="report-map__legend-risk">
+            내부 색상 · 위험도
+            {RISK_LEVEL_ORDER.map((level) => (
+              <i
+                key={level}
+                style={{ backgroundColor: RISK_LEVEL_CONFIG[level].markerColor }}
+                title={RISK_LEVEL_CONFIG[level].label}
+                aria-hidden="true"
+              />
+            ))}
+          </span>
+        </div>
+      )}
+    </div>
+  )
 }

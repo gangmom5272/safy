@@ -55,6 +55,14 @@ export function formatAdminDate(value?: string | null): string {
   return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} (${KOREAN_WEEKDAYS[date.getDay()]}) ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
+/** 정렬·비교용 시각. 문자열을 그대로 비교하면 형식이 섞였을 때 순서가 어긋난다. */
+export function toTimestamp(value?: string | null): number | null {
+  if (!value?.trim()) return null
+
+  const time = new Date(value.trim().replace(' ', 'T')).getTime()
+  return Number.isNaN(time) ? null : time
+}
+
 export function formatAdminTimestamp(value?: string | null): string | null {
   if (!value?.trim()) return null
 
