@@ -1,5 +1,6 @@
 package com.ojimasam.safy.grid.application;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,11 +38,18 @@ public class GridCongestionReader {
 	/**
 	 * 관측값이 있는 셀만 담긴다. 값이 없는 셀은 키가 없다 — 혼잡도 0 이 아니라
 	 * "근거 없음"이고, 격자 위험도는 그 구분을 그대로 쓴다.
+	 *
+	 * @param since 이 시각 이후에 관측된 값만 쓴다. {@code findLatestPerPlace} 는 시각과
+	 *        무관하게 장소별 최신 1건을 주므로, 수집이 멈추면 오래된 관측이 계속 최신으로
+	 *        잡힌다. 격자 명세 7.3 은 시간 창 밖의 관측을 쓰지 않는다고 정한다.
 	 */
 	@Transactional(readOnly = true)
-	public Map<Long, CongestionLevel> latestByGridCell() {
+	public Map<Long, CongestionLevel> latestByGridCell(Instant since) {
 		Map<Long, CongestionLevel> levelByPlace = new HashMap<>();
 		for (CityCongestionObservation observation : observationRepository.findLatestPerPlace()) {
+			if (observation.getObservedAt().isBefore(since)) {
+				continue;
+			}
 			levelByPlace.put(observation.getPlace().getId(), observation.getCongestionLevel());
 		}
 		if (levelByPlace.isEmpty()) {
