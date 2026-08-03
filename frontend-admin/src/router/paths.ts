@@ -3,6 +3,7 @@ export const ROUTE_PATHS = {
   DASHBOARD: '/dashboard',
   REPORTS: '/reports',
   REPORT_DETAIL: '/reports/:reportId',
+  QUEUE: '/queue',
   MONITORING: '/monitoring',
   MONITORING_DETAIL: '/monitoring/:connectionId',
   RISK_MAP: '/risk-map',

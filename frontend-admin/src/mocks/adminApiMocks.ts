@@ -2,6 +2,7 @@
 // 화면용 목 데이터(adminMockData)를 백엔드 응답 형태로 옮겨 담는다.
 import type { OperatorReportDetail, ReportAnalysis, TransferTarget } from '../pages/reports/reportApi'
 import type { OperatorLiveSession } from '../pages/monitoring/monitoringApi'
+import type { QueueItem } from '../pages/queue/queueApi'
 import type { AdminReport, ReportType } from '../types/admin'
 import { adminReports, mockPhoto } from './adminMockData'
 
@@ -122,4 +123,60 @@ export function mockLiveSessions(): OperatorLiveSession[] {
       expiresAt: null,
       createdAt: report.reportedAt,
     }))
+}
+
+// 공용 큐는 평소 비어 있는 게 정상이라, 목 모드에서는 화면 확인을 위해 세 건을 채운다.
+// 이미지·라이브·위험도 없음 세 경우를 모두 보여준다.
+export function mockQueueItems(): QueueItem[] {
+  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+
+  return [
+    {
+      reportId: 9001,
+      reportType: 'IMAGE',
+      category: 'CROWD_CONGESTION',
+      subcategory: '보행 정체',
+      description: '출구 앞 보행 흐름이 멈춰 있습니다.',
+      latitude: 37.5563,
+      longitude: 126.9236,
+      address: '서울 마포구 홍대입구역 9번 출구',
+      reportedAt: minutesAgo(97),
+      image: {
+        imageCount: 2,
+        status: 'AVAILABLE',
+        thumbnailUrl: mockPhoto('공용 큐 대기 제보', '#475569'),
+        thumbnailUrlExpiresAt: null,
+      },
+      live: null,
+      risk: { status: 'COMPLETED', score: 88, level: 'very_high', confidence: 0.87, confirmRequired: false, assessedAt: minutesAgo(95) },
+    },
+    {
+      reportId: 9002,
+      reportType: 'LIVE',
+      category: 'ACCIDENT_RISK',
+      subcategory: '시설 붕괴 우려',
+      description: '가림막이 기울어져 있습니다.',
+      latitude: 37.4979,
+      longitude: 127.0276,
+      address: '서울 강남구 강남역 11번 출구',
+      reportedAt: minutesAgo(24),
+      image: null,
+      live: { streamRoomId: 'room-9002', status: 'LIVE', startedAt: minutesAgo(24), expiresAt: null },
+      risk: { status: 'COMPLETED', score: 54, level: 'medium', confidence: 0.62, confirmRequired: true, assessedAt: minutesAgo(20) },
+    },
+    {
+      reportId: 9003,
+      reportType: 'IMAGE',
+      category: 'FLOOD_WEATHER',
+      subcategory: '도로 침수',
+      description: null,
+      latitude: 37.5172,
+      longitude: 127.0473,
+      address: '서울 강남구 삼성동 봉은사로',
+      reportedAt: minutesAgo(6),
+      image: { imageCount: 1, status: 'PENDING', thumbnailUrl: null, thumbnailUrlExpiresAt: null },
+      live: null,
+      risk: null,
+    },
+  ]
 }
