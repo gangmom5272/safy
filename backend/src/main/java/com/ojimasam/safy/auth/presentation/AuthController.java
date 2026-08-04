@@ -69,15 +69,18 @@ public class AuthController {
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "유효하지 않거나 만료된 일회용 코드")
 	public ResponseEntity<ApiResponse<TokenResponse>> exchangeSocialCode(
 			@Valid @RequestBody SocialCodeExchangeRequest request) {
-		return loginResponse(authService.exchangeSocialLoginCode(request.code()));
+		return loginResponse(authService.exchangeSocialLoginCode(request.code()), properties.refreshCookieName());
 	}
 
 	@PostMapping("/admin/login")
-	@Operation(summary = "관리자 로컬 로그인", description = "관리자 아이디와 비밀번호를 검증하고 토큰을 발급합니다.")
+	@Operation(summary = "관리자 로컬 로그인",
+			description = "관리자 아이디와 비밀번호를 검증하고 토큰을 발급합니다. "
+					+ "Refresh Token 쿠키는 시민 앱과 이름이 다른 관리자 전용 쿠키로 내려갑니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그인 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "아이디 또는 비밀번호 불일치")
 	public ResponseEntity<ApiResponse<TokenResponse>> adminLogin(@Valid @RequestBody AdminLoginRequest request) {
-		return loginResponse(authService.adminLogin(request.loginId(), request.password()));
+		return loginResponse(authService.adminLogin(request.loginId(), request.password()),
+				properties.adminRefreshCookieName());
 	}
 
 	@PostMapping("/token/refresh")
@@ -90,7 +93,22 @@ public class AuthController {
 			@Parameter(hidden = true)
 			@CookieValue(name = "SAFY_REFRESH_TOKEN", required = false) String refreshToken) {
 		if (refreshToken == null || refreshToken.isBlank()) throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
-		return loginResponse(authService.refresh(refreshToken));
+		return loginResponse(authService.refresh(refreshToken), properties.refreshCookieName());
+	}
+
+	@PostMapping("/admin/token/refresh")
+	@Operation(summary = "관리자 콘솔 Access·Refresh Token 재발급",
+			description = "관리자 전용 HttpOnly Refresh Token 쿠키를 검증하고 토큰을 회전합니다. "
+					+ "시민 앱과 쿠키가 분리되어 있어 한쪽 로그인이 다른 쪽 세션을 끊지 않습니다.",
+			parameters = @Parameter(name = "SAFY_ADMIN_REFRESH_TOKEN", in = ParameterIn.COOKIE, required = true,
+					description = "관리자 로그인 시 발급된 Refresh Token"))
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "토큰 재발급 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh Token 누락·만료·위조")
+	public ResponseEntity<ApiResponse<TokenResponse>> refreshAdmin(
+			@Parameter(hidden = true)
+			@CookieValue(name = "SAFY_ADMIN_REFRESH_TOKEN", required = false) String refreshToken) {
+		if (refreshToken == null || refreshToken.isBlank()) throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+		return loginResponse(authService.refresh(refreshToken), properties.adminRefreshCookieName());
 	}
 
 	@PostMapping("/logout")
@@ -105,31 +123,50 @@ public class AuthController {
 			@RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorization,
 			@Parameter(hidden = true)
 			@CookieValue(name = "SAFY_REFRESH_TOKEN", required = false) String refreshToken) {
+		return logoutResponse(authorization, refreshToken, properties.refreshCookieName());
+	}
+
+	@PostMapping("/admin/logout")
+	@Operation(summary = "관리자 콘솔 로그아웃",
+			description = "관리자 전용 Refresh Token과 쿠키만 삭제하므로 같은 브라우저의 시민 앱 세션은 유지됩니다. "
+					+ "담당자(OPERATOR)라면 근무 상태를 오프라인으로 내려 아직 확인하지 않은 배정을 즉시 회수합니다.",
+			parameters = @Parameter(name = "SAFY_ADMIN_REFRESH_TOKEN", in = ParameterIn.COOKIE,
+					description = "선택 사항인 관리자 Refresh Token"))
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그아웃 완료")
+	public ResponseEntity<ApiResponse<Void>> logoutAdmin(
+			@RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+			@Parameter(hidden = true)
+			@CookieValue(name = "SAFY_ADMIN_REFRESH_TOKEN", required = false) String refreshToken) {
+		return logoutResponse(authorization, refreshToken, properties.adminRefreshCookieName());
+	}
+
+	private ResponseEntity<ApiResponse<Void>> logoutResponse(String authorization, String refreshToken,
+			String cookieName) {
 		logoutAccessTokenService.revokeIfValid(authorization)
 				.filter(jwt -> UserRole.OPERATOR.name().equals(jwt.getClaimAsString("role")))
 				.ifPresent(jwt -> presenceService.changeStatus(
 						CurrentUser.id(jwt), OperatorPresenceStatus.OFFLINE));
 		authService.logout(refreshToken);
-		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, deleteCookie().toString())
+		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, deleteCookie(cookieName).toString())
 				.body(ApiResponse.successWithoutData());
 	}
 
-	private ResponseEntity<ApiResponse<TokenResponse>> loginResponse(LoginResult result) {
+	private ResponseEntity<ApiResponse<TokenResponse>> loginResponse(LoginResult result, String cookieName) {
 		return ResponseEntity.ok()
-				.header(HttpHeaders.SET_COOKIE, refreshCookie(result.refreshToken()).toString())
+				.header(HttpHeaders.SET_COOKIE, refreshCookie(cookieName, result.refreshToken()).toString())
 				.body(ApiResponse.success(result.token()));
 	}
 
-	private ResponseCookie refreshCookie(String token) {
-		return cookie(token).maxAge(properties.refreshTokenTtl()).build();
+	private ResponseCookie refreshCookie(String cookieName, String token) {
+		return cookie(cookieName, token).maxAge(properties.refreshTokenTtl()).build();
 	}
 
-	private ResponseCookie deleteCookie() {
-		return cookie("").maxAge(0).build();
+	private ResponseCookie deleteCookie(String cookieName) {
+		return cookie(cookieName, "").maxAge(0).build();
 	}
 
-	private ResponseCookie.ResponseCookieBuilder cookie(String value) {
-		return ResponseCookie.from(properties.refreshCookieName(), value)
+	private ResponseCookie.ResponseCookieBuilder cookie(String cookieName, String value) {
+		return ResponseCookie.from(cookieName, value)
 				.httpOnly(true).secure(properties.cookieSecure()).sameSite(properties.cookieSameSite())
 				.path("/api/v1/auth");
 	}

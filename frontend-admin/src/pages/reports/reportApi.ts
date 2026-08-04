@@ -8,6 +8,7 @@ import {
 } from '../../mocks/adminApiMocks'
 import type { ApiResponse, PageResponse } from '../../api/types'
 import type { AdminReport, LiveStreamStatus, ReportStatus, ReportType } from '../../types/admin'
+import { resolveRiskLevel } from '../../utils/adminRisk'
 import { verificationFromAssignmentStatus } from '../../utils/adminVerification'
 
 type BackendReportStatus =
@@ -30,6 +31,21 @@ interface DashboardLiveView {
   expiresAt: string | null
 }
 
+/** 백엔드 RiskSummaryView. RiskLevel 은 소문자로 직렬화된다(very_high 등). */
+interface ReportRiskView {
+  status: string
+  score: number | null
+  level: string | null
+  confidence: number
+  confirmRequired: boolean
+  assessedAt: string | null
+}
+
+/** 알 수 없는 등급 문자열이 배지에 그대로 흘러가지 않도록 5단계로 정규화한다. */
+function toRiskLevel(risk: ReportRiskView | null) {
+  return resolveRiskLevel(risk?.level, risk?.score)
+}
+
 export interface OperatorDashboardTile {
   assignmentId: number
   reportId: number
@@ -49,6 +65,7 @@ export interface OperatorDashboardTile {
   assignedAt: string
   image: DashboardImageView | null
   live: DashboardLiveView | null
+  risk: ReportRiskView | null
 }
 
 export interface ReportAnalysis {
@@ -88,9 +105,8 @@ export function toAdminReport(tile: OperatorDashboardTile): AdminReport {
     latitude: tile.latitude,
     longitude: tile.longitude,
     type: categoryToType[tile.category] ?? 'etc',
-    // 백엔드 대시보드 타일에는 위험도 필드가 없다.
-    riskLevel: null,
-    riskScore: null,
+    riskLevel: toRiskLevel(tile.risk),
+    riskScore: tile.risk?.score ?? null,
     reportedAt: tile.assignedAt,
     assignedAt: tile.assignedAt,
     status: toUiStatus(tile.reportStatus),
@@ -212,6 +228,7 @@ export interface OperatorAssignment {
   acceptedAt: string | null
   startedAt: string | null
   completedAt: string | null
+  risk: ReportRiskView | null
 }
 
 /**
@@ -236,8 +253,8 @@ export function assignmentToAdminReport(assignment: OperatorAssignment): AdminRe
     assignmentId: assignment.assignmentId,
     location: assignment.address ?? assignment.administrativeAreaName ?? '위치 정보 없음',
     type: categoryToType[assignment.category] ?? 'etc',
-    riskLevel: null,
-    riskScore: null,
+    riskLevel: toRiskLevel(assignment.risk),
+    riskScore: assignment.risk?.score ?? null,
     reportedAt: assignment.assignedAt,
     assignedAt: assignment.assignedAt,
     status: toAssignmentOutcome(assignment),

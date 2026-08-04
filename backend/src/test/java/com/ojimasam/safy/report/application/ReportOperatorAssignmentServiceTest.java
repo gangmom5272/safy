@@ -27,6 +27,7 @@ import com.ojimasam.safy.admin.domain.OperatorPresenceRepository;
 import com.ojimasam.safy.admin.domain.type.MembershipStatus;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
+import com.ojimasam.safy.analysis.domain.RiskAssessmentRepository;
 import com.ojimasam.safy.report.application.dto.OperatorAssignmentResponse;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
@@ -366,6 +367,7 @@ class ReportOperatorAssignmentServiceTest {
 				mock(ReportOperatorAssignmentRepository.class);
 		private final ReportStatusHistoryRepository historyRepository = mock(ReportStatusHistoryRepository.class);
 		private final OperatorPresenceRepository presenceRepository = mock(OperatorPresenceRepository.class);
+		private final RiskAssessmentRepository riskAssessmentRepository = mock(RiskAssessmentRepository.class);
 		private final ReportRealtimeNotifier realtimeNotifier = mock(ReportRealtimeNotifier.class);
 		private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 		private final ReportOperatorAssignmentService service = new ReportOperatorAssignmentService(
@@ -375,6 +377,7 @@ class ReportOperatorAssignmentServiceTest {
 				assignmentRepository,
 				historyRepository,
 				presenceRepository,
+				riskAssessmentRepository,
 				realtimeNotifier,
 				eventPublisher,
 				Clock.fixed(NOW, ZoneOffset.UTC)

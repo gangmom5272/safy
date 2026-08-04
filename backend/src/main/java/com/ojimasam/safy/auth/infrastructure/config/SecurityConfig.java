@@ -46,7 +46,9 @@ public class SecurityConfig {
 								"/api/v1/auth/social/exchange",
 								"/api/v1/auth/admin/login",
 								"/api/v1/auth/token/refresh",
-								"/api/v1/auth/logout").permitAll()
+								"/api/v1/auth/admin/token/refresh",
+								"/api/v1/auth/logout",
+								"/api/v1/auth/admin/logout").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/live/webhooks/**").permitAll()
 						// 공개 도시데이터이고 로그인 전 지도에서 조회하므로 인증을 요구하지 않는다.
 						.requestMatchers(HttpMethod.GET, "/api/v1/public-data/**").permitAll()
@@ -76,7 +78,8 @@ public class SecurityConfig {
 		// 리소스 서버가 이를 사용자 액세스 토큰으로 해석해 401을 내지 않도록 제외한다.
 		return request -> {
 			String path = request.getServletPath();
-			return "/api/v1/auth/logout".equals(path) || path.startsWith("/api/v1/live/webhooks/")
+			return "/api/v1/auth/logout".equals(path) || "/api/v1/auth/admin/logout".equals(path)
+					|| path.startsWith("/api/v1/live/webhooks/")
 					? null : delegate.resolve(request);
 		};
 	}

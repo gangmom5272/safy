@@ -10,13 +10,17 @@ export function RiskLevelIndicator({ level, score }: RiskLevelIndicatorProps) {
   const normalizedLevel = resolveRiskLevel(level, score)
   const displayOrder = [...RISK_LEVEL_ORDER].reverse()
   const currentIndex = normalizedLevel ? displayOrder.indexOf(normalizedLevel) : -1
+  // 점수는 위험도 평가가 끝난 제보에만 있다. 없을 때는 빈 값을 보여주지 않고 줄 자체를 뺀다.
+  const hasScore = typeof score === 'number' && Number.isFinite(score)
 
   return (
-    <div className="risk-indicator" aria-label={`현재 위험도 ${getRiskLabel(level, score)}, 위험 점수 ${score}점`}>
-      <div className="risk-indicator__score">
-        <span>현재 위험 점수</span>
-        <strong>{Number.isFinite(score) ? `${score}점` : '정보 없음'}</strong>
-      </div>
+    <div className="risk-indicator" aria-label={`현재 위험도 ${getRiskLabel(level, score)}${hasScore ? `, 위험 점수 ${score}점` : ''}`}>
+      {hasScore && (
+        <div className="risk-indicator__score">
+          <span>현재 위험 점수</span>
+          <strong>{`${score}점`}</strong>
+        </div>
+      )}
       <ol className="risk-indicator__levels">
         {displayOrder.map((riskLevel, index) => {
           const state = index === currentIndex ? 'is-current' : index < currentIndex ? 'is-passed' : 'is-pending'

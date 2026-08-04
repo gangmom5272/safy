@@ -19,7 +19,9 @@ import jakarta.servlet.http.HttpServletResponse;
 public class CookieAuthOriginFilter extends OncePerRequestFilter {
 	private static final Set<String> PROTECTED_PATHS = Set.of(
 			"/api/v1/auth/token/refresh",
-			"/api/v1/auth/logout"
+			"/api/v1/auth/admin/token/refresh",
+			"/api/v1/auth/logout",
+			"/api/v1/auth/admin/logout"
 	);
 
 	private final Set<String> allowedOrigins;
