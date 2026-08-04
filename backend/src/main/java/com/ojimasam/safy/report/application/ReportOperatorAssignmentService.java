@@ -113,6 +113,12 @@ public class ReportOperatorAssignmentService {
 	public Optional<ReportOperatorAssignment> assignAutomatically(Report report, ReportCenterRoute route,
 			Long excludeOperatorId) {
 		if (report.getStatus() != ReportStatus.RECEIVED) return Optional.empty();
+		// 이 조회는 중복 배정을 막는 것 외에 순서도 보장한다. 호출한 쪽(재배정·이관)이 직전에
+		// 옛 배정을 CANCELLED 로 바꿔둔 상태인데, 배정 id 가 IDENTITY 라 아래 save() 가 INSERT 를
+		// 그 자리에서 실행한다. 이 조회가 같은 테이블을 건드려 대기 중인 UPDATE 를 먼저 밀어내지
+		// 않으면, 옛 배정이 아직 활성인 채로 새 배정이 들어가
+		// uq_report_operator_assignments_active_report 위반이 난다.
+		// 이 조회를 지우거나 뒤로 옮기려면 그 자리에 명시적 flush 가 필요하다.
 		if (assignmentRepository.existsByReport_IdAndStatusIn(report.getId(), ACTIVE_STATUSES)) {
 			return Optional.empty();
 		}

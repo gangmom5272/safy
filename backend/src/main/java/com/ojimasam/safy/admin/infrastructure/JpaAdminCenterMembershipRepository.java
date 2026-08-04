@@ -46,4 +46,25 @@ public interface JpaAdminCenterMembershipRepository
 			@Param("userRole") UserRole userRole,
 			@Param("userStatus") UserStatus userStatus
 	);
+
+	// 잠그지 않는다. 후보를 고르는 게 아니라 있는지만 보는 조회이고, 잠그면 읽기 전용
+	// 트랜잭션에서 PostgreSQL 이 "cannot execute SELECT FOR UPDATE in a read-only
+	// transaction" 으로 거부한다. 엔티티도 필요 없으므로 id 만 가져온다.
+	@Override
+	@Query("""
+			select operator.id
+			from AdminCenterMembership membership
+			join membership.user operator
+			where membership.controlCenter.id = :controlCenterId
+			  and membership.status = :membershipStatus
+			  and operator.role = :userRole
+			  and operator.status = :userStatus
+			order by operator.id asc
+			""")
+	java.util.List<Long> findAssignableOperatorIds(
+			@Param("controlCenterId") Long controlCenterId,
+			@Param("membershipStatus") MembershipStatus membershipStatus,
+			@Param("userRole") UserRole userRole,
+			@Param("userStatus") UserStatus userStatus
+	);
 }

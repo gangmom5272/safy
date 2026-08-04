@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -20,6 +21,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -76,21 +78,19 @@ class ReportTransferServiceTest {
 				ReportOperatorAssignment.automatic(report, currentRoute, operator, NOW.minusSeconds(30));
 		report.assign();
 		AdminCenterMembership membership = activeMembership(operator, 20L);
-		AdminCenterMembership membershipB = activeMembership(operator(40L), 21L);
-		AdminCenterMembership membershipD = activeMembership(operator(50L), 23L);
 		// 커버리지 mock 은 스터빙 밖에서 만든다(스터빙 인자 안에서 mock 을 만들면 UnfinishedStubbing).
 		List<ControlCenterArea> coverages = List.of(
 				coverage(centerA, 1), coverage(centerB, 2), coverage(centerC, 3), coverage(centerD, 4));
 		when(fixture.assignmentRepository.findByReport_IdAndStatusIn(any(), any()))
 				.thenReturn(Optional.of(assignment));
 		when(fixture.membershipRepository.findByUserIdAndIsPrimaryTrue(30L)).thenReturn(Optional.of(membership));
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(21L), any(), any(), any()))
-				.thenReturn(List.of(membershipB));
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(21L), any(), any(), any()))
+				.thenReturn(List.of(40L));
 		when(fixture.presenceRepository.findAllByOperatorIdIn(List.of(40L))).thenReturn(List.of());
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(22L), any(), any(), any()))
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(22L), any(), any(), any()))
 				.thenReturn(List.of());
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(23L), any(), any(), any()))
-				.thenReturn(List.of(membershipD));
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(23L), any(), any(), any()))
+				.thenReturn(List.of(50L));
 		when(fixture.presenceRepository.findAllByOperatorIdIn(List.of(50L)))
 				.thenReturn(List.of(OperatorPresence.connect(50L, NOW)));
 		when(fixture.controlCenterAreaRepository.findRoutingCandidates(any(), any(), any(), any(), any()))
@@ -110,6 +110,11 @@ class ReportTransferServiceTest {
 						tuple(22L, false, false, true),
 						// 거쳐왔어도 근무자가 복귀했으면 다시 후보다.
 						tuple(23L, true, true, true));
+		// 이 조회는 읽기 전용 트랜잭션에서 돈다. 배정용 조회는 PESSIMISTIC_WRITE 라
+		// PostgreSQL 이 "cannot execute SELECT FOR UPDATE in a read-only transaction" 으로
+		// 거부한다(운영에서 500 으로 터졌던 원인). 잠그는 조회를 쓰면 안 된다.
+		verify(fixture.membershipRepository, never())
+				.findEligibleOperatorsForAssignment(any(), any(), any(), any());
 	}
 
 	@Test
@@ -153,6 +158,11 @@ class ReportTransferServiceTest {
 		assertThat(currentRoute.getStatus()).isEqualTo(ReportCenterRouteStatus.REROUTED);
 		ArgumentCaptor<ReportCenterRoute> savedRoute = ArgumentCaptor.forClass(ReportCenterRoute.class);
 		verify(fixture.routeRepository).save(savedRoute.capture());
+		// 옛 라우트를 REROUTED 로 내린 UPDATE 가 새 ACTIVE 라우트 INSERT 보다 먼저 나가야 한다.
+		// 순서가 뒤집히면 uq_report_center_routes_active_report 유니크 위반으로 이관이 통째로 실패한다.
+		InOrder order = inOrder(fixture.routeRepository);
+		order.verify(fixture.routeRepository).flush();
+		order.verify(fixture.routeRepository).save(any());
 		assertThat(savedRoute.getValue().getRouteType()).isEqualTo(ReportCenterRouteType.MANUAL);
 		assertThat(savedRoute.getValue().getPreviousRoute()).isSameAs(currentRoute);
 		assertThat(savedRoute.getValue().getControlCenter()).isSameAs(centerB);
@@ -180,7 +190,7 @@ class ReportTransferServiceTest {
 		when(fixture.assignmentRepository.findByReport_IdAndStatusIn(any(), any()))
 				.thenReturn(Optional.of(assignment));
 		when(fixture.membershipRepository.findByUserIdAndIsPrimaryTrue(30L)).thenReturn(Optional.of(membership));
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(21L), any(), any(), any()))
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(21L), any(), any(), any()))
 				.thenReturn(List.of());
 
 		assertThatThrownBy(() -> fixture.service.transferManually(30L, 10L, 21L, "다시 서초로"))
@@ -203,15 +213,14 @@ class ReportTransferServiceTest {
 				ReportOperatorAssignment.automatic(report, currentRoute, operator, NOW.minusSeconds(30));
 		report.assign();
 		AdminCenterMembership membership = activeMembership(operator, 20L);
-		AdminCenterMembership membershipB = activeMembership(operator(40L), 21L);
 		when(fixture.reportRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(report));
 		when(fixture.assignmentRepository.findByReport_IdAndStatusIn(any(), any()))
 				.thenReturn(Optional.of(assignment));
 		when(fixture.membershipRepository.findByUserIdAndIsPrimaryTrue(30L)).thenReturn(Optional.of(membership));
 		ControlCenterArea currentCoverage = coverage(centerA, 1);
 		ControlCenterArea targetCoverage = coverage(centerB, 2);
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(21L), any(), any(), any()))
-				.thenReturn(List.of(membershipB));
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(21L), any(), any(), any()))
+				.thenReturn(List.of(40L));
 		when(fixture.presenceRepository.findAllByOperatorIdIn(List.of(40L)))
 				.thenReturn(List.of(OperatorPresence.connect(40L, NOW)));
 		when(fixture.controlCenterAreaRepository.findRoutingCandidates(any(), any(), any(), any(), any()))
@@ -258,17 +267,15 @@ class ReportTransferServiceTest {
 		ControlCenter centerA = center(20L, "강남");
 		ControlCenter centerB = center(21L, "서초");
 		ReportCenterRoute currentRoute = ReportCenterRoute.createInitial(report, centerA, 1, "AUTO", NOW.minusSeconds(60));
-		AdminCenterMembership membershipA = activeMembership(operator(30L), 20L);
-		AdminCenterMembership membershipB = activeMembership(operator(40L), 21L);
 		List<OperatorPresence> onDutyB = List.of(OperatorPresence.connect(40L, NOW));
 		when(fixture.reportRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(report));
 		when(fixture.assignmentRepository.existsByReport_IdAndStatusIn(any(), any())).thenReturn(false);
 		when(fixture.routeRepository.findByReport_IdAndStatus(10L, ReportCenterRouteStatus.ACTIVE))
 				.thenReturn(Optional.of(currentRoute));
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(20L), any(), any(), any()))
-				.thenReturn(List.of(membershipA));
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(21L), any(), any(), any()))
-				.thenReturn(List.of(membershipB));
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(20L), any(), any(), any()))
+				.thenReturn(List.of(30L));
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(21L), any(), any(), any()))
+				.thenReturn(List.of(40L));
 		// 강남(30번)은 오프라인, 서초(40번)만 근무중이다.
 		when(fixture.presenceRepository.findAllByOperatorIdIn(List.of(30L))).thenReturn(List.of());
 		when(fixture.presenceRepository.findAllByOperatorIdIn(List.of(40L))).thenReturn(onDutyB);
@@ -299,15 +306,14 @@ class ReportTransferServiceTest {
 		ReportCenterRoute firstRoute = ReportCenterRoute.createInitial(report, centerA, 1, "AUTO", NOW.minusSeconds(120));
 		ReportCenterRoute currentRoute = ReportCenterRoute.reroute(
 				firstRoute, centerB, ReportCenterRouteType.FAILOVER, 2, "이관", NOW.minusSeconds(60));
-		AdminCenterMembership membershipA = activeMembership(operator(30L), 20L);
 		when(fixture.reportRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(report));
 		when(fixture.assignmentRepository.existsByReport_IdAndStatusIn(any(), any())).thenReturn(false);
 		when(fixture.routeRepository.findByReport_IdAndStatus(10L, ReportCenterRouteStatus.ACTIVE))
 				.thenReturn(Optional.of(currentRoute));
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(21L), any(), any(), any()))
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(21L), any(), any(), any()))
 				.thenReturn(List.of());
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(20L), any(), any(), any()))
-				.thenReturn(List.of(membershipA));
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(20L), any(), any(), any()))
+				.thenReturn(List.of(30L));
 		ControlCenterArea recoveredCoverage = coverage(centerA, 1);
 		ControlCenterArea currentCoverage = coverage(centerB, 2);
 		when(fixture.presenceRepository.findAllByOperatorIdIn(List.of(30L)))
@@ -330,14 +336,13 @@ class ReportTransferServiceTest {
 		Report report = fixture.routedReport(10L);
 		ControlCenter centerA = center(20L, "강남");
 		ReportCenterRoute currentRoute = ReportCenterRoute.createInitial(report, centerA, 1, "AUTO", NOW.minusSeconds(60));
-		AdminCenterMembership membershipA = activeMembership(operator(30L), 20L);
 		List<OperatorPresence> onDutyA = List.of(OperatorPresence.connect(30L, NOW));
 		when(fixture.reportRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(report));
 		when(fixture.assignmentRepository.existsByReport_IdAndStatusIn(any(), any())).thenReturn(false);
 		when(fixture.routeRepository.findByReport_IdAndStatus(10L, ReportCenterRouteStatus.ACTIVE))
 				.thenReturn(Optional.of(currentRoute));
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(20L), any(), any(), any()))
-				.thenReturn(List.of(membershipA));
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(20L), any(), any(), any()))
+				.thenReturn(List.of(30L));
 		when(fixture.presenceRepository.findAllByOperatorIdIn(List.of(30L))).thenReturn(onDutyA);
 
 		boolean transferred = fixture.service.failoverIfCenterUnavailable(10L);
@@ -358,7 +363,7 @@ class ReportTransferServiceTest {
 		when(fixture.assignmentRepository.existsByReport_IdAndStatusIn(any(), any())).thenReturn(false);
 		when(fixture.routeRepository.findByReport_IdAndStatus(10L, ReportCenterRouteStatus.ACTIVE))
 				.thenReturn(Optional.of(currentRoute));
-		when(fixture.membershipRepository.findEligibleOperatorsForAssignment(eq(20L), any(), any(), any()))
+		when(fixture.membershipRepository.findAssignableOperatorIds(eq(20L), any(), any(), any()))
 				.thenReturn(List.of());
 		ControlCenterArea currentCoverage = coverage(centerA, 1);
 		when(fixture.controlCenterAreaRepository.findRoutingCandidates(any(), any(), any(), any(), any()))

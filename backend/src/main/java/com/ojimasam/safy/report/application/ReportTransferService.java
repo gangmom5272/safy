@@ -191,6 +191,10 @@ public class ReportTransferService {
 			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
 		}
 		currentRoute.markRerouted(now);
+		// 옛 라우트를 내린 UPDATE 를 먼저 밀어낸다. 라우트 id 가 IDENTITY 라 save() 가
+		// INSERT 를 그 자리에서 실행하는데, flush 없이는 옛 라우트가 아직 ACTIVE 인 채로
+		// 새 ACTIVE 가 들어가 uq_report_center_routes_active_report 위반이 난다.
+		routeRepository.flush();
 		ReportCenterRoute newRoute = routeRepository.save(ReportCenterRoute.reroute(
 				currentRoute, targetCoverage.getControlCenter(), ReportCenterRouteType.MANUAL,
 				targetCoverage.getPriority(), reason, now
@@ -248,6 +252,8 @@ public class ReportTransferService {
 
 		ControlCenter previousCenter = currentRoute.getControlCenter();
 		currentRoute.markRerouted(now);
+		// 수동 이관과 같은 이유로 새 ACTIVE 라우트를 넣기 전에 밀어낸다.
+		routeRepository.flush();
 		ReportCenterRoute newRoute = routeRepository.save(ReportCenterRoute.reroute(
 				currentRoute, target.get().getControlCenter(), ReportCenterRouteType.FAILOVER,
 				target.get().getPriority(),
@@ -306,11 +312,11 @@ public class ReportTransferService {
 	}
 
 	private boolean hasOnDutyOperator(Long controlCenterId) {
-		List<Long> operatorIds = membershipRepository.findEligibleOperatorsForAssignment(
-						controlCenterId, MembershipStatus.ACTIVE, UserRole.OPERATOR, UserStatus.ACTIVE
-				).stream()
-				.map(membership -> membership.getUser().getId())
-				.toList();
+		// 후보를 고르는 게 아니라 있는지만 보므로 잠그지 않는 조회를 쓴다. 배정용 조회는
+		// PESSIMISTIC_WRITE 라, 읽기 전용 트랜잭션(findTransferTargets)에서 쓰면
+		// PostgreSQL 이 SELECT ... FOR UPDATE 를 거부해 500 이 난다.
+		List<Long> operatorIds = membershipRepository.findAssignableOperatorIds(
+				controlCenterId, MembershipStatus.ACTIVE, UserRole.OPERATOR, UserStatus.ACTIVE);
 		if (operatorIds.isEmpty()) return false;
 		return presenceRepository.findAllByOperatorIdIn(operatorIds).stream()
 				.anyMatch(OperatorPresence::isOnDuty);
