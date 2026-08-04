@@ -1,0 +1,21 @@
+sample_id,spatial_pattern,review_status,review_notes
+jhu-test-0104,NOT_APPLICABLE,APPROVED,야간 도로의 사람 없는 저밀도 대조 표본
+jhu-test-3139,NOT_APPLICABLE,APPROVED,실내 상점의 사람 없는 저밀도 대조 표본
+jhu-test-0080,NOT_APPLICABLE,APPROVED,안개 낀 야외에 소수 인원이 떨어져 있는 표본
+jhu-test-0087,NOT_APPLICABLE,APPROVED,잔디 배경의 2인 근접 표본
+jhu-test-0515,NOT_APPLICABLE,APPROVED,실내에 3인이 모여 있는 표본
+jhu-test-1266,NOT_APPLICABLE,APPROVED,설원에 소수 인원이 분산된 표본
+jhu-test-0131,NOT_APPLICABLE,APPROVED,실내에 보통 규모 인원이 모인 표본
+jhu-test-0202,NOT_APPLICABLE,APPROVED,넓은 보행 공간에 보통 규모 인원이 분산된 표본
+jhu-test-0240,NOT_APPLICABLE,APPROVED,운동 경기 중 보통 규모 인원이 겹친 표본
+jhu-test-0332,NOT_APPLICABLE,APPROVED,안개 낀 야외에 보통 규모 인원이 분산된 표본
+jhu-test-2016,WIDE_DISTRIBUTED,APPROVED,공원형 산책로 전역에 사람이 넓게 분산된 핵심 표본
+jhu-test-0416,WIDE_DISTRIBUTED,APPROVED,넓은 보행로 전역에 사람이 분산된 표본
+jhu-test-1009,WIDE_DISTRIBUTED,APPROVED,넓은 쇼핑몰 통로에 사람이 분산된 표본
+jhu-test-1870,WIDE_DISTRIBUTED,APPROVED,야외 놀이공원 공간에 사람이 분산된 표본
+jhu-test-3765,WIDE_DISTRIBUTED,APPROVED,넓은 설원 도로에 사람이 분산된 표본
+jhu-test-1354,LOCAL_CLUSTERED,APPROVED,시장 통로 한 구역에 인원이 밀집된 표본
+jhu-test-2374,LOCAL_CLUSTERED,APPROVED,집회 군중이 화면 중앙에 국소 밀집된 표본
+jhu-test-4079,LOCAL_CLUSTERED,APPROVED,구조물 주변 한 구역에 군중이 밀집된 표본
+jhu-test-2317,LOCAL_CLUSTERED,APPROVED,공연 관객이 무대 앞에 국소 밀집된 표본
+jhu-test-4143,LOCAL_CLUSTERED,APPROVED,야외 숲길 한 구역에 단체 인원이 밀집된 표본
