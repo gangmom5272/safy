@@ -16,6 +16,7 @@ import { formatAdminTimestamp } from '../../utils/adminDate'
 import { getReportStatusTone } from '../../utils/adminStatus'
 import { compareRiskLevels, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
 import { subscribeToRealtimeSignals } from '../../api/realtime'
+import { getReportRowKey } from './reportRowKey'
 
 const allValue = 'all'
 
@@ -84,15 +85,6 @@ function FilterToggleChevron({ open }: { open: boolean }) {
   )
 }
 
-function CalendarIcon() {
-  return (
-    <svg className="filter-calendar-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <rect x="4" y="5" width="16" height="15" rx="2" />
-      <path d="M8 3v4M16 3v4M4 10h16" />
-    </svg>
-  )
-}
-
 function normalizeReportKeyword(keyword: string) {
   const trimmedKeyword = keyword.trim()
   return /^#\d+$/.test(trimmedKeyword) ? trimmedKeyword.slice(1) : trimmedKeyword
@@ -102,7 +94,7 @@ export function ReportListPage() {
   const navigate = useNavigate()
   const [draftFilters, setDraftFilters] = useState<ReportFilters>(initialFilters)
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(initialFilters)
-  const [isDetailOpen, setIsDetailOpen] = useState(true)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [reports, setReports] = useState<AdminReport[]>([])
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -275,7 +267,6 @@ export function ReportListPage() {
             <div className="report-filter__group report-filter__date">
               <span className="report-filter__group-title">제보 날짜</span>
               <div className="report-filter__date-range">
-                <CalendarIcon />
                 <input aria-label="제보 시작 날짜" type="date" value={draftFilters.startDate} onChange={(event) => setDraftFilters((current) => ({ ...current, startDate: event.target.value }))} />
                 <span aria-hidden="true">~</span>
                 <input aria-label="제보 종료 날짜" type="date" value={draftFilters.endDate} onChange={(event) => setDraftFilters((current) => ({ ...current, endDate: event.target.value }))} />
@@ -347,7 +338,7 @@ export function ReportListPage() {
               <thead><tr><th>제보 ID</th><th>위치</th><th>카테고리</th><th>위험도</th><th>제보 시간</th><th>AI 분석 상태</th><th>담당자</th><th>처리 상태</th></tr></thead>
               <tbody>
                 {filteredReports.map((report) => (
-                  <tr key={report.id} className="clickable-row" onClick={() => navigate(createReportDetailPath(report.id))}>
+                  <tr key={getReportRowKey(report)} className="clickable-row" onClick={() => navigate(createReportDetailPath(report.id))}>
                     <td>#{report.id}</td><td>{report.location}</td><td>{reportTypeLabels[report.type]}</td>
                     <td><RiskBadge value={report.riskLevel} score={report.riskScore} /></td>
                     <td>{formatAdminTimestamp(report.reportedAt) ?? '정보 없음'}</td><td>{report.aiAnalysisStatus ? aiAnalysisStatusLabels[report.aiAnalysisStatus] : '-'}</td><td>{report.managerName}</td>
