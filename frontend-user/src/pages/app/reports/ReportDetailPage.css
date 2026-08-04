@@ -135,8 +135,8 @@
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 5px;
+  /* 구분선은 두지 않는다. 제보 요약은 위에서 아래로 읽히는 한 덩어리로 본다. */
   padding: 12px 0;
-  border-bottom: 1px solid #eaecf0;
 }
 
 .report-detail-page .report-detail-list div:first-child {
@@ -145,7 +145,6 @@
 
 .report-detail-page .report-detail-list div:last-child {
   padding-bottom: 0;
-  border-bottom: 0;
 }
 
 .report-detail-page .report-detail-list dt {
@@ -187,6 +186,8 @@
   color: #374151;
   background: #f3f4f6;
   font-size: 14px;
+  /* dd 안에 들어가므로 dd 의 굵기(600)를 상속하지 않도록 본문 굵기를 고정한다. */
+  font-weight: 400;
   line-height: 1.7;
   overflow-wrap: anywhere;
 }

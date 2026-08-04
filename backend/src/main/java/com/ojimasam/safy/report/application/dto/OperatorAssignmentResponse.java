@@ -10,6 +10,13 @@ import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.type.ReportCategory;
 import com.ojimasam.safy.report.domain.type.ReportSubcategory;
 
+/**
+ * 담당자 배정 한 건.
+ *
+ * <p>시각 필드가 둘인 이유: {@code reportedAt} 은 시민이 제보한 시각이고,
+ * {@code assignedAt} 은 이 담당자에게 배정된 시각이다. 재배정되면 배정 시각만 뒤로
+ * 밀리므로 "최신 제보순"으로 줄 세울 때는 반드시 {@code reportedAt} 을 써야 한다.
+ */
 public record OperatorAssignmentResponse(
 		Long assignmentId,
 		Long reportId,
@@ -25,6 +32,9 @@ public record OperatorAssignmentResponse(
 		String controlCenterName,
 		Long operatorId,
 		String operatorName,
+		/** 시민이 제보한 시각. 목록 정렬·표시 기준이다. */
+		Instant reportedAt,
+		/** 이 담당자에게 배정된 시각. 재배정되면 뒤로 밀린다. */
 		Instant assignedAt,
 		Instant acceptedAt,
 		Instant startedAt,
@@ -54,6 +64,7 @@ public record OperatorAssignmentResponse(
 				assignment.getRoute().getControlCenter().getName(),
 				assignment.getOperator().getId(),
 				assignment.getOperator().getDisplayName(),
+				report.getReportedAt(),
 				assignment.getAssignedAt(),
 				assignment.getAcceptedAt(),
 				assignment.getStartedAt(),

@@ -6,7 +6,6 @@ import { ErrorState, LoadingSkeleton } from '../situations/SituationStates'
 import {
   analysisStatusLabels,
   reportTypeLabels,
-  riskLevelLabels,
   shortRiskLevelLabels,
   type ReportAnalysis,
   type ReportDetail,
@@ -100,7 +99,7 @@ export function ReportDetailPage() {
           />
           {shareMessage ? <p className="share-feedback">{shareMessage}</p> : null}
           <section className="report-detail-content-section" aria-labelledby="analysis-title">
-            <h2 id="analysis-title" className="report-detail-section-title">현장 상황 분석</h2>
+            <h2 id="analysis-title" className="report-detail-section-title">제보 분석</h2>
             <ReportAnalysisPanel
               analysis={analysis}
               isLoading={isAnalysisLoading}
@@ -137,11 +136,6 @@ function ReportDetailSummary({ report, imageFailed, onImageError }: ReportDetail
       <div className="report-detail-content-section">
         <h2 id="report-detail-title" className="report-detail-section-title">{report.locationName || report.title}</h2>
         <div className="report-detail-card report-detail-body">
-          <div className="report-card-badges">
-            <span className={`risk-badge risk-${report.riskLevel}`}>
-              {riskLevelLabels[report.riskLevel]}
-            </span>
-          </div>
           <p className="report-category">{reportTypeLabels[report.type]}</p>
           <dl className="report-detail-list">
             <div>
@@ -152,10 +146,15 @@ function ReportDetailSummary({ report, imageFailed, onImageError }: ReportDetail
               <dt><DetailIcon name="time" />제보 시각</dt>
               <dd>{formatDateTime(report.reportedAt)}</dd>
             </div>
+            <div>
+              <dt><DetailIcon name="note" />제보내용</dt>
+              <dd>
+                <p className="report-description detail">
+                  {report.description || '상세 설명이 없습니다.'}
+                </p>
+              </dd>
+            </div>
           </dl>
-          <p className="report-description detail">
-            {report.description || '상세 설명이 없습니다.'}
-          </p>
         </div>
       </div>
     </section>
@@ -225,7 +224,7 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
   )
 }
 
-type DetailIconName = 'address' | 'time' | 'congestion' | 'people' | 'risk'
+type DetailIconName = 'address' | 'time' | 'congestion' | 'people' | 'risk' | 'note'
 
 function DetailIcon({ name }: { name: DetailIconName }) {
   const paths = {
@@ -234,6 +233,7 @@ function DetailIcon({ name }: { name: DetailIconName }) {
     congestion: <><path d="M12 3 3 20h18Z"/><path d="M12 9v4M12 17h.01"/></>,
     people: <><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 4 4v2"/></>,
     risk: <><path d="M12 3l8 3v6c0 5-3.4 7.9-8 9-4.6-1.1-8-4-8-9V6Z"/><path d="M12 8v4M12 15h.01"/></>,
+    note: <><path d="M6 3h9l4 4v14H6Z"/><path d="M14 3v5h5M9 12h6M9 16h4"/></>,
   }
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }

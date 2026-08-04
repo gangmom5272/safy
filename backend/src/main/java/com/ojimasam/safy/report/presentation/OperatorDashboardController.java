@@ -33,7 +33,11 @@ public class OperatorDashboardController {
 	}
 
 	@GetMapping
-	@Operation(summary = "관제 대시보드 제보 타일 조회", description = "담당자 관제 화면에 표시할 제보 타일을 페이지 단위로 조회합니다.")
+	@Operation(summary = "관제 대시보드 제보 타일 조회",
+			description = "담당자 관제 화면에 표시할 제보 타일을 페이지 단위로 조회합니다.\n\n"
+					+ "시각 필드가 둘입니다. **reportedAt** 은 시민이 제보한 시각이고, "
+					+ "**assignedAt** 은 이 담당자에게 배정된 시각입니다. 재배정되면 배정 시각만 뒤로 밀리므로 "
+					+ "'최신 제보순' 정렬과 '제보 시간' 표시에는 reportedAt 을 써야 합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "대시보드 타일 조회 성공")
 	public ApiResponse<PageResponse<OperatorDashboardTileView>> list(
 			@AuthenticationPrincipal Jwt jwt,
