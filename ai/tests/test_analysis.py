@@ -508,9 +508,32 @@ def _build_shadow_service(
                 official=official,
                 shadow=shadow_snapshot,
                 differences=ShadowAnalysisDifferences(
-                    person_count=None,
-                    visual_congestion_score=None,
-                    local_peak_congestion_score=None,
+                    person_count=(
+                        None
+                        if shadow_snapshot.person_count is None
+                        or official.person_count is None
+                        else shadow_snapshot.person_count - official.person_count
+                    ),
+                    visual_congestion_score=(
+                        None
+                        if shadow_snapshot.visual_congestion_score is None
+                        or official.visual_congestion_score is None
+                        else round(
+                            shadow_snapshot.visual_congestion_score
+                            - official.visual_congestion_score,
+                            2,
+                        )
+                    ),
+                    local_peak_congestion_score=(
+                        None
+                        if shadow_snapshot.local_peak_congestion_score is None
+                        or official.local_peak_congestion_score is None
+                        else round(
+                            shadow_snapshot.local_peak_congestion_score
+                            - official.local_peak_congestion_score,
+                            2,
+                        )
+                    ),
                 ),
                 dense_scene=determine_dense_scene_assessment(
                     official_local_peak_congestion_score=(
@@ -568,10 +591,11 @@ def test_correction_disabled_keeps_yolo_congestion(monkeypatch) -> None:
         ),
     )
 
-    payload = client.post(
+    response = client.post(
         "/api/v1/analyze/frame",
         files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
-    ).json()
+    )
+    payload = response.json()
 
     # 플래그가 꺼져 있으면 YOLO 값을 그대로 쓴다.
     assert payload["congestionSource"] == "YOLO"
@@ -597,10 +621,11 @@ def test_correction_enabled_raises_congestion_scores(monkeypatch) -> None:
         ),
     )
 
-    payload = client.post(
+    response = client.post(
         "/api/v1/analyze/frame",
         files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
-    ).json()
+    )
+    payload = response.json()
 
     assert call_log == ["awaited"]
     assert payload["congestionSource"] == "P2PNET_CORRECTED"
@@ -609,6 +634,13 @@ def test_correction_enabled_raises_congestion_scores(monkeypatch) -> None:
     # 공식 인원수는 여전히 YOLO 결과다.
     assert payload["personCount"] == 2
     assert payload["modelName"] == "YOLO"
+    assert response.headers["x-safy-ai-mode"] == "DUAL_MODEL"
+    assert response.headers["x-safy-p2pnet-status"] == "COMPLETED"
+    assert response.headers["x-safy-congestion-source"] == ("P2PNET_CORRECTED")
+    assert response.headers["x-safy-p2pnet-gate-triggered"] == "false"
+    assert response.headers["x-safy-yolo-processing-time-ms"] == "10"
+    assert response.headers["x-safy-p2pnet-processing-time-ms"] == "900"
+    assert response.headers["x-safy-person-count-difference"] == "178"
 
 
 def test_correction_enabled_but_gate_blocks_keeps_yolo(monkeypatch) -> None:
@@ -630,13 +662,16 @@ def test_correction_enabled_but_gate_blocks_keeps_yolo(monkeypatch) -> None:
         ),
     )
 
-    payload = client.post(
+    response = client.post(
         "/api/v1/analyze/frame",
         files={"image": ("test.jpg", b"fake-image", "image/jpeg")},
-    ).json()
+    )
+    payload = response.json()
 
     assert payload["congestionSource"] == "YOLO"
     assert payload["visualCongestionScore"] == 0.94
+    assert response.headers["x-safy-p2pnet-gate-triggered"] == "true"
+    assert response.headers["x-safy-congestion-source"] == "YOLO"
 
 
 def test_correction_enabled_with_failed_shadow_returns_failed(monkeypatch) -> None:

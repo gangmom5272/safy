@@ -107,6 +107,14 @@ def test_shadow_analysis_records_model_differences() -> None:
     assert first_record.differences.local_peak_congestion_score == 15.0
     assert records[0]["selectionStatus"] == ("YOLO_PRIMARY_P2PNET_SHADOW")
     assert records[0]["automaticFallback"] == "DISABLED"
+    assert records[0]["operation"] == {
+        "mode": "SHADOW_ONLY",
+        "correctionEnabled": False,
+        "congestionSource": "YOLO",
+        "falsePositiveGateTriggered": False,
+        "shadowDevice": "cpu",
+        "dualModelProcessingTimeMs": 132,
+    }
     assert "personConfidences" not in records[0]["official"]
     assert factory_calls == 1
 
@@ -222,6 +230,8 @@ def test_shadow_failure_does_not_change_official_result() -> None:
     assert record.shadow.failure_codes == [
         "MODEL_INFERENCE_FAILED",
     ]
+    assert record.shadow.failure_reason == "INFERENCE_FAILED"
+    assert records[0]["shadow"]["failureReason"] == "INFERENCE_FAILED"
     assert record.differences.person_count is None
     assert "sensitive loader error" not in str(records[0])
     assert service.enabled is False
@@ -266,6 +276,8 @@ def test_shadow_timeout_is_recorded_as_isolated_failure() -> None:
     assert record.shadow.failure_codes == [
         "MODEL_INFERENCE_FAILED",
     ]
+    assert record.shadow.failure_reason == "TIMEOUT"
+    assert records[0]["shadow"]["failureReason"] == "TIMEOUT"
     assert records[0]["official"]["personCount"] == 5
 
 

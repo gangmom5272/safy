@@ -12,8 +12,11 @@ from typing import Protocol
 from uuid import uuid4
 
 from app.services.dense_scene_escalation import (
+    CONGESTION_SOURCE_OFFICIAL,
     DenseSceneAssessment,
+    correct_congestion_scores,
     determine_dense_scene_assessment,
+    is_congestion_correction_enabled,
 )
 
 
@@ -41,6 +44,7 @@ class ModelAnalysisSnapshot:
     processing_time_ms: int
     failure_codes: list[str]
     low_confidence_signal: bool | None = None
+    failure_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -60,6 +64,11 @@ class ShadowAnalysisRecord:
     shadow: ModelAnalysisSnapshot
     differences: ShadowAnalysisDifferences
     dense_scene: DenseSceneAssessment
+    correction_enabled: bool = False
+    congestion_source: str = CONGESTION_SOURCE_OFFICIAL
+    false_positive_gate_triggered: bool = False
+    shadow_device: str = "unknown"
+    dual_model_processing_time_ms: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -68,6 +77,18 @@ class ShadowAnalysisRecord:
             "frameSha256": self.frame_sha256,
             "selectionStatus": self.selection_status,
             "automaticFallback": self.automatic_fallback,
+            "operation": {
+                "mode": (
+                    "DUAL_MODEL_CORRECTION"
+                    if self.correction_enabled
+                    else "SHADOW_ONLY"
+                ),
+                "correctionEnabled": self.correction_enabled,
+                "congestionSource": self.congestion_source,
+                "falsePositiveGateTriggered": (self.false_positive_gate_triggered),
+                "shadowDevice": self.shadow_device,
+                "dualModelProcessingTimeMs": (self.dual_model_processing_time_ms),
+            },
             "official": _snapshot_to_dict(self.official),
             "shadow": _snapshot_to_dict(self.shadow),
             "differences": {
@@ -215,12 +236,26 @@ class P2PNetShadowAnalysisService:
                 "P2PNet shadow analysis timed out after %.2f seconds",
                 self.config.timeout_seconds,
             )
-            shadow = self._failed_snapshot()
+            shadow = self._failed_snapshot(
+                failure_reason="TIMEOUT",
+            )
         except Exception:
             logger.exception(
                 "P2PNet shadow analysis failed",
             )
-            shadow = self._failed_snapshot()
+            shadow = self._failed_snapshot(
+                failure_reason="INFERENCE_FAILED",
+            )
+
+        correction_enabled = is_congestion_correction_enabled()
+        correction = correct_congestion_scores(
+            official_visual_congestion_score=(official.visual_congestion_score),
+            official_local_peak_congestion_score=(official.local_peak_congestion_score),
+            shadow_analysis_status=shadow.analysis_status,
+            shadow_visual_congestion_score=(shadow.visual_congestion_score),
+            shadow_local_peak_congestion_score=(shadow.local_peak_congestion_score),
+            shadow_low_confidence_signal=(shadow.low_confidence_signal),
+        )
 
         record = ShadowAnalysisRecord(
             analysis_id=analysis_id or str(uuid4()),
@@ -238,6 +273,15 @@ class P2PNetShadowAnalysisService:
                     official.local_peak_congestion_score
                 ),
                 shadow_local_peak_congestion_score=(shadow.local_peak_congestion_score),
+            ),
+            correction_enabled=correction_enabled,
+            congestion_source=(
+                correction.source if correction_enabled else CONGESTION_SOURCE_OFFICIAL
+            ),
+            false_positive_gate_triggered=(shadow.low_confidence_signal is True),
+            shadow_device=self.config.device,
+            dual_model_processing_time_ms=(
+                official.processing_time_ms + shadow.processing_time_ms
             ),
         )
         self._record_sink(record.to_dict())
@@ -283,7 +327,11 @@ class P2PNetShadowAnalysisService:
 
         return self._runner
 
-    def _failed_snapshot(self) -> ModelAnalysisSnapshot:
+    def _failed_snapshot(
+        self,
+        *,
+        failure_reason: str,
+    ) -> ModelAnalysisSnapshot:
         return ModelAnalysisSnapshot(
             model_name=SHADOW_MODEL_NAME,
             model_version=self.config.model_version,
@@ -294,6 +342,7 @@ class P2PNetShadowAnalysisService:
             local_peak_congestion_score=None,
             processing_time_ms=0,
             failure_codes=[SHADOW_FAILURE_CODE],
+            failure_reason=failure_reason,
         )
 
 
@@ -374,6 +423,7 @@ def _snapshot_to_dict(
         "processingTimeMs": values["processing_time_ms"],
         "failureCodes": values["failure_codes"],
         "lowConfidenceSignal": values["low_confidence_signal"],
+        "failureReason": values["failure_reason"],
     }
 
 
