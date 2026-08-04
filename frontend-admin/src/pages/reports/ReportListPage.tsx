@@ -347,7 +347,8 @@ export function ReportListPage() {
               <thead><tr><th>제보 ID</th><th>위치</th><th>카테고리</th><th>위험도</th><th>제보 시간</th><th>AI 분석 상태</th><th>담당자</th><th>처리 상태</th></tr></thead>
               <tbody>
                 {filteredReports.map((report) => (
-                  <tr key={report.id} className="clickable-row" onClick={() => navigate(createReportDetailPath(report.id))}>
+                  // 목록은 배정 단위다. 같은 제보가 재배정으로 여러 행이 될 수 있어 제보 ID 를 key 로 쓰면 중복된다.
+                  <tr key={report.assignmentId ?? report.id} className="clickable-row" onClick={() => navigate(createReportDetailPath(report.id))}>
                     <td>#{report.id}</td><td>{report.location}</td><td>{reportTypeLabels[report.type]}</td>
                     <td><RiskBadge value={report.riskLevel} score={report.riskScore} /></td>
                     <td>{formatAdminTimestamp(report.reportedAt) ?? '정보 없음'}</td><td>{report.aiAnalysisStatus ? aiAnalysisStatusLabels[report.aiAnalysisStatus] : '-'}</td><td>{report.managerName}</td>

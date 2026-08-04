@@ -89,7 +89,12 @@ public class OperatorReportController {
 	@PreAuthorize("hasRole('OPERATOR')")
 	@Operation(summary = "내 배정 제보 목록 조회",
 			description = "현재 담당자가 맡은 제보를 조회합니다. status 를 지정하지 않으면 "
-					+ "종료·반려·재배정으로 종결된 건까지 포함한 전체 담당 이력을 반환합니다.")
+					+ "종료·반려·재배정으로 종결된 건까지 포함한 전체 담당 이력을 반환합니다.\n\n"
+					+ "시각 필드가 둘입니다. **reportedAt** 은 시민이 제보한 시각이고, "
+					+ "**assignedAt** 은 이 담당자에게 배정된 시각입니다. 재배정되면 배정 시각만 뒤로 밀리므로 "
+					+ "'최신 제보순' 정렬과 '제보 시간' 표시에는 reportedAt 을 써야 합니다.\n\n"
+					+ "**risk** 는 위험도 평가 결과입니다. 평가가 없는 제보는 null 이며, 0점으로 채우지 않습니다 "
+					+ "— 0점은 very_low(안전)로 읽혀 오판을 만듭니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "배정 제보 목록 조회 성공")
 	public ApiResponse<PageResponse<OperatorAssignmentResponse>> listMine(
 			@AuthenticationPrincipal Jwt jwt,

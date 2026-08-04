@@ -62,6 +62,9 @@ export interface OperatorDashboardTile {
   controlCenterName: string | null
   operatorId: number | null
   operatorName: string | null
+  /** 시민이 제보한 시각. 정렬·표시 기준이다. */
+  reportedAt: string
+  /** 이 담당자에게 배정된 시각. 재배정되면 뒤로 밀린다. */
   assignedAt: string
   image: DashboardImageView | null
   live: DashboardLiveView | null
@@ -108,7 +111,9 @@ export function toAdminReport(tile: OperatorDashboardTile): AdminReport {
     subcategory: tile.subcategory,
     riskLevel: toRiskLevel(tile.risk),
     riskScore: tile.risk?.score ?? null,
-    reportedAt: tile.assignedAt,
+    // 배정 시각이 아니라 제보 시각을 쓴다. 재배정되면 배정 시각만 뒤로 밀려
+    // '최신순' 정렬에서 제보 순서가 뒤섞인다.
+    reportedAt: tile.reportedAt,
     assignedAt: tile.assignedAt,
     status: toUiStatus(tile.reportStatus),
     verificationStatus: verificationFromAssignmentStatus(tile.assignmentStatus),
@@ -226,6 +231,9 @@ export interface OperatorAssignment {
   controlCenterName: string | null
   operatorId: number | null
   operatorName: string | null
+  /** 시민이 제보한 시각. 정렬·표시 기준이다. */
+  reportedAt: string
+  /** 이 담당자에게 배정된 시각. 재배정되면 뒤로 밀린다. */
   assignedAt: string
   acceptedAt: string | null
   startedAt: string | null
@@ -258,7 +266,9 @@ export function assignmentToAdminReport(assignment: OperatorAssignment): AdminRe
     subcategory: assignment.subcategory,
     riskLevel: toRiskLevel(assignment.risk),
     riskScore: assignment.risk?.score ?? null,
-    reportedAt: assignment.assignedAt,
+    // 배정 시각이 아니라 제보 시각을 쓴다. 재배정되면 배정 시각만 뒤로 밀려
+    // '최신순' 정렬에서 제보 순서가 뒤섞인다.
+    reportedAt: assignment.reportedAt,
     assignedAt: assignment.assignedAt,
     status: toAssignmentOutcome(assignment),
     verificationStatus: verificationFromAssignmentStatus(assignment.assignmentStatus),
