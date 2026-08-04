@@ -168,7 +168,7 @@ deploy:
     - |
       ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "
         cd ~/S15P11A503/infra &&
-        DEPLOY_TAG=$CI_COMMIT_SHORT_SHA docker compose up -d --build backend data ai-server db redis minio nginx uptime-kuma &&
+        DEPLOY_TAG=$CI_COMMIT_SHORT_SHA docker compose up -d --build backend data ai-server ai-tunnel db redis minio nginx uptime-kuma &&
         docker compose exec -T nginx nginx -t &&
         docker compose exec -T nginx nginx -s reload &&
         echo '$CI_COMMIT_SHORT_SHA $(date -u +%Y-%m-%dT%H:%M:%SZ)' >> ~/S15P11A503/.deployed_tags

@@ -126,6 +126,24 @@ services:
       #   하루 1회라 배포 직후에는 결과를 볼 수 없으니, 검증할 때만 .env로 임시로 당기고
       #   확인 후 원복한다.
       - "PUBLIC_DATA_CULTURAL_EVENT_CRON=${PUBLIC_DATA_CULTURAL_EVENT_CRON:-0 0 4 * * *}"
+      # 프레임 분석·블러를 요청할 ai-server 주소. PUBLIC_DATA_BASE_URL과 같은 이유로
+      # 반드시 넘겨야 한다 — application.yml의 기본값 http://localhost:8000은 backend
+      # 컨테이너 자신을 가리키는데 backend는 컨테이너 안에서 8080만 LISTEN한다
+      # (2026-08-03 실측: docker port = 8080/tcp -> 127.0.0.1:8090, 8000은 미사용).
+      # MediaProcessingWorker가 2초 주기로 폴링하므로, 이 값이 없으면 실제 제보가
+      # 들어오는 순간부터 AI 호출이 전건 실패한다. 아직 job이 0건이라 드러나지 않았다.
+      # ai-server:8000 도달은 2026-08-03 실측(infra_default에서 /health 200).
+      - AI_SERVER_BASE_URL=${AI_SERVER_BASE_URL:-http://ai-server:8000}
+      # 정확도 우선 모드(티켓 140)를 켜면 AI 가 P2PNet 을 응답 경로에서 기다린다.
+      # 그때 두 타임아웃의 순서가 중요하다 — AI 내부 타임아웃
+      # (P2PNET_SHADOW_TIMEOUT_SECONDS)이 이 값보다 작아야 AI 가 먼저 판단을
+      # 내리고, 백엔드는 그 응답을 받는다. 반대가 되면 백엔드가 먼저 끊어
+      # AI 가 계산을 마쳐도 결과가 버려진다.
+      # 기본값은 application.yml 과 같은 PT10S 로 두어 현재 동작을 바꾸지 않는다.
+      # 2026-08-03 실측: P2PNet 추론 4,524~4,684ms, 영상 2개에서 락 대기 최대
+      # 4,806ms, CI 빌드와 겹치면 6,496~10,856ms. 정확도 우선을 실제로 켤 때는
+      # AI 내부 타임아웃과 이 값을 함께 올려야 한다.
+      - AI_READ_TIMEOUT=${AI_READ_TIMEOUT:-PT10S}
     depends_on:
       - db
       - redis
@@ -242,6 +260,12 @@ services:
       - P2PNET_SHADOW_DEVICE=cpu
       - P2PNET_SHADOW_THRESHOLD=${P2PNET_SHADOW_THRESHOLD:-0.5}
       - P2PNET_SHADOW_TIMEOUT_SECONDS=${P2PNET_SHADOW_TIMEOUT_SECONDS:-5.0}
+      # env.example 에는 있었지만 이 목록에 빠져 있었다(2026-08-03, AI 담당자 지적).
+      # compose 는 env_file 을 쓰지 않으므로 여기 선언이 없으면 .env 에 적어도
+      # 컨테이너에 전달되지 않고, 보정을 켜려는 시도가 조용히 실패한다.
+      # 기본값은 false 를 유지한다 — 서버 실측에서 P2PNet CPU 추론이 4.58초라
+      # 5초 프레임 예산의 92%를 먹고, 동시 영상 2개부터 대기열이 발산했다.
+      - P2PNET_CONGESTION_CORRECTION_ENABLED=${P2PNET_CONGESTION_CORRECTION_ENABLED:-false}
     volumes:
       - p2pnet_model_cache:/var/cache/safy-ai/models/p2pnet
     restart: unless-stopped
@@ -264,6 +288,40 @@ services:
     #   추론 후 RSS 341MB(유휴 202MB) / 동시 4요청은 직렬 처리되어 총 470ms
     #   1280x720 서버 처리시간 p95 154ms, HTTP 왕복 p95 205ms
     #     = 5초 프레임 예산의 약 4%. 단 사람 0명 프레임 기준이고 P2PNet 은 미측정이다.
+
+  # ==========================================
+  # AI 터널 중계 — 노트북 GPU AI 서버로 가는 경로
+  # ==========================================
+  # 서버에 GPU 가 없어 P2PNet CPU 추론이 4.58초다(2026-08-03 실측). 그래서 AI 담당자가
+  # RTX 4050 노트북에서 AI 서버를 돌리고 배포 서버로 리버스 SSH 터널을 연결했다.
+  #
+  #   노트북 127.0.0.1:8000  ←ssh -R←  배포 서버 127.0.0.1:18000
+  #
+  # 그 터널은 호스트 루프백에만 바인딩되므로(sshd 기본값 GatewayPorts no) 컨테이너가
+  # 직접 쓸 수 없다. 이 서비스가 host 네트워크로 돌면서 호스트 루프백에 닿고, 도커
+  # 브리지 게이트웨이 172.17.0.1:18001 에 리스너를 열어 backend 가 접근하게 한다.
+  # 설정은 ./nginx-ai-tunnel/ai-tunnel.conf 에 있다.
+  #
+  # 호스트 방화벽에 규칙이 필요하다(2026-08-03, 서버에 수동 적용):
+  #   sudo ufw allow from 172.16.0.0/12 to 172.17.0.1 port 18001 proto tcp
+  # 컨테이너에서 호스트로 가는 트래픽은 INPUT 체인을 타고 정책이 DROP 이라, 이 규칙이
+  # 없으면 컨테이너에서 타임아웃된다(실측). 중계 방식을 바꿔도 우회되지 않는다.
+  #
+  # 실측(2026-08-03, 1280x720 287KB, n=20): 터널 왕복 평균 548.7ms, p95 1,151.9ms,
+  # 최대 1,211.2ms. GPU YOLO 추론은 9~14ms(서버 CPU 68ms), 콜드 스타트 2.6~5.7초.
+  # 5초 프레임 예산의 23%(p95)라 정확도 우선 모드가 성립한다.
+  #
+  # 노트북이나 터널이 끊기면 이 중계는 살아 있어도 502 가 된다. 폴백은 .env 의
+  # AI_SERVER_BASE_URL 을 http://ai-server:8000 으로 되돌려 backend 를 재시작한다.
+  # 그래서 서버 CPU ai-server 컨테이너를 지우지 않고 유지한다.
+  ai-tunnel:
+    image: nginx:alpine
+    network_mode: host
+    volumes:
+      - ./nginx-ai-tunnel:/etc/nginx/conf.d:ro
+    restart: unless-stopped
+    logging: *default-logging
+    labels: *loki-logging
 
   # ==========================================
   # Data 서버 (FastAPI) — 공공데이터 수집
