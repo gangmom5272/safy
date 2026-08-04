@@ -4,7 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public final class RiskAssessor {
-	public static final String RISK_RULE_VERSION = "safy-risk-v0.1";
+	public static final String RISK_RULE_VERSION = "safy-risk-v0.2";
 	private static final double WEIGHT_VISUAL = 0.4;
 	private static final double WEIGHT_LOCAL_PEAK = 0.6;
 	private static final double WEIGHT_PERSISTENCE = 0.15;
@@ -49,7 +49,9 @@ public final class RiskAssessor {
 				&& persistence != null && persistence >= EXCEPTION_PERSISTENCE_VERY_HIGH) {
 			return level.raiseTo(RiskLevel.VERY_HIGH);
 		}
-		if (localPeak >= EXCEPTION_LOCAL_PEAK_HIGH) return level.raiseTo(RiskLevel.HIGH);
+		if (localPeak >= EXCEPTION_LOCAL_PEAK_HIGH && persistence != null) {
+			return level.raiseTo(RiskLevel.HIGH);
+		}
 		return level;
 	}
 
