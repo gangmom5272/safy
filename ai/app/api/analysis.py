@@ -5,6 +5,7 @@ from fastapi import (
     BackgroundTasks,
     File,
     HTTPException,
+    Response,
     UploadFile,
 )
 
@@ -31,6 +32,7 @@ from app.services.model import (
 from app.services.person_detector import detect_people
 from app.services.shadow_analysis import (
     ModelAnalysisSnapshot,
+    ShadowAnalysisRecord,
     get_shadow_analysis_service,
 )
 
@@ -41,6 +43,47 @@ router = APIRouter(
     prefix="/api/v1/analyze",
     tags=["analysis"],
 )
+
+
+def _set_dual_model_monitoring_headers(
+    response: Response,
+    *,
+    record: ShadowAnalysisRecord | None,
+    congestion_source: str = CONGESTION_SOURCE_OFFICIAL,
+    status: str,
+) -> None:
+    """내부 프록시가 GPU·CPU 경로를 동일하게 관측할 수 있게 한다."""
+    response.headers["X-SAFY-AI-Mode"] = "DUAL_MODEL"
+    response.headers["X-SAFY-P2PNet-Status"] = status
+    response.headers["X-SAFY-Congestion-Source"] = congestion_source
+
+    if record is None:
+        return
+
+    response.headers["X-SAFY-P2PNet-Gate-Triggered"] = str(
+        record.shadow.low_confidence_signal is True,
+    ).lower()
+    response.headers["X-SAFY-YOLO-Processing-Time-Ms"] = str(
+        record.official.processing_time_ms,
+    )
+    response.headers["X-SAFY-P2PNet-Processing-Time-Ms"] = str(
+        record.shadow.processing_time_ms,
+    )
+
+    differences = record.differences
+    for header_name, value in (
+        ("X-SAFY-Person-Count-Difference", differences.person_count),
+        (
+            "X-SAFY-Visual-Congestion-Difference",
+            differences.visual_congestion_score,
+        ),
+        (
+            "X-SAFY-Local-Peak-Difference",
+            differences.local_peak_congestion_score,
+        ),
+    ):
+        if value is not None:
+            response.headers[header_name] = str(value)
 
 
 def _failed_dual_model_response(
@@ -82,6 +125,7 @@ def _failed_dual_model_response(
 )
 async def analyze_frame(
     background_tasks: BackgroundTasks,
+    response: Response,
     image: UploadFile = File(...),
 ) -> FrameAnalysisResponse:
     if image.content_type is None or not image.content_type.startswith("image/"):
@@ -245,6 +289,11 @@ async def analyze_frame(
                 logger.error(
                     "P2PNet is required for accuracy-first analysis but is unavailable",
                 )
+                _set_dual_model_monitoring_headers(
+                    response,
+                    record=None,
+                    status="UNAVAILABLE",
+                )
                 return _failed_dual_model_response(
                     quality_result=quality_result,
                     processing_time_ms=detection_result.processing_time_ms,
@@ -263,6 +312,14 @@ async def analyze_frame(
             ):
                 logger.error(
                     "P2PNet required analysis did not complete",
+                )
+                _set_dual_model_monitoring_headers(
+                    response,
+                    record=shadow_record,
+                    status=(
+                        shadow_record.shadow.failure_reason
+                        or shadow_record.shadow.analysis_status
+                    ),
                 )
                 return _failed_dual_model_response(
                     quality_result=quality_result,
@@ -290,6 +347,12 @@ async def analyze_frame(
             visual_congestion_score = correction.visual_congestion_score
             local_peak_congestion_score = correction.local_peak_congestion_score
             congestion_source = correction.source
+            _set_dual_model_monitoring_headers(
+                response,
+                record=shadow_record,
+                congestion_source=congestion_source,
+                status="COMPLETED",
+            )
         elif shadow_service.enabled:
             background_tasks.add_task(
                 shadow_service.analyze_and_log,
@@ -302,6 +365,11 @@ async def analyze_frame(
         )
 
         if correction_enabled:
+            _set_dual_model_monitoring_headers(
+                response,
+                record=None,
+                status="INTERNAL_ERROR",
+            )
             return _failed_dual_model_response(
                 quality_result=quality_result,
                 processing_time_ms=detection_result.processing_time_ms,

@@ -206,31 +206,36 @@ C·L, 처리시간, 실패 코드와 예측 차이를 기록하는 오프라인 
 - 한 모델이 실패해도 다른 모델의 성공 결과를 보존
 - 시나리오별 MAE·RMSE 비교
 - 일반 평가 manifest와 `head-point-v1` manifest 지원
-- 운영 공식 모델: YOLO11n
-- 보조 관찰 모델: P2PNet v2 epoch3 (`SHADOW`)
-- 자동 모델 전환: `DISABLED`
+- 운영 인원수 모델: YOLO11n
+- 운영 혼잡도 보정 모델: P2PNet v2 epoch3
+- 두 모델을 모든 정상 프레임에서 함께 실행
 - 고정 테스트 29장 계수 MAE: YOLO `16.90`, P2PNet v2 `41.34`
 - P2PNet v2의 LOCAL_DENSE 계수 MAE `7.33`, CROWDED 계수 MAE `34.5`
-- 운영 분석 API와 공식 모델 가중치는 변경하지 않음
+- `personCount`는 YOLO 결과를 유지하고 C·L은 오탐 게이트 통과 시
+  P2PNet 값과 비교해 더 큰 값으로 상향 보정
 
-고정 테스트 결과, 그림자 운영 방식과 자동 전환을 보류한 근거는
+고정 테스트 결과와 이중 모델 보정 방식의 근거는
 [YOLO·P2PNet 동일 표본 비교 기반](docs/hybrid-model-comparison.md)을 참고합니다.
 
-## P2PNet 그림자 분석
+## YOLO·P2PNet 이중 모델 분석
 
-운영 API의 공식 결과는 YOLO11n으로 유지하면서, 정상 분석 프레임에 한해
-P2PNet v2 epoch3를 백그라운드에서 선택적으로 실행할 수 있습니다.
+정상 분석 프레임은 YOLO11n과 P2PNet v2 epoch3로 모두 분석합니다.
+YOLO는 공식 인원수를 담당하고 P2PNet은 고밀도 장면의 C·L 누락을 보완합니다.
 
-- 기본 설정: 비활성화
-- 공식 응답 모델: YOLO11n
-- 그림자 관찰 모델: P2PNet v2 epoch3
+- 운영 설정: 이중 모델과 혼잡도 보정 활성화
+- 공식 인원수 모델: YOLO11n
+- 혼잡도 보정 모델: P2PNet v2 epoch3
 - 비교 항목: 사람 수, C·L, 처리시간, 상태와 실패 코드
-- 자동 모델 전환 및 P2PNet 결과의 API 응답 반영: 비활성화
+- P2PNet 오탐 게이트 발동 시 YOLO C·L 유지
+- 오탐 게이트 미발동 시 YOLO·P2PNet C·L 중 큰 값 사용
 - `INVALID_FRAME` 및 YOLO 분석 실패 프레임: 그림자 분석 제외
-- P2PNet 초기화·추론 실패 또는 시간 초과: YOLO 공식 결과에 영향 없음
+- 정확도 우선 모드에서 P2PNet 실패 또는 시간 초과: 해당 프레임 `FAILED`
 
-환경 변수, 비교 로그 형식, 실패 격리 정책과 백엔드 연동 범위는
+환경 변수와 기존 비교 로그 형식은
 [P2PNet 그림자 분석 운영 기준](docs/p2pnet-shadow-analysis.md)을 참고합니다.
+현재 이중 모델 운영 지표, Grafana 대시보드와 데이터 축적 기준은
+[YOLO·P2PNet 이중 모델 운영 모니터링](docs/dual-model-operational-monitoring.md)을
+참고합니다.
 
 P2PNet 외부 코드는 고정 커밋으로 컨테이너에 포함하고, 운영 가중치는
 MinIO(`safy-ai-models` 버킷)에서 내려받아 체크섬 검증 후 영속 볼륨에
