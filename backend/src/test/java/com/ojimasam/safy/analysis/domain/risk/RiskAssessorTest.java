@@ -38,6 +38,44 @@ class RiskAssessorTest {
 	}
 
 	@Test
+	void doesNotRaiseSingleImageToHighFromLocalPeakAlone() {
+		List<FrameObservation> frames = observations(
+				new double[] {12.81}, new double[] {90.0});
+
+		RiskCalculation result = RiskAssessor.assess(frames, 1, 1, false);
+
+		assertThat(result.finalRisk()).isEqualTo(59.1);
+		assertThat(result.riskLevel()).isEqualTo(RiskLevel.MEDIUM);
+		assertThat(result.persistence()).isNull();
+		assertThat(result.confirmRequired()).isTrue();
+		assertThat(result.riskRuleVersion()).isEqualTo("safy-risk-v0.2");
+	}
+
+	@Test
+	void keepsHighRiskForSingleImageWhenVisualAndLocalScoresAreBothHigh() {
+		List<FrameObservation> frames = observations(
+				new double[] {60.0}, new double[] {90.0});
+
+		RiskCalculation result = RiskAssessor.assess(frames, 1, 1, false);
+
+		assertThat(result.finalRisk()).isEqualTo(78.0);
+		assertThat(result.riskLevel()).isEqualTo(RiskLevel.HIGH);
+		assertThat(result.confirmRequired()).isTrue();
+	}
+
+	@Test
+	void raisesSustainedLocalCongestionToHigh() {
+		List<FrameObservation> frames = observations(
+				new double[] {0, 0, 0, 0, 0, 0},
+				new double[] {80, 80, 80, 80, 80, 80});
+
+		RiskCalculation result = RiskAssessor.assess(frames, 6, 6, false);
+
+		assertThat(result.persistence()).isEqualTo(50.0);
+		assertThat(result.riskLevel()).isEqualTo(RiskLevel.HIGH);
+	}
+
+	@Test
 	void doesNotTreatMissingAnalysisAsZeroCongestion() {
 		RiskCalculation result = RiskAssessor.assess(List.of(), 4, 0, false);
 

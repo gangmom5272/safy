@@ -323,15 +323,20 @@ WEIGHT_LOCAL_PEAK                 = 0.6   // L 계수
 WEIGHT_PERSISTENCE                = 0.15  // P 계수
 WEIGHT_GROWTH                     = 0.15  // G 계수
 
-EXCEPTION_LOCAL_PEAK_HIGH         = 80.0  // L >= 80 -> 최소 HIGH
+EXCEPTION_LOCAL_PEAK_HIGH         = 80.0  // L >= 80 AND P 계산 가능 -> 최소 HIGH
 EXCEPTION_LOCAL_PEAK_VERY_HIGH    = 90.0  // L >= 90 AND
 EXCEPTION_PERSISTENCE_VERY_HIGH   = 70.0  //   P >= 70 -> 최소 VERY_HIGH
 
 FULL_CONFIDENCE_FRAME_COUNT       = 12    // 이 프레임 수부터 표본 신뢰도 100%
 CONFIRM_REQUIRED_CONFIDENCE       = 0.5   // 이보다 낮으면 사람 확인 필요
 
-RISK_RULE_VERSION                 = "safy-risk-v0.1"
+RISK_RULE_VERSION                 = "safy-risk-v0.2"
 ```
+
+`safy-risk-v0.2`부터 P를 계산할 수 없는 단일 이미지와 짧은 영상에는
+`EXCEPTION_LOCAL_PEAK_HIGH`를 적용하지 않는다. 국소 L만 높게 계산된 원근·넓은 공간
+장면이 즉시 `high`가 되는 것을 막기 위한 보정이다. 기본 가중 점수 계산은 유지하므로
+C와 L이 함께 높은 이미지는 여전히 높은 위험 단계가 될 수 있다.
 
 **`WEIGHT_LOCAL_PEAK`의 상한은 0.8이다.** 그 이상이면 `C=0, L=80`에서도 이미
 `HIGH`가 되어 예외 규칙 `L >= 80`이 절대 발동하지 않는다. 0.6을 쓰는 이유는
@@ -997,8 +1002,8 @@ FinalRiskLevel = RiskLevel.fromScore(FinalRisk)
 ### 11.2 예외 규칙 — 바닥선이다
 
 ```
-L >= 80              -> FinalRiskLevel 을 최소 HIGH 로
-L >= 90 AND P >= 70  -> FinalRiskLevel 을 최소 VERY_HIGH 로
+L >= 80 AND P 계산 가능  -> FinalRiskLevel 을 최소 HIGH 로
+L >= 90 AND P >= 70      -> FinalRiskLevel 을 최소 VERY_HIGH 로
 ```
 
 **바닥선이므로 이미 그 이상이면 아무 일도 하지 않는다.** 등급을 낮추는 데
@@ -1090,7 +1095,7 @@ package com.ojimasam.safy.report.domain;
  */
 public final class RiskAssessor {
 
-	public static final String RISK_RULE_VERSION = "safy-risk-v0.1";
+	public static final String RISK_RULE_VERSION = "safy-risk-v0.2";
 
 	public static final double WEIGHT_VISUAL = 0.4;
 	public static final double WEIGHT_LOCAL_PEAK = 0.6;
@@ -1160,7 +1165,8 @@ public final class RiskAssessor {
 			return level.raiseTo(RiskLevel.VERY_HIGH);
 		}
 
-		if (localPeak >= EXCEPTION_LOCAL_PEAK_HIGH) {
+		if (localPeak >= EXCEPTION_LOCAL_PEAK_HIGH
+				&& persistence != null) {
 			return level.raiseTo(RiskLevel.HIGH);
 		}
 
@@ -1453,8 +1459,8 @@ class RiskAssessorTest {
 		assertTrue(mixed.confirmRequired());
 
 		// 보너스가 빠져 89.6 -> 74.6 으로 낮아진다.
-		// L=91 이지만 P 가 null 이므로 VERY_HIGH 규칙은 발동하지 않고,
-		// L>=80 규칙이 HIGH 바닥선만 보장한다.
+		// L=91 이지만 P 가 null 이므로 두 예외 규칙은 발동하지 않는다.
+		// 기본 가중 점수 74.6 자체가 HIGH 구간이다.
 		assertEquals(74.6, mixed.finalRisk(), DELTA);
 		assertEquals(RiskLevel.HIGH, mixed.finalRiskLevel());
 	}
@@ -1645,7 +1651,7 @@ C·L은 AI 응답에 그대로 있고 P·G는 백엔드 계산값이다. **추�
 | 표기 | Java enum 대문자, 직렬화 소문자 | 프론트가 소문자를 기대 |
 | 공식 구조 | `Base(C·L) + Bonus(P·G)` | P·G 가 `null` 이어도 재정규화 불필요 |
 | 가중치 | 0.4 / 0.6 / 0.15 / 0.15 | `wL` 상한 0.8, L 포화 고려, P·G 비대칭 근거 없음 |
-| 예외 규칙 목표 등급 | `L>=80 → high`, `L>=90 AND P>=70 → very_high` | 레거시 `caution`(=medium)은 실제 고밀도에 약함 |
+| 예외 규칙 목표 등급 | `L>=80 AND P 계산 가능 → high`, `L>=90 AND P>=70 → very_high` | 단일 이미지의 국소 오탐은 막고 지속 고밀도는 보수적으로 상향 |
 | 추가 예외 규칙 | 없음 | 기존 두 규칙도 아직 검증되지 않음 |
 | `denseScene` 사용 | 사용하지 않음 | API 응답에 없어 백엔드가 받을 수 없음 |
 | 제보 단위 C·L | 평활 후 최댓값 | 위험은 가장 나빴던 순간이 결정 |
