@@ -146,7 +146,7 @@ export function ReportActionPanel({ reportId, assignmentStatus, onActionComplete
     <>
       {actionError && <p className="login-error" role="alert">{actionError}</p>}
       <p>제보를 확인한 담당자가 처리 완료·반려 또는 재배정·이관을 결정할 수 있습니다.</p>
-      <div className="button-row">
+      <div className="button-row report-action-buttons">
         <button type="button" className="primary-button" disabled={isSubmitting} onClick={() => selectAction('complete')}>
           {ACTION_LABELS.complete}
         </button>

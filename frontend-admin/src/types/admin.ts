@@ -47,6 +47,7 @@ export interface AdminReport {
   id: number
   location: string
   type: ReportType
+  subcategory?: string
   // 백엔드가 아직 내려주지 않는 값은 null 로 두고 화면에서 '-' 로 표시한다.
   riskLevel: RiskLevelValue | null
   riskScore: number | null

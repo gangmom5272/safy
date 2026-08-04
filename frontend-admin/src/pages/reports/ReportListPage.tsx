@@ -30,6 +30,10 @@ interface ReportFilters {
   endDate: string
   aiAnalysisStatus: AiAnalysisStatus | typeof allValue
   sortOrder: SortOrder
+  media: {
+    live: boolean
+    image: boolean
+  }
 }
 
 const initialFilters: ReportFilters = {
@@ -42,6 +46,7 @@ const initialFilters: ReportFilters = {
   endDate: '',
   aiAnalysisStatus: allValue,
   sortOrder: 'newest',
+  media: { live: true, image: true },
 }
 
 const sortOrderLabels: Record<SortOrder, string> = {
@@ -51,11 +56,12 @@ const sortOrderLabels: Record<SortOrder, string> = {
   risk_low: '위험도 낮은 순',
 }
 
-function RefreshIcon() {
+function FilterSettingsIcon() {
   return (
-    <svg className="filter-reset-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-15.3 6.4L3 16M3 21v-5h5" />
+    <svg className="filter-settings-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="8" cy="17" r="2" />
     </svg>
   )
 }
@@ -69,10 +75,19 @@ function SearchIcon() {
   )
 }
 
-function CloseIcon() {
+function FilterToggleChevron({ open }: { open: boolean }) {
   return (
-    <svg className="filter-toggle-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="m6 6 12 12M18 6 6 18" />
+    <svg className={`filter-toggle-chevron${open ? ' is-open' : ''}`} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="m7 9 5 5 5-5" />
+    </svg>
+  )
+}
+
+function CalendarIcon() {
+  return (
+    <svg className="filter-calendar-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M8 3v4M16 3v4M4 10h16" />
     </svg>
   )
 }
@@ -86,7 +101,7 @@ export function ReportListPage() {
   const navigate = useNavigate()
   const [draftFilters, setDraftFilters] = useState<ReportFilters>(initialFilters)
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(initialFilters)
-  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isDetailOpen, setIsDetailOpen] = useState(true)
   const [reports, setReports] = useState<AdminReport[]>([])
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -125,12 +140,17 @@ export function ReportListPage() {
           String(report.id),
           report.location,
           report.aiSummary,
+          report.managerName,
           report.reporterName ?? '',
         ].join(' ').toLowerCase()
         const reportDate = report.reportedAt.slice(0, 10)
+        const matchesMedia = report.isLive
+          ? appliedFilters.media.live
+          : appliedFilters.media.image
 
         return (
           (!keyword || searchableText.includes(keyword)) &&
+          matchesMedia &&
           (appliedFilters.type === allValue || report.type === appliedFilters.type) &&
           (appliedFilters.status === allValue || report.status === appliedFilters.status) &&
           (appliedFilters.riskLevel === allValue || matchesRiskLevel(report.riskLevel, appliedFilters.riskLevel, report.riskScore)) &&
@@ -152,78 +172,161 @@ export function ReportListPage() {
     setAppliedFilters(initialFilters)
   }
 
+  const toggleMediaFilter = (media: keyof ReportFilters['media']) => {
+    setDraftFilters((current) => ({
+      ...current,
+      media: { ...current.media, [media]: !current.media[media] },
+    }))
+  }
+
+  const selectSortOrder = (sortOrder: SortOrder) => {
+    setDraftFilters((current) => ({ ...current, sortOrder }))
+    setAppliedFilters((current) => ({ ...current, sortOrder }))
+  }
+
   return (
     <section className="page-stack">
       <form className="report-filter" onSubmit={(event) => {
         event.preventDefault()
         setAppliedFilters({ ...draftFilters, keyword: normalizeReportKeyword(draftFilters.keyword) })
       }}>
-          <div className="report-filter__basic">
-            <div className="report-filter__search-field">
-              <SearchIcon />
-              <input aria-label="통합 검색어" type="search" value={draftFilters.keyword} onChange={(event) => setDraftFilters((current) => ({ ...current, keyword: event.target.value }))} placeholder="검색어를 입력해 주세요. (예: 제보 ID, 주소, 지역 등)" />
-            </div>
-            <button type="button" className="secondary-button filter-detail-toggle" aria-expanded={isDetailOpen} aria-controls="report-detail-filters" aria-label={`상세조건 ${isDetailOpen ? '닫기' : '열기'}`} onClick={() => setIsDetailOpen((current) => !current)}>
-              {isDetailOpen && <CloseIcon />}상세조건
-            </button>
-            <button type="button" className="secondary-button filter-reset-button" onClick={() => { resetFilters(); void loadReports() }} aria-label="필터 초기화 및 목록 새로고침" title="새로고침">
-              <RefreshIcon />
-            </button>
-            <button type="submit" className="primary-button">필터 적용</button>
+        <div className="report-filter__basic">
+          <div className="report-filter__search-field">
+            <SearchIcon />
+            <input
+              aria-label="통합 검색어"
+              type="search"
+              value={draftFilters.keyword}
+              onChange={(event) => setDraftFilters((current) => ({ ...current, keyword: event.target.value }))}
+              placeholder="검색어를 입력해주세요."
+            />
+            <span className="report-filter__search-hint">제보 ID · 지역 · 담당자</span>
           </div>
+          <button
+            type="button"
+            className="secondary-button filter-detail-toggle"
+            aria-expanded={isDetailOpen}
+            aria-controls="report-detail-filters"
+            onClick={() => setIsDetailOpen((current) => !current)}
+          >
+            <FilterSettingsIcon />
+            <span>{isDetailOpen ? '상세조건 닫기' : '상세조건'}</span>
+            <FilterToggleChevron open={isDetailOpen} />
+          </button>
+          <button type="submit" className="primary-button report-filter__search-button">검색</button>
+        </div>
 
-          {isDetailOpen && (
-            <div id="report-detail-filters" className="report-filter__detail">
-              <label>
-                제보일
-                <span className="report-filter__date-range">
-                  <input aria-label="제보 시작 날짜" type="date" value={draftFilters.startDate} onChange={(event) => setDraftFilters((current) => ({ ...current, startDate: event.target.value }))} />
-                  <span aria-hidden="true">~</span>
-                  <input aria-label="제보 종료 날짜" type="date" value={draftFilters.endDate} onChange={(event) => setDraftFilters((current) => ({ ...current, endDate: event.target.value }))} />
-                </span>
-              </label>
-              <label>
-                카테고리
-                <select value={draftFilters.type} onChange={(event) => setDraftFilters((current) => ({ ...current, type: event.target.value as ReportFilters['type'] }))}>
-                  <option value={allValue}>전체</option>
-                  {Object.entries(reportTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label>
-                처리 상태
-                <select value={draftFilters.status} onChange={(event) => setDraftFilters((current) => ({ ...current, status: event.target.value as ReportFilters['status'] }))}>
-                  <option value={allValue}>전체</option>
-                  {Object.entries(reportStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label>
-                위험도
-                <select value={draftFilters.riskLevel} onChange={(event) => setDraftFilters((current) => ({ ...current, riskLevel: event.target.value as ReportFilters['riskLevel'] }))}>
-                  <option value={allValue}>전체</option>
-                  {RISK_LEVEL_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label>
-                AI 분석 상태
-                <select value={draftFilters.aiAnalysisStatus} onChange={(event) => setDraftFilters((current) => ({ ...current, aiAnalysisStatus: event.target.value as ReportFilters['aiAnalysisStatus'] }))}>
-                  <option value={allValue}>전체</option>
-                  {Object.entries(aiAnalysisStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label>
-                정렬
-                <select value={draftFilters.sortOrder} onChange={(event) => setDraftFilters((current) => ({ ...current, sortOrder: event.target.value as SortOrder }))}>
-                  {Object.entries(sortOrderLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
+        {isDetailOpen && (
+          <div id="report-detail-filters" className="report-filter__detail">
+            <fieldset className="report-filter__group report-filter__category">
+              <legend>카테고리</legend>
+              <div className="report-filter__chips">
+                {[[allValue, '전체'], ...Object.entries(reportTypeLabels)].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="filter-chip"
+                    aria-pressed={draftFilters.type === value}
+                    onClick={() => setDraftFilters((current) => ({ ...current, type: value as ReportFilters['type'] }))}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="report-filter__group report-filter__status">
+              <legend>처리 상태</legend>
+              <div className="report-filter__chips">
+                {[[allValue, '전체'], ...Object.entries(reportStatusLabels).filter(([value]) => value !== 'received')].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="filter-chip"
+                    aria-pressed={draftFilters.status === value}
+                    onClick={() => setDraftFilters((current) => ({ ...current, status: value as ReportFilters['status'] }))}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="report-filter__group report-filter__risk">
+              <legend>위험 단계</legend>
+              <div className="report-filter__chips">
+                {[[allValue, '전체'], ...RISK_LEVEL_OPTIONS.map(({ value, label }) => [value, label])].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="filter-chip"
+                    aria-pressed={draftFilters.riskLevel === value}
+                    onClick={() => setDraftFilters((current) => ({ ...current, riskLevel: value as ReportFilters['riskLevel'] }))}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="report-filter__group report-filter__date">
+              <span className="report-filter__group-title">제보 날짜</span>
+              <div className="report-filter__date-range">
+                <CalendarIcon />
+                <input aria-label="제보 시작 날짜" type="date" value={draftFilters.startDate} onChange={(event) => setDraftFilters((current) => ({ ...current, startDate: event.target.value }))} />
+                <span aria-hidden="true">~</span>
+                <input aria-label="제보 종료 날짜" type="date" value={draftFilters.endDate} onChange={(event) => setDraftFilters((current) => ({ ...current, endDate: event.target.value }))} />
+              </div>
             </div>
-          )}
 
-          <div className="report-filter__divider" />
+            <fieldset className="report-filter__group report-filter__media">
+              <legend>미디어</legend>
+              <div className="report-filter__media-options">
+                <label className="media-filter-option">
+                  <input name="media-filter" value="live" type="checkbox" checked={draftFilters.media.live} onChange={() => toggleMediaFilter('live')} />
+                  <span>영상</span>
+                </label>
+                <label className="media-filter-option">
+                  <input name="media-filter" value="image" type="checkbox" checked={draftFilters.media.image} onChange={() => toggleMediaFilter('image')} />
+                  <span>사진</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <label className="report-filter__group report-filter__analysis">
+              <span className="report-filter__group-title">AI 분석 상태</span>
+              <select aria-label="AI 분석 상태" value={draftFilters.aiAnalysisStatus} onChange={(event) => setDraftFilters((current) => ({ ...current, aiAnalysisStatus: event.target.value as ReportFilters['aiAnalysisStatus'] }))}>
+                <option value={allValue}>전체</option>
+                {Object.entries(aiAnalysisStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+
+            <div className="report-filter__actions">
+              <button type="button" className="secondary-button" onClick={() => { resetFilters(); void loadReports() }}>초기화</button>
+              <button type="submit" className="primary-button">조건 적용</button>
+            </div>
+          </div>
+        )}
+
+        <div className="report-filter__result-bar">
+          <strong>총 {filteredReports.length}건</strong>
+          <div className="report-filter__sort" role="group" aria-label="제보 정렬">
+            {Object.entries(sortOrderLabels).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={appliedFilters.sortOrder === value}
+                onClick={() => selectSortOrder(value as SortOrder)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
 
       </form>
 
-      <AdminSection title={`검색 결과 ${filteredReports.length}건`}>
+      <AdminSection title="제보 목록">
         {isLoading ? (
           <p role="status">제보 목록을 불러오는 중입니다...</p>
         ) : loadError ? (

@@ -22,6 +22,15 @@ import {
 import { ReportActionPanel } from './ReportActionPanel'
 import { ImageLightbox } from '../../components/admin/ImageLightbox'
 
+function ReportContentIcon() {
+  return (
+    <svg className="report-summary__content-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v5h5M9 13h6M9 17h6" />
+    </svg>
+  )
+}
+
 export function ReportDetailPage() {
   const { reportId } = useParams()
   const navigate = useNavigate()
@@ -87,7 +96,6 @@ export function ReportDetailPage() {
   // 상세 조회 응답에는 위험도가 없다. 점수는 분석 API(최종 위험 점수)에서만 온다.
   const riskScore = analysis?.riskScore ?? report.riskScore
   const summary = analysis?.summary ?? report.aiSummary
-  const confidence = analysis?.confidence ?? null
 
   return (
     <section className="page-stack report-detail-page">
@@ -125,10 +133,17 @@ export function ReportDetailPage() {
 
         <AdminSection title="제보 정보 요약">
           <dl className="report-summary">
-            <div><dt>제보 ID</dt><dd>#{report.id}</dd></div>
-            <div><dt>제보 형태</dt><dd>{report.isLive ? '라이브' : '이미지'}</dd></div>
-            <div><dt>카테고리</dt><dd>{reportTypeLabels[report.type]}</dd></div>
-            <div><dt>제보 시간</dt><dd>{formatAdminDate(report.reportedAt)}</dd></div>
+            <div className="report-summary__identity"><dt>제보 ID</dt><dd>#{report.id}</dd></div>
+            <div className="report-summary__identity"><dt>제보 형태</dt><dd>{report.isLive ? '라이브' : '이미지'}</dd></div>
+            <div className="report-summary__identity">
+              <dt>카테고리</dt>
+              <dd>{[reportTypeLabels[report.type], report.subcategory].filter(Boolean).join(' · ')}</dd>
+            </div>
+            <div className="report-summary__time"><dt>제보 시간</dt><dd>{formatAdminDate(report.reportedAt)}</dd></div>
+            <div className="report-summary__time">
+              <dt>분석 시간</dt>
+              <dd>{analysis?.analyzedAt ? formatAdminDate(analysis.analyzedAt) : '-'}</dd>
+            </div>
             <div className="report-summary__group">
               <dt>위험 정보</dt>
               <dd><span>위험도</span><RiskBadge value={riskLevel} score={riskScore} /></dd>
@@ -146,7 +161,11 @@ export function ReportDetailPage() {
               <dd><span>제보 상태</span><StatusBadge tone={getReportStatusTone(report.status)}>{reportStatusLabels[report.status]}</StatusBadge></dd>
               <dd><span>관제센터</span><strong>{report.controlCenterName || '미배정'}</strong></dd>
             </div>
-            <div className="report-summary__address"><dt>주소</dt><dd>{report.location}</dd></div>
+            <div className="report-summary__wide"><dt>주소</dt><dd>{report.location}</dd></div>
+            <div className="report-summary__wide">
+              <dt className="report-summary__title"><ReportContentIcon />제보 내용</dt>
+              <dd className="break-text">{summary || '제보 내용이 없습니다.'}</dd>
+            </div>
           </dl>
         </AdminSection>
       </div>
@@ -164,23 +183,6 @@ export function ReportDetailPage() {
           />
         </AdminSection>
       </div>
-
-      <AdminSection title="AI 상황 요약">
-        <div className="ai-summary-layout">
-          <div className="ai-summary-metrics">
-            <div><span>위험 단계</span><RiskBadge value={riskLevel} score={riskScore} /></div>
-            <div><span>신뢰도</span><strong>{confidence === null ? '-' : `${Math.round(confidence * 100)}%`}</strong></div>
-          </div>
-          <section>
-            <h3>상황 요약</h3>
-            <p className="break-text">{summary || 'AI 분석 결과가 아직 없습니다.'}</p>
-          </section>
-          <section>
-            <h3>분석 시각</h3>
-            <p>{analysis?.analyzedAt ? formatAdminDate(analysis.analyzedAt) : '-'}</p>
-          </section>
-        </div>
-      </AdminSection>
 
       {lightboxImage && (
         <ImageLightbox
