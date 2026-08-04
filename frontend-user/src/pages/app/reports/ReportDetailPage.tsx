@@ -3,11 +3,11 @@ import { useNavigate, useParams } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
 import { formatDateTime } from '../../../utils/dateTime'
 import { ErrorState, LoadingSkeleton } from '../situations/SituationStates'
-import { AreaMap } from '../situations/AreaMap'
 import {
   analysisStatusLabels,
   reportTypeLabels,
   riskLevelLabels,
+  shortRiskLevelLabels,
   type ReportAnalysis,
   type ReportDetail,
 } from '../situations/types'
@@ -108,48 +108,9 @@ export function ReportDetailPage() {
               onRetry={() => void retryAnalysis()}
             />
           </section>
-          <ReportLocationMap report={report} />
         </>
       ) : null}
     </div>
-  )
-}
-
-function ReportLocationMap({ report }: { report: ReportDetail }) {
-  const latitude = report.latitude ?? 37.4979
-  const longitude = report.longitude ?? 127.0276
-
-  return (
-    <section className="report-detail-content-section" aria-labelledby="report-map-title">
-      <h2 id="report-map-title" className="report-detail-section-title">주변 위험 지도</h2>
-      <AreaMap
-        variant="report-detail"
-        showTitle={false}
-        locationName={report.locationName}
-        isLoading={false}
-        error={null}
-        mapData={{
-        center: { latitude, longitude },
-        zones: [
-          {
-            id: `${report.id}-zone`,
-            name: '제보 위치 주변',
-            level: report.riskLevel,
-            coordinates: [{ latitude, longitude }],
-          },
-        ],
-        reportMarkers: [
-          {
-            reportId: report.id,
-            latitude,
-            longitude,
-            locationName: report.locationName,
-            riskLevel: report.riskLevel,
-          },
-        ],
-        }}
-      />
-    </section>
   )
 }
 
@@ -242,13 +203,16 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
           <div>
             <dt><DetailIcon name="congestion" />혼잡도</dt>
             <dd>
-              {analysis.congestionLevel ? riskLevelLabels[analysis.congestionLevel] : '정보 없음'}
+              {/* 항목명이 이미 '혼잡도'이므로 값에는 단계만 남긴다. */}
+              {analysis.congestionLevel ? shortRiskLevelLabels[analysis.congestionLevel] : '정보 없음'}
             </dd>
           </div>
           {/* 인원 추정치는 정확도가 보장되지 않아 노출하지 않는다. 내부 판단 용도로만 쓴다. */}
           <div>
-            <dt><DetailIcon name="ai" />AI 요약</dt>
-            <dd>{analysis.aiSummary || '요약 정보 없음'}</dd>
+            <dt><DetailIcon name="risk" />위험도</dt>
+            <dd>
+              {typeof analysis.riskScore === 'number' ? `${Math.round(analysis.riskScore)}점` : '정보 없음'}
+            </dd>
           </div>
         </dl>
       ) : null}
@@ -261,7 +225,7 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
   )
 }
 
-type DetailIconName = 'address' | 'time' | 'congestion' | 'people' | 'ai'
+type DetailIconName = 'address' | 'time' | 'congestion' | 'people' | 'risk'
 
 function DetailIcon({ name }: { name: DetailIconName }) {
   const paths = {
@@ -269,7 +233,7 @@ function DetailIcon({ name }: { name: DetailIconName }) {
     time: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
     congestion: <><path d="M12 3 3 20h18Z"/><path d="M12 9v4M12 17h.01"/></>,
     people: <><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 4 4v2"/></>,
-    ai: <><rect x="3" y="5" width="18" height="14" rx="4"/><path d="M8 15V9l2 6V9M14 9v6M17 9v6M12 2v3"/></>,
+    risk: <><path d="M12 3l8 3v6c0 5-3.4 7.9-8 9-4.6-1.1-8-4-8-9V6Z"/><path d="M12 8v4M12 15h.01"/></>,
   }
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }

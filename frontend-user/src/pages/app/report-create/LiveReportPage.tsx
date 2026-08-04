@@ -504,7 +504,6 @@ export function LiveReportPage({
             </ul>
             <ul className="report-live-safety" aria-label="안전 안내">
               <li><LiveInfoIcon name="camera" />현장 상황만 촬영해주세요.</li>
-              <li><LiveInfoIcon name="camera" />타인의 얼굴이 노출되지 않도록 주의해주세요.</li>
               <li><LiveInfoIcon name="shield" />안전한 장소에서 제보해주세요.</li>
             </ul>
           </>

@@ -95,6 +95,8 @@ export type ReportAnalysis = {
   reportId: string
   status: AnalysisStatus
   congestionLevel?: RiskLevel
+  /** 최종 위험 점수 0~100. 위험도를 수치로 보여줄 때 쓴다. */
+  riskScore?: number
   estimatedPeopleCount?: number
   aiSummary?: string
   analyzedAt?: string
