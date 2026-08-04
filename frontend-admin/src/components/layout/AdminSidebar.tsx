@@ -84,25 +84,35 @@ function SidebarIcon({ name, className }: SidebarIconProps) {
   )
 }
 
-const sidebarItems = [
+interface SidebarItem {
+  label: string
+  path: string
+  end: boolean
+  icon: SidebarIconName
+}
+
+// OPERATOR 는 관제 화면, SUPER_ADMIN 은 인사 관리만 쓴다. 좌측 탭도 역할별로 분리한다.
+const operatorItems: SidebarItem[] = [
   { label: '홈', path: ROUTE_PATHS.DASHBOARD, end: true, icon: 'home' },
   { label: '제보 목록', path: ROUTE_PATHS.REPORTS, end: false, icon: 'reports' },
   { label: '공용 큐', path: ROUTE_PATHS.QUEUE, end: true, icon: 'queue' },
   { label: '실시간 모니터링', path: ROUTE_PATHS.MONITORING, end: true, icon: 'monitoring' },
   { label: '위험도 지도', path: ROUTE_PATHS.RISK_MAP, end: true, icon: 'map' },
-  { label: '시스템 설정', path: ROUTE_PATHS.SETTINGS, end: true, icon: 'settings' },
-] satisfies Array<{
-  label: string
-  path: string
-  end: boolean
-  icon: SidebarIconName
-}>
+  { label: '계정 설정', path: ROUTE_PATHS.SETTINGS, end: true, icon: 'settings' },
+]
+
+const superAdminItems: SidebarItem[] = [
+  { label: '담당자 관리', path: ROUTE_PATHS.OPERATORS, end: true, icon: 'user' },
+  { label: '계정 설정', path: ROUTE_PATHS.SETTINGS, end: true, icon: 'settings' },
+]
 
 export function AdminSidebar() {
   const navigate = useNavigate()
   const { user, adminName, logout } = useAuth()
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+  const sidebarItems = isSuperAdmin ? superAdminItems : operatorItems
   const displayName = user?.displayName || adminName || 'SAFY Super Admin'
-  const roleLabel = user?.role === 'SUPER_ADMIN' ? '최고 관리자' : '관리자'
+  const roleLabel = isSuperAdmin ? '최고 관리자' : '관리자'
 
   const handleLogout = async () => {
     await logout().catch(() => undefined)
@@ -117,7 +127,7 @@ export function AdminSidebar() {
         </span>
         <span className="admin-sidebar__brand-copy">
           <strong>SAFY</strong>
-          <span>관제 콘솔 · 성동구</span>
+          <span>{isSuperAdmin ? '통합 관리 콘솔' : '관제 콘솔 · 성동구'}</span>
         </span>
       </div>
 

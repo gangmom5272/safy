@@ -2,7 +2,6 @@ import apiClient from '../../../api/client'
 import { mockResponse, USE_MOCK_API } from '../../../api/mockMode'
 import {
   mockFaqs,
-  mockFavorites,
   mockInquiries,
   mockNotices,
   mockNotificationSettings,
@@ -11,7 +10,7 @@ import {
   mockUser,
 } from './mypageMock'
 import type { ApiResponse, PageResponse } from '../../../api/types'
-import type { Faq, FavoriteLocation, Inquiry, MyReport, Notice, NotificationSettingsData, ReportCategoryCode, ReportStatus, ReportSummary, ReportTypeCode, UserProfile } from './mypageTypes'
+import type { Faq, Inquiry, MyReport, Notice, NotificationSettingsData, ReportCategoryCode, ReportStatus, ReportSummary, ReportTypeCode, UserProfile } from './mypageTypes'
 import { normalizeAttachments } from './mypageUtils'
 
 type BackendReportStatus = 'RECEIVED' | 'ASSIGNED' | 'ACCEPTED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 'CANCELLED'
@@ -155,10 +154,6 @@ export async function logout() {
   await apiClient.post('/auth/logout')
 }
 
-export async function getFavorites() { if (USE_MOCK_API) return mockResponse(mockFavorites); return (await apiClient.get<ApiResponse<FavoriteLocation[]>>('/users/me/favorite-locations')).data.data }
-export async function createFavorite(data: Omit<FavoriteLocation, 'id' | 'areaId' | 'riskLevel' | 'isPrimary'>) { if (USE_MOCK_API) return mockResponse({ ...data, id: Date.now(), areaId: 0, riskLevel: 'SAFE', isPrimary: false } as FavoriteLocation); return (await apiClient.post<FavoriteLocation>('/users/me/favorite-locations', data)).data }
-export async function patchFavorite(id: number, data: Partial<FavoriteLocation>) { if (USE_MOCK_API) return mockResponse({ ...(mockFavorites.find((favorite) => favorite.id === id) ?? mockFavorites[0]), ...data }); return (await apiClient.patch<FavoriteLocation>(`/users/me/favorite-locations/${id}`, data)).data }
-export async function removeFavorite(id: number) { if (USE_MOCK_API) return mockResponse(undefined); await apiClient.delete(`/users/me/favorite-locations/${id}`) }
 export async function getFaqs(category?: string) { if (USE_MOCK_API) return mockResponse(category ? mockFaqs.filter((faq) => faq.category === category) : mockFaqs); return (await apiClient.get<ApiResponse<Faq[]>>('/faqs', { params: category ? { category } : {} })).data.data }
 export async function getNotices() { if (USE_MOCK_API) return mockResponse(mockNotices); return (await apiClient.get<ApiResponse<PageResponse<Notice>>>('/notices', { params: { page: 0, size: 30 } })).data.data.content }
 export async function getNotice(id: number) { if (USE_MOCK_API) return mockResponse(mockNotices.find((notice) => notice.id === id) ?? mockNotices[0]); return (await apiClient.get<ApiResponse<Notice>>(`/notices/${id}`)).data.data }

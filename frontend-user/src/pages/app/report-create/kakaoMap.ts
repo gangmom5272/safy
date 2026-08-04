@@ -3,17 +3,37 @@ export interface KakaoLatLng {
   getLng: () => number
 }
 
+export interface KakaoLatLngBounds {
+  extend: (position: KakaoLatLng) => void
+  getSouthWest: () => KakaoLatLng
+  getNorthEast: () => KakaoLatLng
+}
+
 export interface KakaoMap {
   getCenter: () => KakaoLatLng
   setCenter: (position: KakaoLatLng) => void
+  getLevel: () => number
+  setLevel: (level: number) => void
+  getBounds: () => KakaoLatLngBounds
+  setBounds: (bounds: KakaoLatLngBounds) => void
   setMinLevel: (level: number) => void
   setMaxLevel: (level: number) => void
   setDraggable: (draggable: boolean) => void
   setZoomable: (zoomable: boolean) => void
+  relayout: () => void
 }
 
 export interface KakaoMarker {
   setPosition: (position: KakaoLatLng) => void
+}
+
+export interface KakaoCustomOverlay {
+  setMap: (map: KakaoMap | null) => void
+  setPosition: (position: KakaoLatLng) => void
+}
+
+export interface KakaoPolygon {
+  setMap: (map: KakaoMap | null) => void
 }
 
 export interface KakaoCircle {
@@ -25,8 +45,25 @@ export interface KakaoCircle {
 interface KakaoMaps {
   load: (callback: () => void) => void
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng
+  LatLngBounds: new () => KakaoLatLngBounds
   Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap
   Marker: new (options: { position: KakaoLatLng; map: KakaoMap }) => KakaoMarker
+  CustomOverlay: new (options: {
+    position: KakaoLatLng
+    content: HTMLElement | string
+    yAnchor?: number
+    zIndex?: number
+  }) => KakaoCustomOverlay
+  Polygon: new (options: {
+    map?: KakaoMap
+    path: KakaoLatLng[]
+    strokeWeight?: number
+    strokeColor?: string
+    strokeOpacity?: number
+    fillColor?: string
+    fillOpacity?: number
+    zIndex?: number
+  }) => KakaoPolygon
   Circle: new (options: {
     center: KakaoLatLng
     radius: number

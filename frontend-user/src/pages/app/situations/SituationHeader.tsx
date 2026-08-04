@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
 
 type SituationNavigationState = {
-  from?: 'notifications' | 'favorites'
+  from?: 'notifications'
   returnTo?: string
   notificationFilter?: string
 }
@@ -12,11 +12,6 @@ export function SituationHeader() {
   const location = useLocation()
   const handleBack = () => {
     const navigationState = location.state as SituationNavigationState | null
-
-    if (navigationState?.from === 'favorites') {
-      navigate(-1)
-      return
-    }
 
     if (navigationState?.returnTo === '/app/notifications' || navigationState?.from === 'notifications') {
       navigate('/app/notifications', {
@@ -35,7 +30,7 @@ export function SituationHeader() {
     <>
       <PageHeader title="상황 확인" onBack={handleBack} />
       <section className="situation-intro">
-        <p>현재 지역의 실시간 제보</p>
+        <p>지도에서 지역 상황과 제보를 확인하세요</p>
       </section>
     </>
   )

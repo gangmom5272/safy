@@ -1,4 +1,4 @@
-import type { FavoriteLocation, MyReport, ReportAttachment, ReportCategoryCode } from './mypageTypes'
+import type { MyReport, ReportAttachment, ReportCategoryCode } from './mypageTypes'
 
 export const APP_VERSION = '1.0.0'
 
@@ -93,9 +93,4 @@ export function formatReceiptNumber(reportId: number | null | undefined) {
   }
 
   return `접수 번호 #${reportId}`
-}
-
-export function buildFavoriteSituationUrl(location: FavoriteLocation) {
-  const params = new URLSearchParams({ query: location.placeName })
-  return `/app/situations?${params.toString()}`
 }

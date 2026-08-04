@@ -8,7 +8,7 @@ export type ReportStatus = 'RECEIVED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 
 // mypageUtils 의 getReportMediaTypeLabel·getReportCategoryLabel 에서 붙인다.
 export type ReportTypeCode = 'IMAGE' | 'LIVE'
 export type ReportCategoryCode = 'CROWD_CONGESTION' | 'ACCIDENT_RISK' | 'FLOOD_WEATHER' | 'FACILITY_ROAD' | 'OTHER'
-export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 'FAVORITES' | 'SUPPORT' | 'FAQ' | 'NOTICES' | 'NOTICE_DETAIL' | 'INQUIRY_FORM' | 'INQUIRIES' | 'INQUIRY_DETAIL' | 'GUIDE' | 'SETTINGS' | 'PROFILE_EDIT' | 'ACCOUNT' | 'PRIVACY' | 'NOTIFICATION_SETTINGS'
+export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 'SUPPORT' | 'FAQ' | 'NOTICES' | 'NOTICE_DETAIL' | 'INQUIRY_FORM' | 'INQUIRIES' | 'INQUIRY_DETAIL' | 'GUIDE' | 'SETTINGS' | 'PROFILE_EDIT' | 'ACCOUNT' | 'PRIVACY' | 'NOTIFICATION_SETTINGS'
 export interface UserProfile { id: number; nickname: string; email: string; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }
 export interface ReportSummary { totalCount: number; receivedCount: number; inProgressCount: number; closedCount: number; rejectedCount: number }
 export interface StatusHistory { status: ReportStatus; changedAt: string; description: string }
@@ -19,7 +19,6 @@ export interface ReportAttachment { url: string; contentType: string | null; fil
 // 값이다. 상세의 유형 표시는 첨부 미디어와 원본 값을 함께 봐야 해서 둘 다 들고 있다.
 export interface MyReport { id: number; type: string; reportType: ReportTypeCode; category: ReportCategoryCode; title: string; description: string; locationName: string; address: string; createdAt: string; status: ReportStatus; thumbnailUrl?: string | null; maskedThumbnailUrl?: string | null; attachments: ReportAttachment[]; adminReply?: string | null; history: StatusHistory[] }
 export type RiskLevel = 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER'
-export interface FavoriteLocation { id: number; areaId: number; placeName: string; alias: string; address: string; riskLevel: RiskLevel; isPrimary: boolean; latitude?: number; longitude?: number }
 export interface Faq { id: number; category: string; question: string; answer: string }
 export interface Notice { id: number; title: string; content: string; createdAt: string; isImportant: boolean }
 export interface Inquiry { id: number; type: string; title: string; content: string; createdAt: string; status: 'WAITING' | 'ANSWERED'; attachmentName?: string; answer?: string; answeredAt?: string }

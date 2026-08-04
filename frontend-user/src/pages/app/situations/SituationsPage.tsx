@@ -1,16 +1,50 @@
-import { AreaMap } from './AreaMap'
+import { useLocation, useNavigate } from 'react-router'
 import { AreaStatusSummary } from './AreaStatusSummary'
-import { LiveReportSection } from './LiveReportSection'
 import { LocationSearchBar } from './LocationSearchBar'
 import { ReportFilterSheet } from './ReportFilterSheet'
-import { ReportSortSelect } from './ReportSortSelect'
 import { SelectedAreaHeader } from './SelectedAreaHeader'
 import { SituationHeader } from './SituationHeader'
+import { SituationMap } from './SituationMap'
 import { useSituationCheck } from './useSituationCheck'
+import { useGeolocation } from '../report-create/useGeolocation'
 import './SituationsPage.css'
 
 export function SituationsPage() {
   const situation = useSituationCheck()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const geolocation = useGeolocation()
+
+  const selectedArea = situation.selectedArea
+  // 지도 응답에 마커가 없으면 center 가 (0,0)으로 내려온다. 그대로 쓰면 지도가
+  // 아프리카 앞바다로 이동해 "지도가 안 나오는" 증상이 되므로 유효 좌표만 쓴다.
+  const isValidCenter = (
+    coordinate?: { latitude?: number; longitude?: number } | null,
+  ): coordinate is { latitude: number; longitude: number } =>
+    coordinate != null
+    && Number.isFinite(coordinate.latitude)
+    && Number.isFinite(coordinate.longitude)
+    && (coordinate.latitude !== 0 || coordinate.longitude !== 0)
+
+  const firstReportWithCoords = situation.reports.find(
+    (report) => isValidCenter({ latitude: report.latitude, longitude: report.longitude }),
+  )
+  // 지역을 선택했으면 지역 중심(지도 응답 → 지역 좌표 → 첫 제보 좌표 순),
+  // 아니면 현재 위치를 중심으로 쓴다.
+  const areaCenter = selectedArea
+    ? [
+        situation.mapData?.center,
+        { latitude: selectedArea.latitude, longitude: selectedArea.longitude },
+        firstReportWithCoords
+          ? { latitude: firstReportWithCoords.latitude, longitude: firstReportWithCoords.longitude }
+          : null,
+      ].find(isValidCenter) ?? null
+    : null
+  const mapCenter = selectedArea ? areaCenter : geolocation.location
+
+  const openReportDetail = (reportId: string) => {
+    navigate(`/app/situations/reports/${reportId}${location.search}`)
+  }
 
   return (
     <div className="situation-page">
@@ -46,40 +80,40 @@ export function SituationsPage() {
             <path d="M4 5h16l-6.5 7.4V19l-3 1v-7.6L4 5Z" />
           </svg>
         </button>
-        <ReportSortSelect value={situation.sort} onChange={situation.setSort} />
       </div>
 
-      {situation.selectedArea ? (
-        <>
-          <SelectedAreaHeader area={situation.selectedArea} />
-          <section className="situation-content-section" aria-labelledby="risk-map-section-title">
-            <h2 id="risk-map-section-title" className="situation-section-title">위험 지역 지도</h2>
-            <AreaMap
-              mapData={situation.mapData}
-              isLoading={situation.isMapLoading}
-              error={situation.mapError}
-              locationName={situation.selectedArea.name}
-            />
-          </section>
-          <AreaStatusSummary
-            status={situation.areaStatus}
-            isLoading={situation.isAreaStatusLoading}
-            error={situation.areaStatusError}
-            onRefresh={situation.refreshAreaStatus}
-          />
-        </>
-      ) : null}
+      {selectedArea ? <SelectedAreaHeader area={selectedArea} /> : null}
 
-      <LiveReportSection
-        reports={situation.reports}
-        sort={situation.sort}
-        selectedTypes={situation.selectedTypes}
-        isLoading={situation.isReportsLoading}
-        error={situation.reportsError}
-        listRef={situation.reportListRef}
-        onRetry={() => void situation.retryReports()}
-        emptyMessage="현재 등록된 실시간 제보가 없습니다."
-      />
+      <section className="situation-content-section" aria-labelledby="risk-map-section-title">
+        <h2 id="risk-map-section-title" className="situation-section-title">
+          {selectedArea ? `${selectedArea.name} 제보 지도` : '내 주변 지도'}
+        </h2>
+        <SituationMap
+          center={mapCenter}
+          reports={situation.reports}
+          showCurrentLocation={!selectedArea}
+          fitToReports={Boolean(selectedArea)}
+          statusMessage={
+            selectedArea
+              ? situation.reports.length === 0 && !situation.isReportsLoading
+                ? '이 지역에 표시할 제보가 없습니다.'
+                : undefined
+              : geolocation.status === 'success'
+                ? undefined
+                : geolocation.message
+          }
+          onSelectReport={openReportDetail}
+        />
+      </section>
+
+      {selectedArea ? (
+        <AreaStatusSummary
+          status={situation.areaStatus}
+          isLoading={situation.isAreaStatusLoading}
+          error={situation.areaStatusError}
+          onRefresh={situation.refreshAreaStatus}
+        />
+      ) : null}
 
       <ReportFilterSheet
         open={situation.isFilterOpen}

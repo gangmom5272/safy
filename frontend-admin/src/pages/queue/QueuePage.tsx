@@ -5,6 +5,7 @@ import { RiskBadge } from '../../components/admin/RiskBadge'
 import { useAuth } from '../../auth/useAuth'
 import { createReportDetailPath } from '../../router/paths'
 import { subscribeToRealtimeSignals } from '../../api/realtime'
+import { getSubcategoryLabel } from '../../utils/reportLabels'
 import { claimReport, formatElapsed, getQueue, QUEUE_CATEGORY_LABELS, type QueueItem } from './queueApi'
 
 export function QueuePage() {
@@ -120,7 +121,7 @@ export function QueuePage() {
                   <strong className="queue-card__address">{item.address ?? '위치 정보 없음'}</strong>
                   <span className="queue-card__category">
                     {QUEUE_CATEGORY_LABELS[item.category] ?? '기타'}
-                    {item.subcategory ? ` · ${item.subcategory}` : ''}
+                    {item.subcategory ? ` · ${getSubcategoryLabel(item.subcategory)}` : ''}
                   </span>
                   {item.description && <p className="queue-card__desc">{item.description}</p>}
                 </div>

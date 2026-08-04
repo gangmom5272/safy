@@ -12,6 +12,7 @@ import {
   getMockWebRtcInfo,
   mockAreaStatus,
 } from './mockData'
+import { findDistrictCenter } from './seoulDistrictCenters'
 import {
   createLiveReportParams,
   mapAreaDetail,
@@ -53,7 +54,18 @@ export async function searchLocations(keyword: string): Promise<LocationSearchRe
     params: { query: keyword },
   })
 
-  return readArrayResponse(response.data).map(mapLocationSearchResult)
+  // 검색 응답에는 좌표가 없어 지도를 옮길 수 없다. 자치구 중심 좌표로 보강한다.
+  return readArrayResponse(response.data)
+    .map(mapLocationSearchResult)
+    .map((location) => {
+      if (location.latitude !== undefined && location.longitude !== undefined) {
+        return location
+      }
+      const center = findDistrictCenter(location.name)
+      return center
+        ? { ...location, latitude: center.latitude, longitude: center.longitude }
+        : location
+    })
 }
 
 export async function getLiveReports(params: ReportListParams): Promise<LiveReportSummary[]> {

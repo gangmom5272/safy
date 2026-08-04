@@ -9,6 +9,7 @@ import { ROUTE_PATHS } from '../../router/paths'
 import type { AdminReport, ReportStatus } from '../../types/admin'
 import { formatAdminDate } from '../../utils/adminDate'
 import { getReportStatusTone } from '../../utils/adminStatus'
+import { getAnalysisStatusLabel } from '../../utils/reportLabels'
 import {
   detailToAdminReport,
   getOperatorReportDetail,
@@ -83,7 +84,6 @@ export function ReportDetailPage() {
     ? [{ id: image.reportImageId, url: image.previewUrl }]
     : [])
   const riskLevel = analysis?.riskLevel ?? report.riskLevel
-  const crowdCount = analysis?.crowdCount ?? null
   const summary = analysis?.summary ?? report.aiSummary
   const confidence = analysis?.confidence ?? null
 
@@ -130,8 +130,8 @@ export function ReportDetailPage() {
             <div className="report-summary__group">
               <dt>위험 정보</dt>
               <dd><span>위험도</span><RiskBadge value={riskLevel} score={report.riskScore} /></dd>
-              <dd><span>분석 상태</span><span>{analysis?.status ?? '-'}</span></dd>
-              <dd><span>추정 인원</span><strong>{crowdCount ?? '-'}</strong></dd>
+              {/* 추정 인원(crowdCount)은 정확도가 보장되지 않아 노출하지 않는다. */}
+              <dd><span>분석 상태</span><span>{getAnalysisStatusLabel(analysis?.status) ?? '-'}</span></dd>
             </div>
             <div className="report-summary__group">
               <dt>처리 정보</dt>
