@@ -4,11 +4,15 @@ import java.util.Comparator;
 import java.util.List;
 
 public final class RiskAssessor {
-	public static final String RISK_RULE_VERSION = "safy-risk-v0.2";
+	public static final String RISK_RULE_VERSION = "safy-risk-v0.3";
 	private static final double WEIGHT_VISUAL = 0.4;
 	private static final double WEIGHT_LOCAL_PEAK = 0.6;
 	private static final double WEIGHT_PERSISTENCE = 0.15;
 	private static final double WEIGHT_GROWTH = 0.15;
+	private static final double AMBIGUOUS_LOCAL_PEAK = 80.0;
+	private static final double CORROBORATING_VISUAL = 20.0;
+	private static final double CORROBORATING_GROWTH = 30.0;
+	private static final double AMBIGUOUS_MAX_RISK = 60.0;
 	private static final double EXCEPTION_LOCAL_PEAK_HIGH = 80.0;
 	private static final double EXCEPTION_LOCAL_PEAK_VERY_HIGH = 90.0;
 	private static final double EXCEPTION_PERSISTENCE_VERY_HIGH = 70.0;
@@ -31,28 +35,49 @@ public final class RiskAssessor {
 		Double growth = congestionSourceMixed ? null : trend.growth();
 		double bonus = (persistence == null ? 0.0 : WEIGHT_PERSISTENCE * persistence)
 				+ (growth == null ? 0.0 : WEIGHT_GROWTH * growth);
-		double finalRisk = roundToOneDecimal(Math.max(0.0, Math.min(100.0,
+		double rawRisk = Math.max(0.0, Math.min(100.0,
 				WEIGHT_VISUAL * trend.peakVisualCongestion()
-						+ WEIGHT_LOCAL_PEAK * trend.peakLocalCongestion() + bonus)));
+						+ WEIGHT_LOCAL_PEAK * trend.peakLocalCongestion() + bonus));
+		boolean isolatedPeak = isUncorroboratedLocalPeak(
+				trend.peakVisualCongestion(), trend.peakLocalCongestion(), growth);
+		double finalRisk = roundToOneDecimal(
+				isolatedPeak ? Math.min(rawRisk, AMBIGUOUS_MAX_RISK) : rawRisk);
 		RiskLevel level = applyExceptionRules(
-				RiskLevel.fromScore(finalRisk), trend.peakLocalCongestion(), persistence);
+				RiskLevel.fromScore(finalRisk), trend.peakVisualCongestion(),
+				trend.peakLocalCongestion(), persistence, growth);
 		double confidence = calculateConfidence(completedFrames.size(), totalFrameCount, qualityCleanFrameCount);
 		boolean confirmRequired = confidence < CONFIRM_REQUIRED_CONFIDENCE
-				|| persistence == null || growth == null || congestionSourceMixed;
+				|| persistence == null || growth == null || congestionSourceMixed || isolatedPeak;
 		return new RiskCalculation(finalRisk, level, trend.peakVisualCongestion(),
 				trend.peakLocalCongestion(), persistence, growth, confidence, confirmRequired,
 				RISK_RULE_VERSION, representative);
 	}
 
-	private static RiskLevel applyExceptionRules(RiskLevel level, double localPeak, Double persistence) {
+	private static RiskLevel applyExceptionRules(RiskLevel level, double visual, double localPeak,
+			Double persistence, Double growth) {
 		if (localPeak >= EXCEPTION_LOCAL_PEAK_VERY_HIGH
-				&& persistence != null && persistence >= EXCEPTION_PERSISTENCE_VERY_HIGH) {
+				&& persistence != null && persistence >= EXCEPTION_PERSISTENCE_VERY_HIGH
+				&& visual >= CORROBORATING_VISUAL
+				&& growth != null && growth >= CORROBORATING_GROWTH) {
 			return level.raiseTo(RiskLevel.VERY_HIGH);
 		}
-		if (localPeak >= EXCEPTION_LOCAL_PEAK_HIGH && persistence != null) {
+		if (localPeak >= EXCEPTION_LOCAL_PEAK_HIGH
+				&& persistence != null && persistence >= EXCEPTION_PERSISTENCE_VERY_HIGH
+				&& hasCorroboratingEvidence(visual, growth)) {
 			return level.raiseTo(RiskLevel.HIGH);
 		}
 		return level;
+	}
+
+	private static boolean isUncorroboratedLocalPeak(double visual, double localPeak, Double growth) {
+		return localPeak >= AMBIGUOUS_LOCAL_PEAK
+				&& visual < CORROBORATING_VISUAL
+				&& (growth == null || growth < CORROBORATING_GROWTH);
+	}
+
+	private static boolean hasCorroboratingEvidence(double visual, Double growth) {
+		return visual >= CORROBORATING_VISUAL
+				|| growth != null && growth >= CORROBORATING_GROWTH;
 	}
 
 	private static double calculateConfidence(int analyzed, int total, int qualityClean) {
