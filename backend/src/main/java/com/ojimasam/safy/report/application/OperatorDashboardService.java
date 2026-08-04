@@ -221,8 +221,8 @@ public class OperatorDashboardService {
 				report.getDescription(), report.getLatitude(), report.getLongitude(), report.getAddress(),
 				report.getStatus(), assignment.getStatus(), assignment.getRoute().getControlCenter().getId(),
 				assignment.getRoute().getControlCenter().getName(), assignment.getOperator().getId(),
-				assignment.getOperator().getDisplayName(), assignment.getAssignedAt(), image, live,
-				risksByReportId.get(report.getId()));
+				assignment.getOperator().getDisplayName(), report.getReportedAt(), assignment.getAssignedAt(),
+				image, live, risksByReportId.get(report.getId()));
 	}
 
 	private DashboardImageView image(List<ReportImage> images, Instant thumbnailExpiresAt) {
