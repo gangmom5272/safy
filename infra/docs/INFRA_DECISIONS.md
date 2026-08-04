@@ -1229,3 +1229,416 @@ stun.cloudflare.com:3478  무응답
 - **`operator-accounts.sql`**: 라이브 관제 검증에는 걸리지 않는 것으로 확인됐다.
   `requireAccess`가 `SUPER_ADMIN`을 그대로 통과시키고 `markHandling`은 배정이 없으면
   조용히 반환한다. 다만 그 경우 제보 상태가 `HANDLING`으로 바뀌지 않는다.
+
+
+# 2026-07-31 (금) — data·AI 서버 배포 · nginx stale DNS 근절 · P2PNet 자산 파이프라인 검증
+
+> 타임스탬프는 배포 태그를 포함해 대부분 UTC 원문이다. Kuma heartbeat만 KST로 조회했고
+> 그 절에 표시해 뒀다.
+>
+> 1절은 같은 날 오전 작업이고 이후 절과 다른 세션에서 진행됐다. 그 절의 수치는 당시
+> 기록을 옮긴 것이고, 2절 이후는 이 문서를 쓰는 세션에서 직접 실행해 얻은 값이다.
+
+## 1. data 서버를 자동 배포에 넣었더니 전 API가 502가 됐다 (`a142388`)
+
+`data`는 compose 정의(`0eef9d7`)가 있는데도 CI 배포 목록에 없어 컨테이너가 기동되지
+않았다. backend는 이미 2분마다 수집을 요청하고 있어 이름 해석 실패를 반복하는 상태였다.
+rsync 대상과 `docker compose up` 목록에 `data`를 넣어 해소했다.
+
+배포는 성공했고 수집도 즉시 돌았다.
+
+```
+CITY_CONGESTION   SUCCESS 121/0
+DISASTER_MESSAGE  SUCCESS 100/0
+error_details 있는 run 0건
+places 121행 (seoul-places.sql 수동 psql 적용)
+```
+
+그런데 **배포 직후 전 API가 502가 됐다.** 원인은 컨테이너 IP 재배치였다.
+
+```
+infra-data-1    172.19.0.6   ← backend 가 쓰던 주소
+infra-backend-1 172.19.0.8   ← 밀려난 주소
+```
+
+`nginx/default.conf`는 `proxy_pass http://backend:8080`인데 `resolver` 지시자가 없다.
+**nginx는 이 경우 기동 시점에 한 번만 호스트명을 해석하고 그 IP를 영구히 캐시한다.**
+nginx는 7/29부터 떠 있었고 설정이 바뀌지 않아 재생성되지 않았으므로, 캐시된 `.6`을 계속
+호출했다. 그 주소는 이제 data(8000 리스닝)라 8080 연결이 거부됐다.
+
+```
+[error] connect() failed (111: Connection refused) while connecting to upstream,
+        upstream: "http://172.19.0.6:8080/..."
+```
+
+**`nginx -s reload`로는 풀리지 않는다.** reload는 이름을 재해석하지 않는다.
+`docker restart infra-nginx-1`로 복구했다. 이 구간에 backend 자체는 무중단이었다
+(`RestartCount=0`, 8090 직접 호출 200). Uptime Kuma 알림도 같은 옛 IP를 가리켰다.
+
+이 시점에 남긴 판단은 "`ai-server`를 추가하면 똑같이 재현된다"였고, 그래서 AI 배포보다
+nginx 수정을 먼저 처리했다.
+
+## 2. nginx는 시작 시 한 번만 이름을 해석한다 — 격리 실험으로 대조했다 (`7b094f2`)
+
+실서비스를 건드리지 않고 `infra_default`에 임시 nginx 두 개와 더미 upstream을 띄워
+대조했다. 더미를 삭제·재생성해 IP를 옮긴 뒤 두 방식의 응답을 비교했다.
+
+```
+                          IP 이동 직후   15초 후
+상수 proxy_pass           502            502
+resolver + 변수 proxy_pass 200            200
+
+상수 쪽 로그: upstream: "http://172.19.0.9:80/" connect refused  ← 옛 IP
+```
+
+7/31 오전 장애와 동일한 로그 패턴이 재현됐다. 수정은 두 conf 모두에 적용했다.
+
+```
+resolver 127.0.0.11 valid=10s ipv6=off;
+set $backend_upstream backend;
+...
+proxy_pass http://$backend_upstream:8080$request_uri;
+```
+
+`proxy_pass`에 변수가 들어가야 런타임 재해석이 일어난다. 상수 호스트명으로는 안 된다.
+`ipv6=off`는 내장 DNS가 AAAA를 돌려줄 때 IPv6로 먼저 붙으려다 실패하는 것을 막는다.
+
+바꾸기 전에 전달 결과가 같은지를 확인했다. 다른 방식으로 프록시하면 OAuth2 콜백이
+깨질 수 있어서다.
+
+```
+전달된 request line (상수/변수 모두 동일)
+  GET /api/v1/health?code=a%2Fb&x=1
+  GET /login/oauth2/code/kakao?state=%2Bx%3D
+Host 헤더: i15a503.p.ssafy.io:6080   ← 포트까지 유지
+```
+
+`$request_uri`는 클라이언트가 보낸 원본 경로와 쿼리를 그대로 담으므로 퍼센트 인코딩이
+재인코딩되지 않는다. 배포 후에는 실서비스에서 확인했다. backend IP를 `.6`→`.20`→`.6`으로
+옮기는 동안 **nginx를 전혀 건드리지 않은 상태로 401이 45초간 끊기지 않았고**, IP 교체
+구간의 nginx upstream 실패는 0건이었다. `ai-server`를 추가한 배포에서도 옛 IP 오조회는
+없었다.
+
+IP를 옮길 때 컨테이너를 재기동하지 않고 `docker network disconnect`/`connect`를 썼다.
+`--force-recreate`는 IPAM이 같은 주소를 다시 주는 경우가 있어 검증이 성립하지 않았고,
+재기동을 섞으면 Spring 기동 대기(약 15초 502)와 DNS 문제가 구분되지 않는다. 네트워크만
+갈아끼우면 프로세스가 살아 있으므로 502가 나오면 그것은 100% 이름 해석 문제다. 재연결
+시에는 `--alias backend`를 반드시 붙여야 한다.
+
+부수 이득이 하나 있다. **변수 방식은 기동 시 이름을 해석하지 않으므로 upstream이 아직
+없어도 nginx가 뜬다.** 전에는 해석 실패가 기동 자체를 막았다(5절).
+
+## 3. conf를 파일 단위로 마운트하면 배포가 반영되지 않는다 (같은 커밋)
+
+수정을 커밋하기 전에 "이게 배포로 적용되는가"를 확인했는데, 답이 아니었다.
+
+CI 배포의 rsync는 임시 파일에 받아 rename으로 교체하므로 **파일의 inode가 바뀐다.**
+파일 단위 바인드 마운트는 마운트 시점의 inode에 묶여 있어 컨테이너 안에서는 옛 내용이
+계속 보인다.
+
+```
+마운트 방식                          rsync 교체 후 컨테이너가 보는 내용
+./nginx/default.conf:...(파일)       ORIGINAL   ← 반영 안 됨
+./nginx:/etc/nginx/conf.d(디렉터리)  REPLACED
+```
+
+여기에 compose는 nginx 정의가 바뀌지 않으면 컨테이너를 재생성하지 않는다는 점이 겹친다.
+**즉 지금까지는 conf만 고쳐 배포하면 적용될 방법이 없었고, 컨테이너를 재생성해야만
+반영됐다.** 그동안 반영된 것은 다른 이유로 nginx가 재생성됐기 때문이다.
+
+디렉터리 마운트로 바꾸고, CI 배포 뒤에 reload를 넣었다.
+
+```
+docker compose exec -T nginx nginx -t &&
+docker compose exec -T nginx nginx -s reload
+```
+
+reload는 새 워커를 띄우고 기존 연결을 유지해 무중단이다. 서버에서 같은 명령을 실행해
+워커 교체(PID 20→325, 옛 워커는 graceful shutdown)와 6080 401 / 9200 200 유지를
+확인했다. `nginx -t`를 먼저 두어 잘못된 conf를 reload하지 않게 했다. 문법 오류면 배포가
+실패로 끝나는데, 그게 옛 설정으로 조용히 계속 도는 것보다 낫다.
+
+`docker-compose.yml`이 바뀌므로 이 배포에서 nginx가 자동 재생성되어 새 conf가 적용됐다.
+
+## 4. 그 실험을 한 번 오판했다 — rsync가 전송을 건너뛰었다
+
+3절의 첫 실험에서 디렉터리 마운트도 옛 내용을 보여 "둘 다 반영되지 않는다"고 결론냈다.
+틀렸다. 원본과 교체본이 **같은 크기(9바이트)에 같은 초에 만들어져 rsync가 전송을
+건너뛴** 것이었다. 컨테이너는 바뀐 적이 없는 파일을 보고 있었을 뿐이다.
+
+크기와 mtime을 분리하고 `--itemize-changes`로 전송을 확인한 뒤 결론이 뒤집혔다.
+
+```
+>f.st...... t.conf     ← 두 경우 모두 실제 전송됨
+파일 마운트   : ORIGINAL-AAA
+디렉터리 마운트: REPLACED-BBBBBBBBBB
+```
+
+**대조 실험에서 "변화가 없다"는 결과는, 변화를 실제로 만들었는지부터 증명해야 한다.**
+7/28 4절과 7/30 8절에 같은 성격의 오진이 있다. 세 번째다.
+
+## 5. minio.conf의 상수 호스트명은 nginx 전체를 못 뜨게 만든다 (`6899a46`)
+
+`minio.conf`는 처음에 손대지 않기로 했다. minio는 이미지 태그가 고정이라 재생성이 드물어
+stale DNS 위험이 낮다고 봤기 때문이다. 그 판단을 뒤집은 것은 `nginx -t` 결과였다.
+
+```
+nginx: [emerg] host not found in upstream "minio" in minio.conf:52
+nginx: configuration file test failed
+```
+
+**상수 호스트명은 기동 시 해석에 실패하면 nginx 전체가 뜨지 않는다.** stale IP보다 나쁘다.
+minio가 재생성되는 중에 nginx가 기동하면 MinIO뿐 아니라 앱 전체가 죽는 연쇄가 된다.
+변수 방식은 기동 시 해석하지 않으므로 이 연쇄가 끊긴다.
+
+이 파일은 presigned URL을 프록시하므로 서명 호환이 깨지면 업로드가 전멸한다. 그래서
+실제 presigned URL을 발급해 확인했다.
+
+```
+mc share download 로 발급 (X-Amz-Algorithm/Credential/Date/Expires/SignedHeaders/Signature)
+상수 proxy_pass (실서비스 9200) : 200
+변수 proxy_pass (임시 19443)    : 200, 본문 일치
+```
+
+`Share:` 줄의 서명된 URL을 써야 한다. 처음에 출력 첫 줄(`URL:`, 서명 없음)을 잡아 양쪽
+403을 받았고, 그대로 "대조 성립"으로 넘겼으면 서명 검증을 안 한 채 넘어갔을 뻔했다.
+
+## 6. P2PNet 가중치 인증 — presigned를 버렸다 (7일 상한 실측)
+
+137번은 가중치를 MinIO로 옮기는 티켓이고, AI 쪽 문서는 presigned URL을 권장으로
+기술하고 있었다. 실측이 그 권장을 뒤집었다.
+
+```
+mc share download --expire 169h    → Expiry cannot be larger than 7 days
+mc share download --expire 604801s → 동일
+```
+
+**상한이 7일이다.** 오늘 발급분은 8/7에 만료되고, 8/9 리허설과 8/10 제출 사이에 재발급
++`.env` 수정+`ai-server` 재시작이 필요해진다. 8/8 프리즈 이후에 손을 대야 한다는 뜻이다.
+
+여기서 중요한 것은 어떤 방식이든 **실패가 조용하다**는 공통 성질이다. 자산 준비가
+실패하면 코드가 P2PNet만 끄고 YOLO로 계속 서비스한다. API는 200을 주고 알림도 없다.
+그래서 "언제 조용히 깨지는가"가 선택 기준이 됐다.
+
+| 방식 | 만료 | 공유비밀 | 외부노출 | 자동복구 | 비용 |
+|---|---|---|---|---|---|
+| presigned | **8/7 (7일 상한)** | 없음 | URL 유출 시 7일 | O | `.env` 1줄 |
+| nginx 헤더 검증 | 없음 | 있음 | 낮음 | O | 비밀을 Git 커밋되는 conf에 못 씀 → envsubst 구조 도입 필요 |
+| **내부 익명 + 외부 차단** | 없음 | 없음 | nginx 규칙 하나에 의존 | O | conf 1개 + `.env` 1줄 |
+| 볼륨 직접 주입 | 없음 | 없음 | 없음 | **X (수동)** | URL 비움 |
+
+세 번째를 택했다. presigned의 만료는 오늘 검증해도 시간이 흐르면 다시 깨지는데, 이쪽의
+약점(nginx 규칙 의존)은 규칙이 Git에 있어 rsync로 유지되고 `curl` 한 줄로 언제든
+재검증된다. 만료도 공유비밀도 없다.
+
+```
+버킷    safy-ai-models (p2pnet prefix 에만 mc anonymous set download)
+내부    ai-server → http://minio:9000/safy-ai-models/p2pnet/safy-p2pnet-v2-epoch3/epoch-003.pth
+외부    nginx/minio.conf 에 location ^~ /safy-ai-models { return 404; }
+```
+
+minio 컨테이너 포트는 `127.0.0.1`에만 게시되므로 외부 경로는 nginx 9200뿐이다.
+**즉 이 nginx 규칙이 가중치를 인터넷에서 떼어놓는 유일한 경계다.** 지우면 공개된다.
+403이 아니라 404로 답해 버킷 존재 여부도 알리지 않는다.
+
+대가 하나는 브리지 안의 모든 컨테이너가 인증 없이 이 prefix를 읽는다는 것이다. 같은
+네트워크의 backend는 이미 MinIO 자격증명을 갖고 있어 실질적 권한 확대는 미미하다고
+판단했다(**추론**).
+
+## 7. AI 서버를 가중치 없이 먼저 배포했다 (`6899a46`)
+
+가중치 파일은 저장소에 없고 AI 담당자 로컬에만 있다. 파일을 기다리지 않고 배포한 근거는
+세 가지다.
+
+- YOLO 가중치는 이미지 빌드 단계에서 내려받아 SHA-256까지 검증해 넣는다(`ai/Dockerfile`)
+- `P2PNET_SHADOW_ENABLED=false`면 자산 준비를 건너뛰고 `ASSET_DISABLED`로 끝난다
+- `/health`는 P2PNet 상태와 무관하게 200을 준다
+
+서버 `.env`에 P2PNET 키가 하나도 없어 compose 기본값 `false`가 그대로 적용된다. 가중치가
+오면 `.env` 두 줄과 재시작만 남는다.
+
+CI에 넣기 전에 서버에서 이미지를 수동 빌드해 기동·응답·자원을 먼저 확인하고 임시
+컨테이너·이미지를 삭제했다. 빌드 실패가 배포 파이프라인을 막는 것을 미리 걸러내기
+위해서다. 실제로 1차 빌드가 실패했다(12절).
+
+`ai-server` 빌드 실패가 `docker compose up` 체인을 끊어 배포 전체를 실패시키는 구조는
+그대로 뒀다. 실패를 무시하도록 분리하면 옛 컨테이너가 계속 도는데도 배포가 성공한 것으로
+보인다. 그게 더 나쁘다.
+
+## 8. AI 서버 실측 (티켓 106 입력값)
+
+배포된 컨테이너에서 측정했다. 프레임은 AI 담당자가 보낸 검증용 합성 이미지와 컨테이너
+내장 Ultralytics 샘플을 썼다.
+
+```
+최초 빌드(캐시 없음)  213.47 s
+이미지 크기            2.85 GB
+기동 ~ /health 200     5.19 s
+첫 요청                processingTimeMs 2151   ← 모델 로드
+RSS                    유휴 202MiB → 추론 후 410.5MiB
+```
+
+| 프레임 | 왕복 mean / p95 / max | `processingTimeMs` mean / p95 |
+|---|---|---|
+| 1280×720 합성 (n=30) | 83.9 / 86.4 / 89.3 ms | 60.5 / 63.0 ms |
+| `bus.jpg` 사람 4명 (n=30) | 95.0 / 107.0 / 107.2 ms | 71.7 / 84.0 ms |
+| 3840×2160 (n=20) | 173.6 / 176.4 / 179.7 ms | 61.0 / 63.0 ms |
+
+읽을 지점이 두 개다.
+
+- **사람이 탐지되면 추론이 약 11ms 늘어난다**(60.5 → 71.7). 사람 0명 프레임으로만 측정하면
+  후처리 비용을 놓친다.
+- **4K는 추론 시간이 720p와 같다**(61ms). YOLO가 내부에서 리사이즈하기 때문이다. 왕복
+  차이 112ms는 1.3MB 업로드와 디코드다. 큰 프레임에서는 네트워크·디코드가 지배적이다.
+
+동시 4요청은 직렬로 처리된다(uvicorn 단일 워커). 총 470ms, 개별 0.12/0.23/0.34/0.45초.
+Egress 프레임 추출 간격이 5초이므로 왕복 p95 86.4ms는 예산의 약 1.7%다. 노트북 P95
+68.81ms 대비 1.26배다. **YOLO 기준으로 CPU 단독 배포는 충분하다.**
+
+미확보 두 가지를 분명히 남긴다. **P2PNet은 가중치가 없어 미측정이고**, 노트북 값에 위
+1.26배를 곱하는 것은 비율이 같다는 가정에 기댄 추정이라 실측으로 대체해야 한다.
+**Egress 트랜스코딩과 겹쳤을 때의 메모리도 미측정이다** — 라이브 세션이 없으면 Egress가
+돌지 않으므로 티켓 95의 브라우저 라이브 제보 검증 때 같이 재야 한다.
+
+## 9. P2PNet 자산 실패 3케이스를 실제 서버에서 격리 검증했다 (티켓 141)
+
+가중치가 없어도 격리는 검증할 수 있다. 82.39MB 더미 파일을 실제 경로에 올려 체크섬
+불일치를 만들고, 임시 컨테이너로 세 실패를 재현했다. 운영 `ai-server`는 건드리지 않았다.
+
+| 조건 | `p2pnetShadow.status` | `/health` | YOLO 공식 분석 |
+|---|---|---|---|
+| URL 없음 | `P2PNET_WEIGHT_URL_MISSING` | ok 200 | `COMPLETED` personCount 4 C 1.88 |
+| 없는 URL | `P2PNET_WEIGHT_DOWNLOAD_FAILED` | ok 200 | `COMPLETED` personCount 4 C 1.88 |
+| 체크섬 불일치 | `P2PNET_WEIGHT_CHECKSUM_MISMATCH` | ok 200 | `COMPLETED` personCount 4 C 1.88 |
+
+세 경우 모두 P2PNet만 꺼지고 공식 경로는 동일한 결과를 냈다. `congestionSource`도 계속
+`YOLO`다. 부수로 세 케이스 모두 `modelVersion`이 `safy-p2pnet-v2-epoch3`로 채워졌는데,
+이는 **manifest 로드와 `/opt/p2pnet` pinned commit 검증이 통과했다는 뜻**이다. 소스가
+어긋나면 `SOURCE_MISSING`/`VERSION_MISMATCH`에서 먼저 걸린다.
+
+같은 기회에 MinIO 배선을 선행 검증했다.
+
+```
+p2pnet prefix 익명 정책 부여 후
+  내부 minio:9000 익명 GET  200, 86,390,702 bytes, 0.08 s
+  외부 9200                 404
+  /safy-reports/            403 (회귀 없음)
+```
+
+**내부 다운로드가 0.08초라 기동 지연 요인이 아니다.** 검증 후 더미 파일은 삭제하고 익명
+정책만 남겼다. 잘못된 파일이 실제 가중치 경로에 남으면 혼란을 준다. 실제 가중치가 오면
+파일만 올리면 `READY`가 된다.
+
+## 10. 앱 로그가 Loki에 한 줄도 없다 (티켓 142 차단, AI 영역)
+
+AI 담당자가 "앱에 로깅 설정이 없어 `logger.info`가 안 나올 것"이라는 가설을 보냈다.
+확인 결과 맞았고, 더 중요하게 **원인 지점이 갈렸다.**
+
+```
+{container="infra-ai-server-1"}                          → uvicorn 로그 조회됨 (수집 정상)
+{container="infra-ai-server-1"} |= "p2pnet_asset_startup" → 0건
+{job=~".+"} |= "p2pnet"                                   → 0건
+docker logs infra-ai-server-1 | grep p2pnet_asset_startup → 0건 (uvicorn 로그 11줄만)
+```
+
+`logging=true` 라벨과 Alloy 수집, Loki 저장은 모두 정상이다. 앱의 `logger.info`가 stdout에
+도달하지 못한다. root 로거에 핸들러가 없어 `logging.lastResort`(WARNING)가 INFO를 버린다.
+**인프라가 고칠 것은 없고 AI 쪽 로깅 설정 문제다.**
+
+`ENABLED=false`여도 `_log_preparation`은 호출되므로, 수정되면 지금 상태에서도
+`status=DISABLED` 한 줄이 남아야 한다. 그게 수정 확인 기준이다.
+
+## 11. Uptime Kuma는 docker sandbox 레벨에서 stale DNS를 겪는다 (미해결)
+
+nginx를 고친 뒤에도 Kuma에서 backend DOWN 알림이 왔다. 오탐이었다.
+
+```
+heartbeat (KST)
+  15:11:12  status=1
+  15:12:12  status=2  connect ECONNREFUSED 172.19.0.6:8080   ← backend 는 .7 로 이동한 뒤
+  15:15:12  status=0  → 알림 발송
+  15:21:12  status=1  자연 회복
+```
+
+그 9분간 실제 backend는 무중단이었다(`restarts=0`, 8090 직접 200, 수집 SUCCESS 유지).
+**같은 시각 nginx는 이미 `.7`로 정확히 붙고 있었다.** 같은 docker DNS인데 컨테이너별로
+다른 답을 받은 것이다.
+
+Kuma 안에서 `getent hosts`와 `node dns.resolve4` 둘 다 stale 값을 줬으므로 앱
+캐시(`cacheable-lookup`)가 아니고, `/etc/hosts`에도 항목이 없다(docker 29.6.2). docker
+network inspect에도 유령 엔드포인트가 없었다. sandbox 레벨 문제로 본다.
+
+같은 날 두 번째 사례에서는 3분(`status=2` 3회)만 지속되고 회복해 **알림까지 가지
+않았다.** 즉 지속 시간이 가변적이고, **알림이 없다는 것이 오탐이 없었다는 뜻은 아니다.**
+
+구별법은 단순하다. heartbeat `msg`의 IP가 현재 컨테이너 IP와 다르면 오탐이다.
+
+대책 후보는 세 가지다. compose에 `extra_hosts: host.docker.internal:host-gateway`를 주고
+모니터를 게이트웨이 경유로 바꾸면 DNS를 아예 타지 않는다(권장, 다만 모니터 설정이 Kuma UI
+소유라 코드 밖 작업이 남는다). 컨테이너 고정 IP는 근본적이지만 전 서비스 IP를 수동
+관리해야 한다. 배포 후 Kuma 재시작은 가장 단순하지만 sandbox 캐시가 초기화되는지
+**미확인**이다.
+
+**backend → `http://data:8000` 경로도 같은 병에 노출돼 있다.** JVM은 DNS를 캐시한다.
+7/31 배포에서는 backend도 함께 재생성돼 무사했지만, data만 IP가 바뀌는 배포 조합은
+위험하다(미발생, **추론**).
+
+## 12. 별건 관찰
+
+- **`ai/deploy/p2pnet-compatibility.patch`가 Windows 체크아웃에서 CRLF가 된다.** 1차 빌드가
+  `git apply --check` 거부로 실패한 원인이다. blob은 LF 514B, 워킹트리는 CRLF 529B이고
+  `.gitattributes`는 `*.sh`만 `eol=lf`로 고정한다. `/opt/p2pnet`은 컨테이너에서 새로
+  clone되므로 대상은 항상 LF다. **CI(리눅스 러너)와 서버 빌드는 영향이 없다** — 서버에서
+  `git -c core.autocrlf=false archive`로 LF를 보내 빌드 성공까지 확인했다. Windows 로컬
+  빌드에만 걸린다. AI 담당자가 원인을 바이트 단위로 재확인하고 `*.patch text eol=lf`
+  적용까지 마쳤으며, 루트 공유 파일이라 다음 AI MR에 묶어 가기로 했다.
+- **검증 스크립트 `measure-latency.sh`의 awk 블록이 개행 손상으로 실행되지 않는다**
+  (`unterminated string`). zip 생성 과정에서 `printf "...%.1f ms\n"`의 `\n`이 실제 개행으로
+  바뀐 것으로 보인다. sh는 문자열 안 개행을 허용해 `run-all.sh`는 정상 동작한다. 측정
+  루프는 정상이라 8절 수치는 동등한 방식으로 다시 계산했다.
+- **재난문자 수집량이 하루 안에 100 → 1000 → 374로 두 번 바뀌었다.** 151번(수집 한도)과
+  `22d0f34`(요청 포맷 일치)가 차례로 배포된 결과다. 374는 하루 발생 규모와 비슷해
+  정상화로 보이지만(**추론**), 숫자의 의미와 기존 오적재분 정리는 데이터 담당 확인
+  사항이다.
+- AI 담당자가 보낸 검증 이미지 9개는 기대 결과와 전부 일치했다. `07-large-4k.jpg`가
+  `COMPLETED`로 나와 154번(4K 오판 수정)이 운영에 반영된 것도 확인됐다
+  (`frameQualityRuleVersion=frame-quality-v0.3`).
+
+## 13. 오늘 배운 점
+
+- **`resolver` 없는 `proxy_pass`는 시한폭탄이다.** 컨테이너가 하나 늘어날 때마다 IP가
+  재배치되고, nginx는 설정이 안 바뀌면 재생성되지 않아 옛 주소를 계속 부른다. 상수
+  호스트명은 그 위에 "기동 시 해석 실패 = 전체 기동 실패"라는 두 번째 위험을 얹는다.
+- **파일 단위 바인드 마운트는 rsync 배포와 함께 쓰면 침묵한다.** 인증서에 대해 이미 알고
+  있던 함정(7/29 4절)이 conf 파일 자체에도 그대로 적용됐는데 지금까지 몰랐다. 같은 원리가
+  적용되는 곳을 한 번 훑을 가치가 있다.
+- **"아무 일도 일어나지 않았다"는 관측은 관측이 유효했는지부터 증명해야 한다.** rsync
+  스킵으로 결론을 뒤집은 것이 오늘이고, 7/28·7/30에도 같은 성격의 오진이 있었다.
+- **조용한 실패를 기준으로 설계를 고르는 것이 유효했다.** presigned를 버린 이유는 기술적
+  우열이 아니라 "언제 아무 신호 없이 깨지는가"였다. 만료 기한은 캘린더에만 존재하고
+  런타임에는 아무 경고도 남기지 않는다.
+- **감시 도구도 같은 병에 걸린다.** nginx를 고쳤다고 stale DNS 문제가 끝난 것이 아니었다.
+  Kuma는 여전히 오탐을 내고, 그 오탐이 알림까지 갈지는 지속 시간에 달려 있다.
+
+## 14. 후속 · 미결
+
+- **P2PNet 가중치 수신·게시**: 파일이 저장소에 없어 인프라 단독으로 끝낼 수 없다. scp로
+  받아 전송 전/후/업로드 후 3중 체크섬을 대조한 뒤 `mc cp`한다. MinIO 자격증명은 공유하지
+  않는다. 배선과 격리는 이미 검증돼 있어 파일만 올리면 `READY`가 된다.
+- **P2PNet 지연·RSS 실측과 swap 판단**: 가중치 활성화 후. 현재 최대 RSS 410.5MiB,
+  메모리 여유 11G, swap 0B다. P2PNet 로드 후 값이 나와야 swap 추가 여부를 정할 수 있다.
+- **Egress 겹침 메모리**: 티켓 95 브라우저 라이브 제보 검증과 같이 측정한다.
+- **Kuma stale DNS 대책**: 11절 A안(게이트웨이 경유)을 권한다. 모니터 설정 변경이 Kuma UI
+  소유라 코드 변경만으로는 끝나지 않는다.
+- **Kuma `ai-server` 모니터 활성화**: `active=0`으로 이미 등록돼 있다. 자산 실패는 200을
+  주며 조용히 넘어가므로 감시가 필요하다. 가중치 활성화 후에는 Keyword 모니터로
+  `"ready":true`를 검사하면 P2PNet 상태까지 볼 수 있다.
+- **MinIO 자격증명 교체**: 9200이 외부에 열려 있는 것과 함께 검토해야 한다. 교체하면
+  backend·egress 재시작이 필요하다. 상세는 문서에 남기지 않고 별도 채널로 공유한다.
+- **backend → data 이름 해석**: 11절 마지막 항목. data만 IP가 바뀌는 배포 조합에서
+  재현될 수 있다.
+- **프레임 전달 주체 미정**: `ai-server`는 떠 있지만 아무도 프레임을 보내지 않는다.
+  `ai/docs/backend-integration-contract.md` 7.1에도 미결로 적혀 있다. 백엔드·OpenVidu와
+  결정해야 하며, 정해지지 않으면 AI가 배포돼도 실제 동작을 볼 수 없다.
+- **앱 로깅 설정(티켓 142 전제)**: 10절. AI 영역이고 수정 확인 기준은 `status=DISABLED`
+  한 줄이 Loki에 나타나는 것이다.
