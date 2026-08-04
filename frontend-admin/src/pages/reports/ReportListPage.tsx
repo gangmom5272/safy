@@ -12,6 +12,7 @@ import type { AdminReport } from '../../types/admin'
 import { getMyAssignedReports } from './reportApi'
 import { createReportDetailPath } from '../../router/paths'
 import type { AiAnalysisStatus, ReportStatus, ReportType, RiskLevel } from '../../types/admin'
+import { formatAdminTimestamp } from '../../utils/adminDate'
 import { getReportStatusTone } from '../../utils/adminStatus'
 import { compareRiskLevels, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
 import { subscribeToRealtimeSignals } from '../../api/realtime'
@@ -143,7 +144,9 @@ export function ReportListPage() {
           report.managerName,
           report.reporterName ?? '',
         ].join(' ').toLowerCase()
-        const reportDate = report.reportedAt.slice(0, 10)
+        // 화면에 보이는 날짜와 같은 기준으로 걸러야 한다. 원본은 UTC ISO 문자열이라
+        // 앞 10자를 그대로 쓰면 한국 시간으로 넘어간 밤 시간대 제보가 하루 어긋난다.
+        const reportDate = formatAdminTimestamp(report.reportedAt)?.slice(0, 10) ?? ''
         const matchesMedia = report.isLive
           ? appliedFilters.media.live
           : appliedFilters.media.image
@@ -347,7 +350,7 @@ export function ReportListPage() {
                   <tr key={report.id} className="clickable-row" onClick={() => navigate(createReportDetailPath(report.id))}>
                     <td>#{report.id}</td><td>{report.location}</td><td>{reportTypeLabels[report.type]}</td>
                     <td><RiskBadge value={report.riskLevel} score={report.riskScore} /></td>
-                    <td>{report.reportedAt}</td><td>{report.aiAnalysisStatus ? aiAnalysisStatusLabels[report.aiAnalysisStatus] : '-'}</td><td>{report.managerName}</td>
+                    <td>{formatAdminTimestamp(report.reportedAt) ?? '정보 없음'}</td><td>{report.aiAnalysisStatus ? aiAnalysisStatusLabels[report.aiAnalysisStatus] : '-'}</td><td>{report.managerName}</td>
                     <td><StatusBadge tone={getReportStatusTone(report.status)}>{reportStatusLabels[report.status]}</StatusBadge></td>
                   </tr>
                 ))}

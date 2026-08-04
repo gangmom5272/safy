@@ -783,6 +783,13 @@ button:disabled {
 /* 마커를 클릭했을 때만 열리는 정보창. 핀 위로 올려 핀을 가리지 않게 한다. */
 .map-info {
   display: grid;
+  /*
+   * 카카오 오버레이 레이어는 자식에게 white-space: nowrap 을 상속시킨다.
+   * 그대로 두면 주소가 한 줄로 늘어나 암시적 auto 트랙이 박스(250px)보다
+   * 커지고, 트랙에 맞춰 늘어난 헤더 때문에 닫기 버튼까지 테두리 밖으로
+   * 밀려난다. 트랙을 박스 너비로 묶고 줄바꿈을 되돌려 둘 다 막는다.
+   */
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   width: 250px;
   padding: 10px 12px;
@@ -794,6 +801,7 @@ button:disabled {
   color: var(--text);
   font-size: 12px;
   line-height: 1.45;
+  white-space: normal;
   text-align: left;
 }
 
@@ -801,11 +809,14 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .map-info__number {
+  min-width: 0;
   font-size: 13px;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .map-info__status {
@@ -816,6 +827,7 @@ button:disabled {
 }
 
 .map-info__close {
+  flex: 0 0 auto;
   margin-left: auto;
   padding: 0 2px;
   border: 0;
@@ -844,6 +856,7 @@ button:disabled {
 .map-info__rows dd {
   margin: 0;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .map-info__detail {

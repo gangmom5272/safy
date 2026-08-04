@@ -628,7 +628,8 @@
 
 .status-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* 항목 3개를 한 줄에 나란히 둔다. 2열이면 3개가 2+1로 접힌다. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -1073,8 +1074,21 @@
     min-height: 170px;
   }
 
+  /* 좁은 화면에서도 한 줄을 유지한다. 열을 쌓지 않고 여백과 글자만 줄인다. */
   .status-grid {
-    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .status-item {
+    padding: 10px 8px;
+  }
+
+  .status-item span {
+    font-size: 11px;
+  }
+
+  .status-item strong {
+    font-size: 15px;
   }
 }
 

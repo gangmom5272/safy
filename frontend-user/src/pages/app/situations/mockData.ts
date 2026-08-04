@@ -215,6 +215,7 @@ export const mockReportAnalyses: ReportAnalysis[] = mockReports.map((report) => 
   reportId: report.id,
   status: report.riskLevel === 'low' ? 'pending' : 'completed',
   congestionLevel: report.riskLevel,
+  riskScore: { critical: 88, high: 72, medium: 51, low: 18 }[report.riskLevel],
   estimatedPeopleCount: report.viewerCount ? report.viewerCount * 8 : undefined,
   aiSummary: `${report.locationName} 주변 상황을 목업 데이터로 표시하고 있습니다.`,
   analyzedAt: '2026-07-21T09:42:00+09:00',

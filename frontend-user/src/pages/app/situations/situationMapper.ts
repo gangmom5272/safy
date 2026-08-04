@@ -325,6 +325,7 @@ export function mapReportAnalysis(raw: unknown): ReportAnalysis {
     congestionLevel: item.congestionLevel ?? item.riskLevel
       ? normalizeRiskLevel(item.congestionLevel ?? item.riskLevel)
       : undefined,
+    riskScore: asOptionalNumber(item.riskScore),
     estimatedPeopleCount: asOptionalNumber(item.estimatedPeopleCount ?? item.crowdCount),
     aiSummary: asString(item.aiSummary ?? item.summary),
     analyzedAt: asString(item.analyzedAt),

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatRelativeTime } from '../../../utils/dateTime'
 import { ErrorState, LoadingSkeleton } from './SituationStates'
-import { congestionLevelLabels, riskLevelLabels, type AreaStatus } from './types'
+import { congestionLevelLabels, shortRiskLevelLabels, type AreaStatus } from './types'
 
 type AreaStatusSummaryProps = {
   status?: AreaStatus
@@ -57,10 +57,10 @@ export function AreaStatusSummary({ status, isLoading, error, onRefresh }: AreaS
         {isLoading && !status ? <LoadingSkeleton /> : null}
         {!isLoading && error && !status ? <ErrorState message="지역 상황 요약을 불러오지 못했습니다." actionLabel="새로고침" onAction={() => void refreshStatus()} /> : null}
         {status ? <div className="status-grid">
-          <StatusItem label="현재 위험도" value={riskLevelLabels[status.riskLevel]} tone={status.riskLevel} />
+          {/* 라벨이 '현재 위험도'이므로 값에는 단계만 남긴다('위험도 높음' → '높음'). */}
+          <StatusItem label="현재 위험도" value={shortRiskLevelLabels[status.riskLevel]} tone={status.riskLevel} />
           <StatusItem label="혼잡 단계" value={congestionLevelLabels[status.congestionLevel]} />
           <StatusItem label="최근 제보" value={`${status.recentReportCount}건`} />
-          <StatusItem label="현재 날씨" value={formatWeather(status.weather)} />
         </div> : null}
       </div>
     </section>
@@ -80,14 +80,4 @@ function StatusItem({ label, value, tone }: StatusItemProps) {
       <strong>{value}</strong>
     </div>
   )
-}
-
-function formatWeather(weather: AreaStatus['weather']) {
-  if (!weather) {
-    return '정보 없음'
-  }
-
-  return typeof weather.temperature === 'number'
-    ? `${weather.condition}, ${weather.temperature}도`
-    : weather.condition
 }
