@@ -48,7 +48,7 @@ class RiskAssessorTest {
 		assertThat(result.riskLevel()).isEqualTo(RiskLevel.MEDIUM);
 		assertThat(result.persistence()).isNull();
 		assertThat(result.confirmRequired()).isTrue();
-		assertThat(result.riskRuleVersion()).isEqualTo("safy-risk-v0.2");
+		assertThat(result.riskRuleVersion()).isEqualTo("safy-risk-v0.3");
 	}
 
 	@Test
@@ -64,7 +64,7 @@ class RiskAssessorTest {
 	}
 
 	@Test
-	void raisesSustainedLocalCongestionToHigh() {
+	void keepsUncorroboratedSustainedLocalCongestionAtMedium() {
 		List<FrameObservation> frames = observations(
 				new double[] {0, 0, 0, 0, 0, 0},
 				new double[] {80, 80, 80, 80, 80, 80});
@@ -72,7 +72,50 @@ class RiskAssessorTest {
 		RiskCalculation result = RiskAssessor.assess(frames, 6, 6, false);
 
 		assertThat(result.persistence()).isEqualTo(50.0);
-		assertThat(result.riskLevel()).isEqualTo(RiskLevel.HIGH);
+		assertThat(result.finalRisk()).isEqualTo(55.5);
+		assertThat(result.riskLevel()).isEqualTo(RiskLevel.MEDIUM);
+		assertThat(result.confirmRequired()).isTrue();
+	}
+
+	@Test
+	void capsWidePersistentParkSceneAtMediumAndRequiresConfirmation() {
+		List<FrameObservation> frames = observations(
+				new double[] {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
+				new double[] {90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90});
+
+		RiskCalculation result = RiskAssessor.assess(frames, 12, 12, false);
+
+		assertThat(result.persistence()).isEqualTo(100.0);
+		assertThat(result.growth()).isEqualTo(0.0);
+		assertThat(result.finalRisk()).isEqualTo(60.0);
+		assertThat(result.riskLevel()).isEqualTo(RiskLevel.MEDIUM);
+		assertThat(result.confirmRequired()).isTrue();
+	}
+
+	@Test
+	void keepsBroadPersistentCrowdAtVeryHigh() {
+		List<FrameObservation> frames = observations(
+				new double[] {45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45},
+				new double[] {90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90});
+
+		RiskCalculation result = RiskAssessor.assess(frames, 12, 12, false);
+
+		assertThat(result.finalRisk()).isEqualTo(87.0);
+		assertThat(result.riskLevel()).isEqualTo(RiskLevel.VERY_HIGH);
+		assertThat(result.confirmRequired()).isFalse();
+	}
+
+	@Test
+	void allowsGrowingLocalCongestionToExceedMedium() {
+		List<FrameObservation> frames = observations(
+				new double[] {10, 10, 10, 10, 10, 10, 15, 15, 15, 15, 15, 15},
+				new double[] {90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90});
+
+		RiskCalculation result = RiskAssessor.assess(frames, 12, 12, false);
+
+		assertThat(result.growth()).isGreaterThanOrEqualTo(30.0);
+		assertThat(result.finalRisk()).isGreaterThan(60.0);
+		assertThat(result.riskLevel()).isIn(RiskLevel.HIGH, RiskLevel.VERY_HIGH);
 	}
 
 	@Test

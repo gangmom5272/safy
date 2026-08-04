@@ -28,8 +28,8 @@ public final class CongestionTrendCalculator {
 		return new CongestionTrend(
 				calculatePersistence(ordered, smoothedLocalPeak),
 				calculateGrowth(ordered, smoothedVisual),
-				maximum(smoothedVisual),
-				maximum(smoothedLocalPeak));
+				percentile75(smoothedVisual),
+				percentile75(smoothedLocalPeak));
 	}
 
 	private static Double calculatePersistence(List<FrameObservation> ordered, double[] values) {
@@ -95,11 +95,12 @@ public final class CongestionTrendCalculator {
 		return result;
 	}
 
-	private static Double maximum(double[] values) {
+	private static Double percentile75(double[] values) {
 		if (values.length == 0) return null;
-		double max = values[0];
-		for (double value : values) max = Math.max(max, value);
-		return max;
+		double[] sorted = Arrays.copyOf(values, values.length);
+		Arrays.sort(sorted);
+		int index = Math.max(0, (int) Math.ceil(sorted.length * 0.75) - 1);
+		return sorted[index];
 	}
 
 	private static long secondsBetween(Instant from, Instant to) {
