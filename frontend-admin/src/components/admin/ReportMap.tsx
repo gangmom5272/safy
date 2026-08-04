@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { AdminReport } from '../../types/admin'
 import { RISK_LEVEL_CONFIG, RISK_LEVEL_ORDER } from '../../utils/adminRisk'
 import { VERIFICATION_CONFIG } from '../../utils/adminVerification'
-import { loadKakaoMaps, type KakaoCustomOverlay, type KakaoMap } from '../../services/kakaoMap'
+import { loadKakaoMaps, type KakaoCustomOverlay, type KakaoMap, type KakaoMaps } from '../../services/kakaoMap'
 import { hasCoordinates } from '../../utils/reportGeo'
 import { createReportInfoWindow, createReportPin, PIN_HEIGHT } from './reportMapMarkers'
 
@@ -13,12 +13,17 @@ interface ReportMapProps {
   showLegend?: boolean
   /** 지도를 클릭했을 때 이동시킬 화면이 있으면 넘긴다. */
   onSelect?: (report: AdminReport) => void
+  /**
+   * 지도 인스턴스가 준비되면 한 번 알린다. 위험도 지도처럼 같은 지도 위에
+   * 다른 레이어(격자 폴리곤 등)를 얹어야 하는 화면이 쓴다.
+   */
+  onMapReady?: (map: KakaoMap, maps: KakaoMaps) => void
 }
 
 // 표시할 제보가 없을 때 보여줄 기본 위치(서울시청).
 const DEFAULT_CENTER = { latitude: 37.5665, longitude: 126.978 }
 
-export function ReportMap({ reports, className = '', showLegend = false, onSelect }: ReportMapProps) {
+export function ReportMap({ reports, className = '', showLegend = false, onSelect, onMapReady }: ReportMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const overlaysRef = useRef<KakaoCustomOverlay[]>([])
@@ -29,8 +34,10 @@ export function ReportMap({ reports, className = '', showLegend = false, onSelec
 
   // 최신 콜백을 참조해 지도를 다시 만들지 않고도 클릭 동작을 갱신한다.
   const onSelectRef = useRef(onSelect)
+  const onMapReadyRef = useRef(onMapReady)
   useEffect(() => {
     onSelectRef.current = onSelect
+    onMapReadyRef.current = onMapReady
   })
 
   useEffect(() => {
@@ -44,6 +51,7 @@ export function ReportMap({ reports, className = '', showLegend = false, onSelec
             center: new maps.LatLng(DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude),
             level: 8,
           })
+          onMapReadyRef.current?.(mapRef.current, maps)
         }
 
         const map = mapRef.current

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { useAuth } from '../../auth/useAuth'
-import { ROUTE_PATHS } from '../../router/paths'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -36,7 +35,8 @@ export function LoginPage() {
     try {
       await login({ loginId: loginId.trim(), password })
       setPassword('')
-      navigate(ROUTE_PATHS.DASHBOARD, { replace: true })
+      // 역할별 첫 화면 분기는 루트의 RoleHome 이 담당한다.
+      navigate('/', { replace: true })
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '로그인하지 못했습니다.')
       setIsSubmitting(false)

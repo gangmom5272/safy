@@ -9,11 +9,15 @@ export interface KakaoLatLng {
 export interface KakaoLatLngBounds {
   extend: (position: KakaoLatLng) => void
   isEmpty: () => boolean
+  getSouthWest: () => KakaoLatLng
+  getNorthEast: () => KakaoLatLng
 }
 
 export interface KakaoMap {
   setCenter: (position: KakaoLatLng) => void
+  getLevel: () => number
   setLevel: (level: number) => void
+  getBounds: () => KakaoLatLngBounds
   setBounds: (bounds: KakaoLatLngBounds) => void
   relayout: () => void
 }
@@ -22,7 +26,11 @@ export interface KakaoCustomOverlay {
   setMap: (map: KakaoMap | null) => void
 }
 
-interface KakaoMaps {
+export interface KakaoPolygon {
+  setMap: (map: KakaoMap | null) => void
+}
+
+export interface KakaoMaps {
   load: (callback: () => void) => void
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng
   LatLngBounds: new () => KakaoLatLngBounds
@@ -37,6 +45,20 @@ interface KakaoMaps {
     zIndex?: number
     clickable?: boolean
   }) => KakaoCustomOverlay
+  Polygon: new (options: {
+    map?: KakaoMap
+    path: KakaoLatLng[]
+    strokeWeight?: number
+    strokeColor?: string
+    strokeOpacity?: number
+    fillColor?: string
+    fillOpacity?: number
+    zIndex?: number
+  }) => KakaoPolygon
+  event: {
+    addListener: (target: KakaoMap | KakaoPolygon, type: string, handler: () => void) => void
+    removeListener: (target: KakaoMap | KakaoPolygon, type: string, handler: () => void) => void
+  }
 }
 
 declare global {

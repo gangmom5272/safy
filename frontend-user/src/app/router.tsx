@@ -4,7 +4,6 @@ import { GuidePage } from '../pages/app/guide/GuidePage'
 import { PrivacyPage } from '../pages/app/guide/PrivacyPage'
 import { TermsPage } from '../pages/app/guide/TermsPage'
 import { HomePage } from '../pages/app/home/HomePage'
-import { FavoritesPage } from '../pages/app/mypage/FavoritesPage'
 import { MyPage } from '../pages/app/mypage/MyPage'
 import { MyReportDetailPage } from '../pages/app/mypage/MyReportDetailPage'
 import { MyReportsPage } from '../pages/app/mypage/MyReportsPage'
@@ -51,7 +50,6 @@ export const router = createBrowserRouter([
       { path: 'mypage', element: <MyPage /> },
       { path: 'mypage/reports', element: <MyReportsPage /> },
       { path: 'mypage/reports/:reportId', element: <MyReportDetailPage /> },
-      { path: 'mypage/favorites', element: <FavoritesPage /> },
       { path: 'mypage/support', element: <SupportPage /> },
       { path: 'mypage/support/notices/:noticeId', element: <NoticeDetailPage /> },
       { path: 'mypage/support/inquiries/:inquiryId', element: <InquiryDetailPage /> },

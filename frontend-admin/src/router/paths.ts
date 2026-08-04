@@ -8,6 +8,7 @@ export const ROUTE_PATHS = {
   MONITORING_DETAIL: '/monitoring/:connectionId',
   RISK_MAP: '/risk-map',
   SETTINGS: '/settings',
+  OPERATORS: '/operators',
 } as const
 
 export const createReportDetailPath = (reportId: number | string) =>

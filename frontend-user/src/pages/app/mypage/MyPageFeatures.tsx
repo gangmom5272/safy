@@ -1,14 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { useNavigate } from 'react-router'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { PageHeader } from '../../../components/common/PageHeader'
-import { useFavoritePlacesStore } from '../../../stores/favoritePlacesStore'
 import { formatDateTime, formatRelativeTime } from '../../../utils/dateTime'
-import { createFavorite, patchFavorite, removeFavorite } from './mypageApi'
-import { FavoritePlaceForm } from './FavoritePlaceForm'
 import { mockFaqs, mockNotices } from './mypageMock'
-import type { FavoriteLocation, Inquiry, MyPageView, MyReport, Notice, ReportAttachment, ReportStatus } from './mypageTypes'
+import type { Inquiry, MyPageView, MyReport, Notice, ReportAttachment, ReportStatus } from './mypageTypes'
 import { APP_VERSION, formatReceiptNumber, getReportCategoryLabel, getReportMediaTypeLabel, isVideoAttachment } from './mypageUtils'
-import './favoritePlaceForm.css'
 
 // 접수 대기 중(RECEIVED)은 담당자 확인 전이라 시민이 취소할 수 있는 구간이다.
 const statusLabel: Record<ReportStatus, string> = { RECEIVED: '접수 대기 중', IN_PROGRESS: '처리중', CLOSED: '처리완료', REJECTED: '반려됨', CANCELLED: '취소됨' }
@@ -241,42 +236,6 @@ export function ReportDetail({ report, onBack, onCancel }: { report: MyReport; o
   </div>
 }
 
-// 즐겨찾기 추가 버튼 아이콘. 원형 버튼 가운데에 정확히 놓이도록 문자 대신 svg 를 쓴다.
-function PlusIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> }
-
-export function Favorites({ items, onBack, onChange, onNavigate, usingMock }: { items: FavoriteLocation[]; onBack: () => void; onChange: Dispatch<SetStateAction<FavoriteLocation[]>>; onNavigate: (item: FavoriteLocation) => void; usingMock: boolean }) {
-  const navigate = useNavigate()
-  const { favoritePlaces, storageError, hydrate, removeFavoritePlace } = useFavoritePlacesStore()
-  const [adding, setAdding] = useState(false)
-  const [editingItem, setEditingItem] = useState<FavoriteLocation | null>(null)
-
-  useEffect(() => {
-    hydrate()
-  }, [hydrate])
-
-  const add = (alias: string, location: { name: string; address: string; latitude?: number; longitude?: number }) => {
-    if (typeof location.latitude !== 'number' || typeof location.longitude !== 'number') return
-    const data = { placeName: location.name, alias, address: location.address, latitude: location.latitude, longitude: location.longitude }
-    const next: FavoriteLocation = { id: Date.now(), areaId: Date.now(), ...data, riskLevel: 'SAFE', isPrimary: items.length === 0 }
-    onChange((values) => [...values, next])
-    setAdding(false)
-    if (!usingMock) void createFavorite(data).catch(console.error)
-  }
-
-  const edit = (alias: string, location: { name: string; address: string; latitude?: number; longitude?: number }) => {
-    if (!editingItem || typeof location.latitude !== 'number' || typeof location.longitude !== 'number') return
-    const changes = { alias, placeName: location.name, address: location.address, latitude: location.latitude, longitude: location.longitude }
-    onChange((values) => values.map((value) => value.id === editingItem.id ? { ...value, ...changes } : value))
-    if (!usingMock) void patchFavorite(editingItem.id, changes).catch(console.error)
-    setEditingItem(null)
-  }
-
-  const hasItems = favoritePlaces.length > 0 || items.length > 0
-
-  const openStoredFavorite = (searchQuery: string) => navigate(`/app/situations?query=${encodeURIComponent(searchQuery)}`, { state: { from: 'favorites' } })
-
-  return <><PageHeader title="즐겨찾기" className="favorites-header" onBack={onBack} action={<button type="button" className="favorite-add-button" aria-label="즐겨찾기 추가" onClick={() => { setEditingItem(null); setAdding(true) }}><PlusIcon /></button>} />{storageError && <p className="mypage-message" role="status">{storageError}</p>}{adding && <FavoritePlaceForm submitLabel="추가" onSubmit={add} onCancel={() => setAdding(false)} />}{editingItem && <FavoritePlaceForm initialAlias={editingItem.alias} initialLocation={{ id: String(editingItem.areaId), name: editingItem.placeName, address: editingItem.address, latitude: editingItem.latitude, longitude: editingItem.longitude }} submitLabel="저장" onSubmit={edit} onCancel={() => setEditingItem(null)} />}<div className="favorite-list">{favoritePlaces.map((place) => <section className="favorite-card" key={place.id}><button type="button" className="favorite-main" onClick={() => openStoredFavorite(place.searchQuery)}><span className="risk-dot risk-safe" /><span><small>{formatDate(place.savedAt)} 저장</small><strong>{place.name}</strong><em>{place.address}</em></span><b>›</b></button><div><button type="button" onClick={() => openStoredFavorite(place.searchQuery)}>장소 상황 보기</button><button type="button" className="danger-text" onClick={() => removeFavoritePlace(place.id)}>해제</button></div></section>)}{items.map((item) => <section className="favorite-card" key={item.id}><button type="button" className="favorite-main" onClick={() => onNavigate(item)}><span className={`risk-dot risk-${item.riskLevel.toLowerCase()}`} /><span className="favorite-server-meta"><small>{item.isPrimary ? `대표 위치 · ${item.alias}` : item.alias}</small><strong>{item.placeName}</strong><em>{item.address}</em></span><b>›</b></button><div><button type="button" onClick={() => { setAdding(false); setEditingItem(item) }}>별칭·주소 수정</button><button type="button" onClick={() => { onChange((values) => values.map((value) => ({ ...value, isPrimary: value.id === item.id }))); if (!usingMock) void patchFavorite(item.id, { isPrimary: true }).catch(console.error) }}>대표 설정</button><button type="button" className="danger-text" onClick={() => { if (!window.confirm('즐겨찾기 위치를 삭제할까요?')) return; onChange((values) => values.filter((value) => value.id !== item.id)); if (!usingMock) void removeFavorite(item.id).catch(console.error) }}>삭제</button></div></section>)}</div>{!hasItems && <Empty text="아직 즐겨찾기한 장소가 없습니다." />}</>
-}
 export function Support({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageView) => void }) { const items: [SupportIconName, string, MyPageView][] = [['help','자주 묻는 질문','FAQ'],['notice','공지사항','NOTICES'],['inquiry','1:1 문의','INQUIRY_FORM'],['history','문의 내역','INQUIRIES']]; return <><PageHeader title="고객센터" onBack={onBack} className="support-header" /><section className="mypage-menu support-menu">{items.map(([icon,label,target]) => <button type="button" key={target} onClick={() => onGo(target)}><span><SupportIcon name={icon} /></span><b>{label}</b><em><ChevronRightIcon /></em></button>)}</section></> }
 
 type SupportIconName = 'help' | 'notice' | 'inquiry' | 'history'

@@ -98,6 +98,7 @@ export function mockReportAnalysis(reportId: number): ReportAnalysis {
     status: 'COMPLETED',
     summary: report.aiSummary,
     riskLevel: typeof report.riskLevel === 'string' ? report.riskLevel : null,
+    riskScore: report.riskScore ?? null,
     crowdCount: 120,
     confidence: 0.87,
     analyzedAt: report.reportedAt,

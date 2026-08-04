@@ -245,14 +245,7 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
               {analysis.congestionLevel ? riskLevelLabels[analysis.congestionLevel] : '정보 없음'}
             </dd>
           </div>
-          <div>
-            <dt><DetailIcon name="people" />인원 추정치</dt>
-            <dd>
-              {typeof analysis.estimatedPeopleCount === 'number'
-                ? `${analysis.estimatedPeopleCount.toLocaleString()}명`
-                : '정보 없음'}
-            </dd>
-          </div>
+          {/* 인원 추정치는 정확도가 보장되지 않아 노출하지 않는다. 내부 판단 용도로만 쓴다. */}
           <div>
             <dt><DetailIcon name="ai" />AI 요약</dt>
             <dd>{analysis.aiSummary || '요약 정보 없음'}</dd>

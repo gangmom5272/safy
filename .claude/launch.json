@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend-user-mock",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:mock", "--prefix", "frontend-user", "--", "--port", "5175"],
+      "port": 5175
+    },
+    {
+      "name": "frontend-admin-mock",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:mock", "--prefix", "frontend-admin", "--", "--port", "5176"],
+      "port": 5176
+    }
+  ]
+}

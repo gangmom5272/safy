@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   connectionQualityLabels,
@@ -8,7 +8,7 @@ import {
 import type { AdminReport, RiskLevel, WebRTCConnection, WebRTCConnectionStatus } from '../../types/admin'
 import { AdminSection } from '../../components/admin/AdminSection'
 import { RiskBadge } from '../../components/admin/RiskBadge'
-import { getRiskLabel, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
+import { getRiskConfig, getRiskLabel, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
 import { ROUTE_PATHS, createMonitoringDetailPath, createReportDetailPath } from '../../router/paths'
 import { useAuth } from '../../auth/useAuth'
 import { getReportMessages, sendAdminLiveMessage, type ReportMessage } from '../../services/adminLiveMessage'
@@ -17,10 +17,13 @@ import {
   detailToAdminReport,
   getDashboardReports,
   getOperatorReportDetail,
+  getReportAnalysis,
   type OperatorReportDetail,
+  type ReportAnalysis,
 } from '../reports/reportApi'
 import { ReportActionPanel } from '../reports/ReportActionPanel'
 import { formatAdminDate } from '../../utils/adminDate'
+import { getSubcategoryLabel } from '../../utils/reportLabels'
 import { LiveViewer } from './LiveViewer'
 
 const allValue = 'all'
@@ -124,6 +127,9 @@ export function MonitoringPage() {
   const [filters, setFilters] = useState<MonitoringFilters>(initialFilters)
   const [columns, setColumns] = useState<(typeof gridOptions)[number]>(2)
   const [reports, setReports] = useState<AdminReport[]>([])
+  // 대시보드 타일에는 위험도가 없어 제보별 AI 분석 결과를 따로 모은다. 카드 테두리 색의 근거다.
+  const [analyses, setAnalyses] = useState<Record<number, ReportAnalysis>>({})
+  const requestedAnalysisIds = useRef(new Set<number>())
   const [dismissedEndedReports, setDismissedEndedReports] = useState(readDismissedEndedReports)
   const [notice, setNotice] = useState<MonitoringNotice | null>(null)
   const [loadError, setLoadError] = useState('')
@@ -140,6 +146,25 @@ export function MonitoringPage() {
       setIsLoading(false)
     }
   }, [])
+
+  const loadAnalysis = useCallback(async (reportId: number) => {
+    requestedAnalysisIds.current.add(reportId)
+    try {
+      const analysis = await getReportAnalysis(reportId)
+      setAnalyses((current) => ({ ...current, [reportId]: analysis }))
+    } catch {
+      // 분석 결과가 아직 없어도 관제 카드는 그대로 보여준다.
+    }
+  }, [])
+
+  // 새로 나타난 제보의 분석 결과만 추가 조회한다. 이미 받은 결과는
+  // RISK_ASSESSMENT_UPDATED 이벤트가 올 때만 다시 가져온다.
+  useEffect(() => {
+    reports
+      .map((report) => report.id)
+      .filter((reportId) => !requestedAnalysisIds.current.has(reportId))
+      .forEach((reportId) => void loadAnalysis(reportId))
+  }, [loadAnalysis, reports])
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadReports(), 0)
@@ -171,13 +196,15 @@ export function MonitoringPage() {
         })
       }
 
+      if (event.eventType === 'RISK_ASSESSMENT_UPDATED') void loadAnalysis(event.reportId)
+
       if (event.eventType !== 'REPORT_MESSAGE') void loadReports()
     })
     return () => {
       window.clearTimeout(initialLoad)
       unsubscribe()
     }
-  }, [loadReports])
+  }, [loadAnalysis, loadReports])
 
   const selectedReport = connectionId
     ? reports.find((report) => report.streamRoomId === connectionId)
@@ -218,18 +245,23 @@ export function MonitoringPage() {
       const connection = toLiveConnection(report)
       if (connection?.connectionStatus === 'ended' && dismissedEndedReports.has(report.id)) return false
 
+      const analysis = analyses[report.id]
       const matchesRegion = keywordFromUrl.length === 0
         || report.location.toLowerCase().includes(keywordFromUrl.toLowerCase())
       const matchesType = filters.mediaType === allValue
         || (filters.mediaType === 'live' ? report.isLive : !report.isLive)
       const matchesRisk = !filters.riskLevel || filters.riskLevel === allValue
-        || matchesRiskLevel(report.riskLevel, filters.riskLevel, report.riskScore)
+        || matchesRiskLevel(
+          analysis?.riskLevel ?? report.riskLevel,
+          filters.riskLevel,
+          analysis?.riskScore ?? report.riskScore,
+        )
       const matchesStatus = !filters.connectionStatus || filters.connectionStatus === allValue
         || connection?.connectionStatus === filters.connectionStatus
 
       return matchesRegion && matchesType && matchesRisk && matchesStatus
     }),
-    [dismissedEndedReports, filters, keywordFromUrl, reports],
+    [analyses, dismissedEndedReports, filters, keywordFromUrl, reports],
   )
 
   const openReport = (report: AdminReport) => {
@@ -257,6 +289,7 @@ export function MonitoringPage() {
         <MonitoringDetailView
           connection={selectedConnection}
           report={selectedReport}
+          analysis={analyses[selectedReport.id] ?? null}
           onBack={() => navigate(ROUTE_PATHS.MONITORING)}
           onActionComplete={completeLiveAction}
         />
@@ -350,6 +383,7 @@ export function MonitoringPage() {
             <MonitoringGrid
               columns={columns}
               reports={filteredReports}
+              analyses={analyses}
               onSelect={openReport}
               onDismissEnded={dismissEndedReport}
             />
@@ -363,11 +397,12 @@ export function MonitoringPage() {
 interface MonitoringGridProps {
   columns: (typeof gridOptions)[number]
   reports: AdminReport[]
+  analyses: Record<number, ReportAnalysis>
   onSelect: (report: AdminReport) => void
   onDismissEnded: (reportId: number) => void
 }
 
-function MonitoringGrid({ columns, reports, onSelect, onDismissEnded }: MonitoringGridProps) {
+function MonitoringGrid({ columns, reports, analyses, onSelect, onDismissEnded }: MonitoringGridProps) {
   return (
     <article className="admin-card monitoring-grid-card">
       {reports.length > 0 ? (
@@ -376,6 +411,7 @@ function MonitoringGrid({ columns, reports, onSelect, onDismissEnded }: Monitori
             <MonitoringReportCard
               key={report.id}
               report={report}
+              analysis={analyses[report.id] ?? null}
               onSelect={() => onSelect(report)}
               onDismissEnded={() => onDismissEnded(report.id)}
             />
@@ -390,17 +426,27 @@ function MonitoringGrid({ columns, reports, onSelect, onDismissEnded }: Monitori
 
 interface MonitoringReportCardProps {
   report: AdminReport
+  analysis: ReportAnalysis | null
   onSelect: () => void
   onDismissEnded: () => void
 }
 
-function MonitoringReportCard({ report, onSelect, onDismissEnded }: MonitoringReportCardProps) {
+function MonitoringReportCard({ report, analysis, onSelect, onDismissEnded }: MonitoringReportCardProps) {
   const connection = toLiveConnection(report)
   const isEnded = connection?.connectionStatus === 'ended'
+  // AI 위험도에 따라 카드 테두리 색을 입혀 관제사가 위험 제보를 한눈에 찾게 한다.
+  const riskLevel = analysis?.riskLevel ?? report.riskLevel
+  const riskScore = analysis?.riskScore ?? report.riskScore
+  const riskConfig = getRiskConfig(riskLevel, riskScore)
 
   return (
     <div className="monitoring-tile">
-      <button type="button" className="video-card monitoring-report-card" onClick={onSelect}>
+      <button
+        type="button"
+        className={`video-card monitoring-report-card${riskConfig ? ' monitoring-report-card--risk' : ''}`}
+        style={riskConfig ? { borderColor: riskConfig.markerColor } : undefined}
+        onClick={onSelect}
+      >
         <span className={`media-type-badge ${report.isLive ? 'media-type-badge--live' : 'media-type-badge--image'}`}>
           {report.isLive ? 'LIVE' : 'IMAGE'}
         </span>
@@ -421,7 +467,7 @@ function MonitoringReportCard({ report, onSelect, onDismissEnded }: MonitoringRe
           )}
         </span>
         <strong>{report.location || '위치 정보 없음'}</strong>
-        <RiskBadge value={report.riskLevel} score={report.riskScore} />
+        <RiskBadge value={riskLevel} score={riskScore} />
         <span>{report.isLive
           ? `상태 ${connection ? connectionStatusLabels[connection.connectionStatus] : '준비 중'}`
           : `첨부 이미지 ${report.imageCount ?? 0}장`}</span>
@@ -440,11 +486,12 @@ function MonitoringReportCard({ report, onSelect, onDismissEnded }: MonitoringRe
 interface MonitoringDetailViewProps {
   connection: WebRTCConnection
   report: AdminReport
+  analysis: ReportAnalysis | null
   onBack: () => void
   onActionComplete: () => void
 }
 
-function MonitoringDetailView({ connection, report, onBack, onActionComplete }: MonitoringDetailViewProps) {
+function MonitoringDetailView({ connection, report, analysis, onBack, onActionComplete }: MonitoringDetailViewProps) {
   const { adminName } = useAuth()
   const [reportDetail, setReportDetail] = useState<OperatorReportDetail | null>(null)
   const [detailError, setDetailError] = useState('')
@@ -575,14 +622,14 @@ function MonitoringDetailView({ connection, report, onBack, onActionComplete }: 
             <dl>
               <div><dt>제보 ID</dt><dd>#{connection.reportId}</dd></div>
               <div><dt>카테고리</dt><dd>{reportTypeLabels[detailReport.type]}</dd></div>
-              <div><dt>세부 유형</dt><dd>{reportDetail?.subcategory ?? '정보 없음'}</dd></div>
+              <div><dt>세부 유형</dt><dd>{getSubcategoryLabel(reportDetail?.subcategory) ?? '정보 없음'}</dd></div>
               <div><dt>제보 내용</dt><dd className="break-text">{reportDetail?.description ?? detailReport.aiSummary}</dd></div>
               <div><dt>위치</dt><dd>{detailReport.location}</dd></div>
               <div><dt>제보 시간</dt><dd>{formatAdminDate(detailReport.reportedAt)}</dd></div>
               <div><dt>관제센터</dt><dd>{detailReport.controlCenterName ?? '정보 없음'}</dd></div>
               <div><dt>연결 상태</dt><dd>{connectionStatusLabels[connection.connectionStatus]}</dd></div>
               <div><dt>연결 품질</dt><dd>{connection.quality ? connectionQualityLabels[connection.quality] : '정보 없음'}</dd></div>
-              <div><dt>위험도</dt><dd>{getRiskLabel(connection.riskLevel, connection.riskScore)}</dd></div>
+              <div><dt>위험도</dt><dd>{getRiskLabel(analysis?.riskLevel ?? connection.riskLevel, analysis?.riskScore ?? connection.riskScore)}</dd></div>
               <div><dt>AI 분석 결과</dt><dd className="break-text">{connection.aiAnalysisResult || '정보 없음'}</dd></div>
             </dl>
           </aside>

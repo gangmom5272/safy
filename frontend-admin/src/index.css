@@ -3151,3 +3151,205 @@ button:disabled {
   .live-connection-panel { min-height: 380px; }
   .recent-reports-table { min-width: 560px; }
 }
+
+/* 담당자 인사 관리 (SUPER_ADMIN) */
+.operator-form {
+  display: grid;
+  gap: 12px;
+}
+
+.operator-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.operator-form input,
+.operator-form select {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  font-weight: 500;
+}
+
+.operator-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.operator-row-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.operator-row-actions .secondary-button {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.operator-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-weight: 700;
+}
+
+/* 계정 설정 */
+.settings-password-form {
+  max-width: 420px;
+}
+
+.settings-success {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 700;
+}
+
+/* 실시간 모니터링: AI 위험도 테두리 */
+.monitoring-report-card--risk {
+  border-width: 3px;
+  border-style: solid;
+}
+
+/* 위험도 지도: 격자 추이 패널 */
+.grid-trend-card {
+  display: grid;
+  gap: 10px;
+}
+
+.grid-trend-card__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.grid-trend-card__heading span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.grid-trend-card__heading strong {
+  display: block;
+  font-size: 18px;
+}
+
+.grid-trend-card__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin: 0;
+}
+
+.grid-trend-card__meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.grid-trend-card__meta dt {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.grid-trend-card__meta dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.grid-trend-chart {
+  margin: 0;
+}
+
+.grid-trend-chart svg {
+  width: 100%;
+  height: auto;
+}
+
+.grid-trend-chart__caption {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.map-stats__hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* 위험도 지도: 혼잡도(서울시 121장소)·행사 마커 */
+.congestion-place-marker,
+.event-place-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 180px;
+  padding: 4px 9px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #101828;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(16, 32, 51, 0.25);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.congestion-place-marker span,
+.event-place-marker span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.congestion-place-marker i {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--congestion-color, #94a3b8);
+}
+
+.event-place-marker {
+  border-color: #d8b4fe;
+  background: #faf5ff;
+  color: #6b21a8;
+}
+
+.event-place-marker i {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: #9333ea;
+}
+
+.congestion-level-badge {
+  justify-self: start;
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.congestion-message {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--text);
+  font-size: 12px;
+}

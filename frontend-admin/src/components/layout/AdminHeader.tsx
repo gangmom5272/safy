@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { AdminModal } from '../admin/AdminModal'
+import { useAuth } from '../../auth/useAuth'
 import { OperatorPresenceToggle } from './OperatorPresenceToggle'
 import { adminReports, emergencyBanner } from '../../mocks/adminMockData'
 import { ROUTE_PATHS } from '../../router/paths'
@@ -13,7 +14,8 @@ const pageTitleByPath: Record<string, string> = {
   [ROUTE_PATHS.QUEUE]: '공용 큐',
   [ROUTE_PATHS.MONITORING]: '실시간 모니터링',
   [ROUTE_PATHS.RISK_MAP]: '위험도 지도',
-  [ROUTE_PATHS.SETTINGS]: '시스템 설정',
+  [ROUTE_PATHS.SETTINGS]: '계정 설정',
+  [ROUTE_PATHS.OPERATORS]: '담당자 관리',
 }
 
 function getPageTitle(pathname: string) {
@@ -53,11 +55,14 @@ function SearchIcon() {
 export function AdminHeader({ lastDashboardUpdatedAt }: AdminHeaderProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(() => new Date())
   const [searchQuery, setSearchQuery] = useState('')
   const dangerReports = adminReports.filter((report) => isEmergencyRisk(report.riskLevel))
   const isDashboard = pathname === ROUTE_PATHS.DASHBOARD
+  // 긴급 위험 알림은 관제(OPERATOR) 업무라 인사 관리만 하는 SUPER_ADMIN 에게는 숨긴다.
+  const isOperator = user?.role === 'OPERATOR'
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -110,16 +115,18 @@ export function AdminHeader({ lastDashboardUpdatedAt }: AdminHeaderProps) {
           </form>
         )}
         <OperatorPresenceToggle />
-        <button
-          type="button"
-          className="emergency-alert-button"
-          onClick={() => setIsEmergencyOpen(true)}
-          aria-label={`긴급 위험 알림 ${dangerReports.length}건 확인`}
-        >
-          <SirenIcon />
-          <span>긴급 위험 알림</span>
-          <strong>{dangerReports.length}건</strong>
-        </button>
+        {isOperator && (
+          <button
+            type="button"
+            className="emergency-alert-button"
+            onClick={() => setIsEmergencyOpen(true)}
+            aria-label={`긴급 위험 알림 ${dangerReports.length}건 확인`}
+          >
+            <SirenIcon />
+            <span>긴급 위험 알림</span>
+            <strong>{dangerReports.length}건</strong>
+          </button>
+        )}
       </div>
       <AdminModal
         open={isEmergencyOpen}

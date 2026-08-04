@@ -55,7 +55,9 @@ export interface ReportAnalysis {
   reportId: number
   status: string
   summary: string | null
+  /** 백엔드 RiskLevel 은 소문자(very_high 등)로 직렬화된다. */
   riskLevel: string | null
+  riskScore: number | null
   crowdCount: number | null
   confidence: number | null
   analyzedAt: string | null

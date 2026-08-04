@@ -16,6 +16,8 @@ export type RealtimeEventType =
   | 'REPORT_CANCELLED'
   | 'REPORT_REASSIGNED'
   | 'REPORT_MESSAGE'
+  | 'RISK_ASSESSMENT_UPDATED'
+  | 'REPORT_ASSIGNMENT_STALLED'
 
 export interface RealtimeEvent {
   eventId: number

@@ -122,16 +122,6 @@ export type ReportListParams = {
   limit?: number
 }
 
-export type FavoritePlace = {
-  id: string
-  name: string
-  searchQuery: string
-  address: string
-  latitude: number
-  longitude: number
-  savedAt: string
-}
-
 export const DEFAULT_REPORT_SORT: ReportSort = 'latest'
 
 export const DEFAULT_REPORT_LIMIT = 20
