@@ -46,6 +46,9 @@ app:
     access-token-ttl: ${AUTH_ACCESS_TOKEN_TTL:1h}
     refresh-token-ttl: 14d
     refresh-cookie-name: SAFY_REFRESH_TOKEN
+    # 시민 앱(/)과 관리자 콘솔(/admin/)이 같은 호스트라 쿠키를 공유한다. 이름을 분리해야
+    # 관리자 로그인이 시민 세션을 덮어쓰지 않는다.
+    admin-refresh-cookie-name: SAFY_ADMIN_REFRESH_TOKEN
     cookie-secure: ${AUTH_COOKIE_SECURE:false}
     cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
     oauth2-success-redirect-uri: ${OAUTH2_SUCCESS_REDIRECT_URI:http://localhost:3000/oauth/callback}

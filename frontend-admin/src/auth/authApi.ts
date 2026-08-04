@@ -16,7 +16,8 @@ export async function getCurrentUser() {
 
 export async function logout() {
   try {
-    await apiClient.post('/auth/logout')
+    // 관리자 전용 쿠키만 지운다. 같은 브라우저의 시민 앱 세션은 그대로 유지된다.
+    await apiClient.post('/auth/admin/logout')
   } finally {
     clearAccessToken()
   }

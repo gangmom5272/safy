@@ -5,8 +5,10 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -20,6 +22,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
+import com.ojimasam.safy.analysis.application.dto.RiskSummaryView;
+import com.ojimasam.safy.analysis.domain.RiskAssessmentRepository;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
 import com.ojimasam.safy.admin.domain.OperatorPresence;
 import com.ojimasam.safy.admin.domain.OperatorPresenceRepository;
@@ -57,6 +61,7 @@ public class ReportOperatorAssignmentService {
 	private final ReportOperatorAssignmentRepository assignmentRepository;
 	private final ReportStatusHistoryRepository historyRepository;
 	private final OperatorPresenceRepository presenceRepository;
+	private final RiskAssessmentRepository riskAssessmentRepository;
 	private final ReportRealtimeNotifier realtimeNotifier;
 	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
@@ -69,11 +74,12 @@ public class ReportOperatorAssignmentService {
 			ReportOperatorAssignmentRepository assignmentRepository,
 			ReportStatusHistoryRepository historyRepository,
 			OperatorPresenceRepository presenceRepository,
+			RiskAssessmentRepository riskAssessmentRepository,
 			ReportRealtimeNotifier realtimeNotifier,
 			ApplicationEventPublisher eventPublisher
 	) {
 		this(reportRepository, routeRepository, membershipRepository, assignmentRepository, historyRepository,
-				presenceRepository, realtimeNotifier, eventPublisher, Clock.systemUTC());
+				presenceRepository, riskAssessmentRepository, realtimeNotifier, eventPublisher, Clock.systemUTC());
 	}
 
 	ReportOperatorAssignmentService(
@@ -83,6 +89,7 @@ public class ReportOperatorAssignmentService {
 			ReportOperatorAssignmentRepository assignmentRepository,
 			ReportStatusHistoryRepository historyRepository,
 			OperatorPresenceRepository presenceRepository,
+			RiskAssessmentRepository riskAssessmentRepository,
 			ReportRealtimeNotifier realtimeNotifier,
 			ApplicationEventPublisher eventPublisher,
 			Clock clock
@@ -93,6 +100,7 @@ public class ReportOperatorAssignmentService {
 		this.assignmentRepository = assignmentRepository;
 		this.historyRepository = historyRepository;
 		this.presenceRepository = presenceRepository;
+		this.riskAssessmentRepository = riskAssessmentRepository;
 		this.realtimeNotifier = realtimeNotifier;
 		this.eventPublisher = eventPublisher;
 		this.clock = clock;
@@ -182,8 +190,21 @@ public class ReportOperatorAssignmentService {
 				statuses == null || statuses.isEmpty()
 						? EnumSet.allOf(ReportOperatorAssignmentStatus.class)
 						: statuses;
-		return assignmentRepository.findAllByOperator_IdAndStatusIn(operatorId, targetStatuses, pageable)
-				.map(OperatorAssignmentResponse::from);
+		Page<ReportOperatorAssignment> assignments =
+				assignmentRepository.findAllByOperator_IdAndStatusIn(operatorId, targetStatuses, pageable);
+		Map<Long, RiskSummaryView> risksByReportId = risksByReportId(assignments.getContent().stream()
+				.map(assignment -> assignment.getReport().getId())
+				.toList());
+		return assignments.map(assignment -> OperatorAssignmentResponse.from(
+				assignment, risksByReportId.get(assignment.getReport().getId())));
+	}
+
+	private Map<Long, RiskSummaryView> risksByReportId(List<Long> reportIds) {
+		if (reportIds.isEmpty()) return Map.of();
+		Map<Long, RiskSummaryView> result = new HashMap<>();
+		riskAssessmentRepository.findAllByReportIdIn(reportIds)
+				.forEach(assessment -> result.put(assessment.getReportId(), RiskSummaryView.from(assessment)));
+		return result;
 	}
 
 	/**

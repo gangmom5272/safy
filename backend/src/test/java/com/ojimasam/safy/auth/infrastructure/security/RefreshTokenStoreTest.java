@@ -35,7 +35,7 @@ class RefreshTokenStoreTest {
 		when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 		when(redisTemplate.opsForSet()).thenReturn(setOperations);
 		AuthProperties properties = new AuthProperties("secret", Duration.ofMinutes(15), Duration.ofDays(14),
-				"refresh", false, "Lax", "success", "failure");
+				"refresh", "admin-refresh", false, "Lax", "success", "failure");
 		store = new RefreshTokenStore(redisTemplate, properties);
 	}
 

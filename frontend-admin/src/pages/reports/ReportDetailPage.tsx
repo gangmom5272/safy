@@ -84,6 +84,8 @@ export function ReportDetailPage() {
     ? [{ id: image.reportImageId, url: image.previewUrl }]
     : [])
   const riskLevel = analysis?.riskLevel ?? report.riskLevel
+  // 상세 조회 응답에는 위험도가 없다. 점수는 분석 API(최종 위험 점수)에서만 온다.
+  const riskScore = analysis?.riskScore ?? report.riskScore
   const summary = analysis?.summary ?? report.aiSummary
   const confidence = analysis?.confidence ?? null
 
@@ -129,7 +131,7 @@ export function ReportDetailPage() {
             <div><dt>제보 시간</dt><dd>{formatAdminDate(report.reportedAt)}</dd></div>
             <div className="report-summary__group">
               <dt>위험 정보</dt>
-              <dd><span>위험도</span><RiskBadge value={riskLevel} score={report.riskScore} /></dd>
+              <dd><span>위험도</span><RiskBadge value={riskLevel} score={riskScore} /></dd>
               {/* 추정 인원(crowdCount)은 정확도가 보장되지 않아 노출하지 않는다. */}
               <dd><span>분석 상태</span><span>{getAnalysisStatusLabel(analysis?.status) ?? '-'}</span></dd>
             </div>
@@ -151,7 +153,7 @@ export function ReportDetailPage() {
 
       <div className="report-detail-grid report-detail-grid--second">
         <AdminSection title="위험도 지표">
-          <RiskLevelIndicator level={riskLevel} score={report.riskScore} />
+          <RiskLevelIndicator level={riskLevel} score={riskScore} />
         </AdminSection>
 
         <AdminSection title="제보 처리">
@@ -166,7 +168,7 @@ export function ReportDetailPage() {
       <AdminSection title="AI 상황 요약">
         <div className="ai-summary-layout">
           <div className="ai-summary-metrics">
-            <div><span>위험 단계</span><RiskBadge value={riskLevel} score={report.riskScore} /></div>
+            <div><span>위험 단계</span><RiskBadge value={riskLevel} score={riskScore} /></div>
             <div><span>신뢰도</span><strong>{confidence === null ? '-' : `${Math.round(confidence * 100)}%`}</strong></div>
           </div>
           <section>
