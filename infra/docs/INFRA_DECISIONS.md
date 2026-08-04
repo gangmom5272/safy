@@ -2174,3 +2174,306 @@ Uptime Kuma가 `172.17.0.1:18001/health`를 Keyword `"ready":true`로 감시해�
   다음 빌드를 느리게 만들므로 제출 후로 미룬다.
 - **미머지 브랜치 2개**: `chore/S15P11A503-49/container-restart-policy`(머지 시 redis
   재생성으로 전원 재로그인 — 팀 공지 필요), `docs/S15P11A503-95/webrtc-checklist`.
+
+---
+
+# 2026-08-04 (월) 이어서 — AI 경로 완결: MR 배포 · 자동 복귀 검증 · Kuma 이중 감시
+
+앞 절에서 "인프라 MR 머지"만 남겨두고 끝났는데, 그 머지가 세 번 미뤄졌다. 원인이 기술
+문제가 아니라 **MR을 만들지 않은 것**이었다. 머지된 뒤에는 남은 검증이 한 번에 끝났다.
+
+## 1. 브랜치 푸시와 MR은 다른 일이다
+
+같은 증상을 세 번 반복했다. 매번 "배포됐다"고 판단했는데 서버에는 인프라 변경이 없었다.
+
+증상과 실제:
+
+| 관측 | 판단 | 실제 |
+|---|---|---|
+| 파이프라인 `Passed`, deploy 스테이지 초록 | 배포 완료 | 맞다. 다만 **무엇을** 배포했는지가 다르다 |
+| develop에 배포가 돌았다 | 내 변경 반영 | develop에는 문서 커밋만 있었다 |
+| 브랜치 파이프라인이 돌았다 | MR이 처리됐다 | 브랜치 푸시로도 파이프라인은 돈다 |
+
+**결정적 단서는 GitLab 사이드바의 `Merge requests 0`이었다.** 열린 MR이 하나도 없었다.
+브랜치는 `git push`로 origin에 올라가 있었고 브랜치 파이프라인도 통과했지만, MR을 만들지
+않았으니 develop에 들어갈 수 없었다.
+
+구별법:
+
+```bash
+# 브랜치가 origin에 있는가 (푸시 여부)
+git ls-remote --heads origin | grep <branch>
+
+# 그 커밋이 develop에 들어갔는가 (머지 여부)
+git merge-base --is-ancestor <commit> origin/develop && echo 머지됨 || echo 미머지
+
+# develop에 무엇이 머지됐는지
+git log origin/develop --oneline -3
+```
+
+파이프라인 목록에서도 구별된다. MR 파이프라인에는 `!158` 같은 MR 번호와 `merge request`
+태그가 붙는다. 브랜치 파이프라인에는 브랜치 이름과 `branch` 태그만 붙는다.
+
+머지를 막는 기술적 요인이 있는지도 확인했다 — 없었다.
+
+```bash
+MB=$(git merge-base origin/develop origin/<branch>)
+git diff --stat $MB..origin/develop -- <내가 건드린 경로>   # 비어 있으면 충돌 없음
+git merge-tree $MB origin/develop origin/<branch> | grep -iE 'CONFLICT|changed in both'
+```
+
+## 2. 디렉터리 마운트도 디렉터리 자체가 삭제되면 stale이 된다
+
+7/31에 "파일 단위 바인드 마운트는 rsync가 inode를 바꿔 stale이 되고, 디렉터리 마운트는
+괜찮다"고 정리했다. 그 결론에 조건이 하나 빠져 있었다.
+
+MR이 머지되어 `infra/nginx-ai-tunnel/`이 복원된 뒤에도 `infra-ai-tunnel-1` 컨테이너 안의
+`conf.d`가 **비어 있었다**.
+
+```
+호스트: ~/S15P11A503/infra/nginx-ai-tunnel/ai-tunnel.conf   있음
+컨테이너: /etc/nginx/conf.d/                                total 0
+```
+
+이 디렉터리는 git에 없던 동안 `rsync --delete`가 **디렉터리 자체를 지웠고**, 커밋된 뒤
+다시 만들어졌다. 그래서 디렉터리의 inode가 바뀌었고, 컨테이너의 바인드 마운트는 마운트
+시점의(이미 삭제된) 디렉터리를 계속 보고 있었다.
+
+더 나쁜 것은 **겉으로는 정상이었다**는 점이다. nginx는 기동 시 읽은 설정을 메모리에 갖고
+있으므로 `172.17.0.1:18001` 리스너가 살아 있고 프록시도 동작했다. 재시작하는 순간
+설정이 없어 리스너가 사라질 상태였다. `docker ps`로는 `Up 17 hours`로만 보인다.
+
+```bash
+docker compose up -d --force-recreate --no-deps ai-tunnel   # 이것만으로 풀린다
+docker exec infra-ai-tunnel-1 ls -l /etc/nginx/conf.d/      # 파일이 보이는지 확인
+```
+
+**정정된 규칙**: 디렉터리 마운트가 안전한 것은 **디렉터리가 계속 존재하고 안의 파일만
+교체될 때**다. 디렉터리가 삭제·재생성되면 파일 마운트와 똑같이 stale이 된다. 새 마운트
+디렉터리를 만들 때는 커밋을 먼저 하고, 서버에 먼저 만들어 검증했다면 배포 후 컨테이너
+안에서 파일이 보이는지 반드시 확인한다.
+
+## 3. 최종 구성과 검증 결과
+
+배포 태그 `b3ddb1f4`(2026-08-04 02:14 UTC)로 완결됐다.
+
+```
+backend → nginx:8010 (infra/nginx/ai-failover.conf)
+            주력  172.17.0.1:18001 → infra-ai-tunnel-1(host netns) → 127.0.0.1:18000
+                                    → ssh -R 터널 → 노트북 8000 (RTX 4050)
+            예비  ai-server:8000   → 서버 CPU (P2PNet 활성)
+```
+
+서버 `.env`(git 밖):
+
+```
+AI_SERVER_BASE_URL=http://nginx:8010     # 프록시 경유. 주력 직행이 아니다
+AI_READ_TIMEOUT=PT40S
+P2PNET_SHADOW_ENABLED=true
+P2PNET_CONGESTION_CORRECTION_ENABLED=true
+P2PNET_SHADOW_TIMEOUT_SECONDS=30
+P2PNET_SHADOW_WEIGHT_URL=http://minio:9000/safy-ai-models/p2pnet/safy-p2pnet-v2-epoch3/epoch-003.pth
+```
+
+**6줄은 항상 함께 넣는다.** `CORRECTION_ENABLED=true`를 `SHADOW_ENABLED=true`와 가중치 URL
+없이 넣으면 티켓 140 코드가 모든 프레임을 `FAILED`로 반환한다.
+
+머지 전에 `.env`를 미리 맞춰둔 것이 유효했다. compose에 선언이 없는 동안은 아무 효과가
+없고, 머지되는 순간 정상 값으로 적용된다. 반대로 옛 값(`http://172.17.0.1:18001` 직행)을
+그대로 뒀다면 머지 직후 **폴백 없이 주력 직행**으로 동작했을 것이다.
+
+검증(실제 backend 컨테이너에서):
+
+| 항목 | 결과 |
+|---|---|
+| `printenv \| grep AI_` | `AI_SERVER_BASE_URL=http://nginx:8010`, `AI_READ_TIMEOUT=PT40S` |
+| `wget -qO- http://nginx:8010/health` | `{"ready":true,"status":"READY",...}` |
+| ai-server 자체 `/health` | `READY` — 예비도 가중치 로드 완료(MEM 597.9MiB) |
+
+주력 경로 왕복(1280×720 287KB, n=20, 2초 간격, 안정화 후):
+
+```
+평균 575ms  p95 878ms  최대 920ms  최소 365ms
+폴백 0/20 · GPU YOLO 추론 9~45ms · 서버 가용 메모리 11,590MB
+```
+
+5초 프레임 예산의 18%(p95)다.
+
+## 4. 자동 복귀가 실측으로 검증됐다
+
+앞 절에서 유일하게 미검증으로 남겼던 항목이다. 노트북 터널이 끊겼다가 살아나는 구간이
+그대로 검증 조건이 됐다. 인위적으로 만든 상황이 아니다.
+
+| 시각(UTC) | 터널 18000 | 왕복 | 어디로 갔나 |
+|---|---|---|---|
+| 02:16 | 없음 | 11,501ms | 예비 (서버 CPU, 콜드 스타트) |
+| 02:19 | 없음 | 10,168ms | 예비 (`ai-server` 요청 로그로 확인) |
+| 02:19 직후 | **복구** | **630ms** | **주력 GPU** (`ai-server` 로그에 없음) |
+
+**터널이 살아나자 다음 요청부터 주력으로 돌아왔다.** `error_page` 방식을 고른 이유가 그대로
+확인됐다 — 매 요청이 주력을 먼저 시도하므로 `fail_timeout` 같은 복귀 대기가 없다.
+
+어느 업스트림이 응답했는지 구별하는 방법도 정리해 둔다. 주력과 예비의 `/health` 응답이
+완전히 같아서 응답만으로는 알 수 없다.
+
+```bash
+# 1) ai-server 접근 로그에 요청이 찍혔는지 (찍혔으면 폴백)
+docker logs infra-ai-server-1 --since 3m | grep -c 'analyze/frame'
+
+# 2) 중계 nginx의 업스트림 실패 로그
+docker logs infra-ai-tunnel-1 --since 10m | grep -iE 'refused|timed'
+
+# 3) processingTimeMs (GPU 9~45ms vs 서버 CPU 68ms+, 보정 ON이면 CPU는 4.5초 추가)
+```
+
+측정 중 폴백이 1회 섞였는데 원인을 이 방법으로 특정했다 — 중계 로그의
+`connect() failed (111: Connection refused)`가 전부 터널 복구 전환 구간(02:19:05~02:19:19)에만
+찍혀 있었고, 안정화 후 20회에서는 0건이었다.
+
+## 5. Kuma 이중 감시 — 폴백이 조용히 성공하는 문제
+
+자동 폴백에는 대가가 있다. **주력이 죽어도 `/health`는 계속 200 READY를 준다**(예비가
+응답하기 때문). 실제로 노트북이 18분간 죽어 있었는데 아무 신호도 없었다.
+
+그래서 모니터를 두 개로 나눴다.
+
+| id | 이름 | URL | Keyword |
+|---|---|---|---|
+| 6 | `ai-gpu-tunnel (주력)` | `http://172.17.0.1:18001/health` | `"ready":true` |
+| 7 | `ai-proxy (전체 가용성)` | `http://nginx:8010/health` | `"ready":true` |
+
+신호 해석:
+
+```
+주력 DOWN + 전체 UP    →  노트북·터널 장애. 폴백으로 돌고 있음(서버 CPU는 동시 1개까지)
+주력 DOWN + 전체 DOWN  →  AI 전면 장애
+주력 UP                →  정상
+```
+
+7번이 없으면 "폴백으로 버티는 중"과 "AI가 완전히 죽음"을 구별할 수 없다.
+
+`maxretries=2`, `interval=60`으로 알림까지 약 3분이다. 노트북의 터널 자동 재접속이 3~6초라
+그 블립에는 알림이 가지 않는다. 기존 모니터 1~5는 `maxretries=3`인데 주력 GPU는 시연 중
+빨리 알아야 해서 하나 낮췄다.
+
+각 모니터 `description`에 복구 절차를 넣었다 — 노트북 로그온 → 터널 감시 스크립트 확인 →
+서버에서 `ss -ltn | grep 18000`.
+
+### Kuma 설정을 DB로 바꿀 때
+
+Kuma v1에는 모니터 CRUD용 REST API가 없다(socket.io 기반). UI가 아니면 SQLite를 직접
+고쳐야 한다.
+
+```bash
+docker exec infra-uptime-kuma-1 sh -c 'cp /app/data/kuma.db /app/data/kuma.db.bak.$(date +%Y%m%d%H%M%S)'
+docker exec infra-uptime-kuma-1 sqlite3 /app/data/kuma.db "UPDATE monitor SET ... WHERE id=6"
+docker restart infra-uptime-kuma-1     # 메모리 캐시 때문에 필수
+```
+
+**Kuma는 모니터를 메모리에 캐시하므로 재시작하지 않으면 반영되지 않는다.** 컬럼명 주의:
+`maxretries`(언더스코어 없음), `retry_interval`(있음)로 일관성이 없다.
+
+새 모니터를 추가할 때는 기존 행을 복사하는 편이 안전하다. 컬럼이 70개가 넘어 일부를
+NULL로 두면 UI가 깨질 수 있다.
+
+```sql
+CREATE TEMP TABLE t AS SELECT * FROM monitor WHERE id=6;
+UPDATE t SET id=NULL, name='...', url='...';
+INSERT INTO monitor SELECT * FROM t;
+INSERT INTO monitor_notification (monitor_id, notification_id) SELECT MAX(id), 1 FROM monitor;
+```
+
+### 알림 동작은 가짜 장애 없이 확인했다
+
+팀 Mattermost 채널에 가짜 DOWN 알림을 보내지 않으려고, 강제 장애 대신 이력으로 확인했다.
+Kuma는 상태 전환 heartbeat에 `important=1`을 세우고 그때 알림을 보낸다.
+
+```sql
+select h.monitor_id, m.name, h.status, h.msg, h.time
+from heartbeat h join monitor m on m.id=h.monitor_id
+where h.important=1 order by h.id desc limit 8;
+```
+
+backend의 DOWN/UP 전환이 실제로 기록돼 있고 Mattermost 채널(id 1)이 활성이므로 발송
+경로가 살아 있다.
+
+처음에는 기존 모니터가 `maxretries=0`이라 배포마다 알림이 갈 것으로 봤는데, 재보니 1~5번은
+이미 3으로 튜닝돼 있었다. 7일간 backend DOWN 알림 12건은 전부 4분 이상 걸린 배포이고 그건
+알릴 가치가 있는 값이라 손대지 않았다. **짐작으로 남의 설정을 고치기 전에 재보는 것이
+맞았다.**
+
+## 6. 노트북 운영 기준 — ONLOGON의 한계를 받아들였다
+
+AI 담당자가 노트북 설정을 정리했다. 전원 연결 시 절전·최대 절전 해제, 덮개 닫아도 유지,
+AI 서버와 SSH 터널 자동 재시작 스크립트, 배터리 전환 시 유지.
+
+자동 재접속은 별도로 검증됐다 — SSH 프로세스를 강제 종료하면 3~6초 후 새 프로세스가 생기고
+`127.0.0.1:18000/health`가 READY가 되며 GPU 경로로 자동 복귀한다.
+
+다만 Windows 예약 작업이 **ONLOGON 방식**이라 재부팅 후 로그인 전까지는 AI와 터널이 실행
+되지 않는다. 로그온 여부와 무관하게 실행하는 SYSTEM 서비스 방식은 GPU 접근과 SSH 키 권한이
+서비스 계정에서 달라지고 실제 재부팅 검증이 필요해서, 제출 6일 전에 손댈 항목이 아니라고
+판단했다. 대신 운영 기준으로 덮었다.
+
+```
+시연 중 노트북 종료·로그아웃 금지
+재부팅 시 SSAFY 계정으로 반드시 로그인
+로그인 후 GPU AI와 터널 health 확인
+전원 연결 및 절전 해제 유지
+```
+
+시연 전 점검은 두 줄이면 된다.
+
+```
+서버: ss -ltn | grep 18000        # 리스너가 있으면 터널 정상
+Kuma: ai-gpu-tunnel 모니터가 UP
+```
+
+**단일 실패점이라는 사실은 남는다.** 노트북이 죽으면 폴백이 받지만 서버 CPU는 프레임당
+4.6초라 동시 영상 1개까지만 정상이다. 그 이상에서는 프레임이 폐기된다.
+
+## 7. 오늘 배운 점
+
+- **"배포 성공"은 세 단계로 나눠 봐야 한다.** 브랜치가 푸시됐는가 / MR이 만들어졌는가 /
+  develop에 머지됐는가. 파이프라인 초록은 세 번째를 보장하지 않는다. 같은 오판을 세 번
+  했다.
+- **겉으로 정상인 고장이 가장 위험하다.** stale 마운트는 리스너가 살아 있어 안 보이고,
+  자동 폴백은 200을 줘서 안 보인다. 둘 다 재시작이나 다음 장애 때 드러난다. 그래서
+  "동작한다"를 확인할 때 **무엇을 통해 동작하는지**까지 봐야 한다.
+- **짐작으로 남의 설정을 고치기 전에 재본다.** `maxretries=0`이라고 짐작해 기존 모니터
+  5개를 손대려 했는데 실제로는 이미 3이었다.
+- **가짜 장애를 만들지 않고 검증할 방법이 있으면 그쪽을 쓴다.** 알림 발송을 확인하려고
+  팀 채널에 DOWN 알림을 보내는 대신 `important=1` 이력을 읽었다.
+- **끊겼던 것이 저절로 검증 조건이 됐다.** 노트북이 밤새 꺼진 것이 자동 폴백 검증이 됐고,
+  터널이 살아난 순간이 자동 복귀 검증이 됐다.
+
+## 8. 후속 · 미결
+
+앞 절의 미결 중 해소된 것: 인프라 MR 머지, `.env` 정책 반영, 터널 복구 시 자동 복귀 검증,
+Kuma 주력 감시, 터널 자동 재접속.
+
+남은 것은 전부 **라이브 제보 1건에 종속**된다.
+
+- **진짜 end-to-end**: 제보 → Egress → MinIO → `media_processing_jobs` → 워커 → AI.
+  `media_processing_jobs`와 `extracted_frames`가 여전히 0행이고 이 경로는 한 번도 실행된
+  적이 없다. AI API 왕복은 전부 검증됐지만 워커가 실제로 job을 집어 AI를 부르는 것은
+  확인되지 않았다. 티켓 95의 브라우저 라이브 제보 검증과 함께 진행해야 한다.
+- **Egress 겹침 메모리**: 같은 조건이 필요하다. 계산으로 나오지 않는 유일한 항목이다.
+- **swap 추가 여부**: 위 측정 종속. 현재 서버 가용 11,590MB, swap 0B.
+
+인프라 단독으로 남은 것:
+
+- **백엔드 워커 처리량 문의**: `MediaProcessingWorker.processPending()`이
+  `fixedDelay=PT2S`에 한 번에 최대 10건을 순차 처리한다. GPU 주력 경로(왕복 575ms)에서는
+  이용률이 약 6%로 여유가 크지만, 폴백 경로(4.6초)에서는 동시 영상 1개에서도 약 99%가
+  된다. 폴백 상황에서만 문제가 되므로 우선도는 내려갔다.
+- **스케줄러 스레드 풀**: `PublicDataSchedulerConfig` 풀 크기 3에 `@Scheduled` 작업 4개.
+  BE 확인 사항.
+- **운영 프로필 `dev`**: `ddl-auto: update`. 제출 전 전환은 위험하다고 보며 BE 판단이
+  필요하다. 8/4에 `application-dev.yml ddl-auto:update` 관련 커밋이 두 번 오간 것을
+  파이프라인 목록에서 봤으므로 BE 쪽에서 이미 검토 중인 것으로 보인다.
+- **`safy-ai` 이미지 누적**: 회수 가능한 것은 이미지 2.765GB(전체의 8%)와 Build Cache
+  5.278GB. 디스크 여유가 충분하고 `builder prune`은 다음 빌드를 느리게 만들므로 제출
+  후로 미룬다.
+- **미머지 브랜치 2개**: `chore/S15P11A503-49/container-restart-policy`(머지 시 redis
+  재생성으로 전원 재로그인 — 팀 공지 필요), `docs/S15P11A503-95/webrtc-checklist`.
