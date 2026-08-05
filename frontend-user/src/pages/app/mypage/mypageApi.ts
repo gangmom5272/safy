@@ -83,10 +83,12 @@ function toMyReport(report: ReportListItemView, history: ReportStatusHistoryResp
     status: toUiStatus(report.status),
     thumbnailUrl: previewUrl,
     attachments: normalizeAttachments(report.representativeImage),
+    // 관리자 원본 이력을 그대로 보존한다. reason 을 화면 문구로 바꾸지 않는 이유는
+    // 상태별로 내부 코드가 섞여 있어서다. 사용자용 문구는 mypageUtils 가 만든다.
     history: history.map((item) => ({
       status: toUiStatus(item.toStatus),
       changedAt: item.changedAt,
-      description: item.reason ?? '제보 상태가 변경되었습니다.',
+      reason: item.reason,
     })),
   }
 }

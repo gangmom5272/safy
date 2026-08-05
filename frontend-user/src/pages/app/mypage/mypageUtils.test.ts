@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { formatReceiptNumber, getReportCategoryLabel, getReportMediaTypeLabel, isVideoAttachment, normalizeAttachments, pickReportThumbnailUrl, toReportProgressSteps } from './mypageUtils.ts'
+import { formatReceiptNumber, getReportCategoryLabel, getReportMediaTypeLabel, getStatusLabel, isVideoAttachment, normalizeAttachments, pickReportThumbnailUrl, toReportProgressSteps } from './mypageUtils.ts'
 import type { ReportStatus, StatusHistory } from './mypageTypes.ts'
 
 // docs/api-contract.md 의 ReportImageView 모양.
@@ -134,17 +134,22 @@ test('영상 첨부는 img 로 그릴 수 없으므로 썸네일로 쓰지 않�
 // 재배정이 반복돼 같은 상태가 여러 번 들어온다(QA 지적 사항).
 const RECEIVED_AT = '2026-08-05T09:49:00'
 const adminHistory: StatusHistory[] = [
-  { status: 'RECEIVED', changedAt: RECEIVED_AT, description: 'AUTO_OPERATOR_ASSIGNMENT' },
-  { status: 'IN_PROGRESS', changedAt: '2026-08-05T09:50:00', description: 'OPERATOR_VIEWING' },
-  { status: 'RECEIVED', changedAt: '2026-08-05T10:00:00', description: '가져가' },
-  { status: 'RECEIVED', changedAt: '2026-08-05T10:00:30', description: 'OPERATOR_OFFLINE' },
-  { status: 'IN_PROGRESS', changedAt: '2026-08-05T10:01:00', description: 'OPERATOR_VIEWING' },
+  { status: 'RECEIVED', changedAt: RECEIVED_AT, reason: 'AUTO_OPERATOR_ASSIGNMENT' },
+  { status: 'IN_PROGRESS', changedAt: '2026-08-05T09:50:00', reason: 'OPERATOR_VIEWING' },
+  { status: 'RECEIVED', changedAt: '2026-08-05T10:00:00', reason: '가져가' },
+  { status: 'RECEIVED', changedAt: '2026-08-05T10:00:30', reason: 'OPERATOR_OFFLINE' },
+  { status: 'IN_PROGRESS', changedAt: '2026-08-05T10:01:00', reason: 'OPERATOR_VIEWING' },
 ]
 
 test('접수만 된 제보는 접수 대기 중 한 단계만 보여준다', () => {
   const steps = toReportProgressSteps({ status: 'RECEIVED', createdAt: RECEIVED_AT, history: [] })
 
-  assert.deepEqual(steps, [{ status: 'RECEIVED', changedAt: RECEIVED_AT, isCurrent: true }])
+  assert.deepEqual(steps, [{
+    status: 'RECEIVED',
+    changedAt: RECEIVED_AT,
+    description: '접수가 진행 중입니다.',
+    isCurrent: true,
+  }])
 })
 
 test('관리자 이력이 여러 건이어도 사용자 단계는 반복되지 않는다', () => {
@@ -160,7 +165,7 @@ test('처리 완료 제보는 3단계가 되고 완료 시각은 마지막 값�
   const steps = toReportProgressSteps({
     status: 'CLOSED',
     createdAt: RECEIVED_AT,
-    history: [...adminHistory, { status: 'CLOSED', changedAt: '2026-08-05T11:00:00', description: '종결' }],
+    history: [...adminHistory, { status: 'CLOSED', changedAt: '2026-08-05T11:00:00', reason: '종결' }],
   })
 
   assert.deepEqual(steps.map((step) => step.status), ['RECEIVED', 'IN_PROGRESS', 'CLOSED'])
@@ -173,12 +178,12 @@ test('반려·취소는 처리 완료로 바뀌지 않는다', () => {
   const rejected = toReportProgressSteps({
     status: 'REJECTED',
     createdAt: RECEIVED_AT,
-    history: [{ status: 'REJECTED', changedAt: '2026-08-05T11:00:00', description: '허위 제보' }],
+    history: [{ status: 'REJECTED', changedAt: '2026-08-05T11:00:00', reason: '허위 제보' }],
   })
   const cancelled = toReportProgressSteps({
     status: 'CANCELLED',
     createdAt: RECEIVED_AT,
-    history: [{ status: 'CANCELLED', changedAt: '2026-08-05T10:10:00', description: '시민 취소' }],
+    history: [{ status: 'CANCELLED', changedAt: '2026-08-05T10:10:00', reason: '시민 취소' }],
   })
 
   assert.deepEqual(rejected.map((step) => step.status), ['RECEIVED', 'REJECTED'])
@@ -189,7 +194,7 @@ test('처리중을 거치지 않고 종결된 제보는 처리중을 만들어�
   const steps = toReportProgressSteps({
     status: 'CLOSED',
     createdAt: RECEIVED_AT,
-    history: [{ status: 'CLOSED', changedAt: '2026-08-05T11:00:00', description: '종결' }],
+    history: [{ status: 'CLOSED', changedAt: '2026-08-05T11:00:00', reason: '종결' }],
   })
 
   assert.deepEqual(steps.map((step) => step.status), ['RECEIVED', 'CLOSED'])
@@ -207,12 +212,133 @@ test('모르는 상태가 이력에 섞여 있어도 단계로 노출되지 않�
   const steps = toReportProgressSteps({
     status: 'IN_PROGRESS',
     createdAt: RECEIVED_AT,
-    history: [{ status: 'ESCALATED' as ReportStatus, changedAt: '2026-08-05T09:55:00', description: 'CENTER_TRANSFER' }],
+    history: [{ status: 'ESCALATED' as ReportStatus, changedAt: '2026-08-05T09:55:00', reason: 'CENTER_TRANSFER' }],
   })
 
   // 내부 코드가 화면에 나가지 않고, 현재 상태 단계는 시각 없이도 남는다.
   assert.deepEqual(steps.map((step) => step.status), ['RECEIVED', 'IN_PROGRESS'])
   assert.equal(steps[1].changedAt, null)
+})
+
+test('사용자 상태 라벨은 처리 중·처리 완료로 띄어 쓴다', () => {
+  assert.equal(getStatusLabel('RECEIVED'), '접수 대기 중')
+  assert.equal(getStatusLabel('IN_PROGRESS'), '처리 중')
+  assert.equal(getStatusLabel('CLOSED'), '처리 완료')
+  assert.equal(getStatusLabel('REJECTED'), '반려됨')
+  assert.equal(getStatusLabel('CANCELLED'), '취소됨')
+})
+
+test('모르는 상태의 라벨도 내부 코드를 노출하지 않는다', () => {
+  assert.equal(getStatusLabel('ESCALATED' as ReportStatus), '상태 확인 중')
+})
+
+test('단계마다 상태에 맞는 한글 안내 문구가 붙는다', () => {
+  const steps = toReportProgressSteps({
+    status: 'CLOSED',
+    createdAt: RECEIVED_AT,
+    history: [...adminHistory, { status: 'CLOSED', changedAt: '2026-08-05T11:00:00', reason: 'WORK_COMPLETED' }],
+  })
+
+  assert.deepEqual(steps.map((step) => step.description), [
+    '접수가 진행 중입니다.',
+    '관리자가 처리 중입니다.',
+    '관리자가 제보 처리를 완료했습니다.',
+  ])
+})
+
+test('관리자 내부 코드는 어떤 단계의 안내 문구에도 들어가지 않는다', () => {
+  const steps = toReportProgressSteps({
+    status: 'CLOSED',
+    createdAt: RECEIVED_AT,
+    history: [
+      ...adminHistory,
+      { status: 'RECEIVED', changedAt: '2026-08-05T10:30:00', reason: '강남구 담당자 B 에게 이관' },
+      { status: 'CLOSED', changedAt: '2026-08-05T11:00:00', reason: 'WORK_COMPLETED' },
+    ],
+  })
+  const text = steps.map((step) => step.description).join(' ')
+
+  for (const internal of ['AUTO_OPERATOR_ASSIGNMENT', 'OPERATOR_VIEWING', 'OPERATOR_OFFLINE', 'WORK_COMPLETED', '가져가', '이관']) {
+    assert.equal(text.includes(internal), false, `${internal} 이 사용자 문구에 들어갔습니다.`)
+  }
+})
+
+test('반려 사유가 있으면 원문을 그대로 붙여 보여준다', () => {
+  const steps = toReportProgressSteps({
+    status: 'REJECTED',
+    createdAt: RECEIVED_AT,
+    history: [...adminHistory, { status: 'REJECTED', changedAt: '2026-08-05T11:00:00', reason: '허위 신고로 확인되었습니다.' }],
+  })
+
+  assert.equal(steps.at(-1)?.status, 'REJECTED')
+  assert.equal(steps.at(-1)?.description, '관리자가 다음 사유로 제보를 반려했습니다: 허위 신고로 확인되었습니다.')
+})
+
+test('반려 사유 앞뒤 공백은 지우고 빈 문자열은 사유 없음으로 본다', () => {
+  const padded = toReportProgressSteps({
+    status: 'REJECTED',
+    createdAt: RECEIVED_AT,
+    history: [{ status: 'REJECTED', changedAt: '2026-08-05T11:00:00', reason: '  현장 확인 결과 위험이 없었습니다.  ' }],
+  })
+  const blank = toReportProgressSteps({
+    status: 'REJECTED',
+    createdAt: RECEIVED_AT,
+    history: [{ status: 'REJECTED', changedAt: '2026-08-05T11:00:00', reason: '   ' }],
+  })
+
+  assert.equal(padded.at(-1)?.description, '관리자가 다음 사유로 제보를 반려했습니다: 현장 확인 결과 위험이 없었습니다.')
+  assert.equal(blank.at(-1)?.description, '관리자 검토 결과 제보가 반려되었습니다.')
+})
+
+test('반려 사유가 없으면 기본 안내 문구를 쓴다', () => {
+  const steps = toReportProgressSteps({
+    status: 'REJECTED',
+    createdAt: RECEIVED_AT,
+    history: [{ status: 'REJECTED', changedAt: '2026-08-05T11:00:00', reason: null }],
+  })
+
+  assert.equal(steps.at(-1)?.description, '관리자 검토 결과 제보가 반려되었습니다.')
+})
+
+test('재배정·센터 이관 사유를 반려 사유로 쓰지 않는다', () => {
+  // 두 사유는 서버가 toStatus=RECEIVED 이력에 남기므로 상태로 걸러진다.
+  const steps = toReportProgressSteps({
+    status: 'REJECTED',
+    createdAt: RECEIVED_AT,
+    history: [
+      { status: 'RECEIVED', changedAt: '2026-08-05T10:00:00', reason: '담당자 휴가로 재배정합니다.' },
+      { status: 'RECEIVED', changedAt: '2026-08-05T10:30:00', reason: '송파구 관제센터로 이관합니다.' },
+      { status: 'REJECTED', changedAt: '2026-08-05T11:00:00', reason: null },
+    ],
+  })
+
+  assert.equal(steps.at(-1)?.description, '관리자 검토 결과 제보가 반려되었습니다.')
+})
+
+test('반려 사유가 여러 건이면 마지막 반려 사유를 쓴다', () => {
+  const steps = toReportProgressSteps({
+    status: 'REJECTED',
+    createdAt: RECEIVED_AT,
+    history: [
+      { status: 'REJECTED', changedAt: '2026-08-05T10:00:00', reason: '이전 반려 사유' },
+      { status: 'REJECTED', changedAt: '2026-08-05T11:00:00', reason: '최종 반려 사유' },
+    ],
+  })
+
+  assert.equal(steps.at(-1)?.description, '관리자가 다음 사유로 제보를 반려했습니다: 최종 반려 사유')
+})
+
+test('처리 중에서 반려로 바뀐 제보는 마지막 단계가 반려됨이다', () => {
+  const steps = toReportProgressSteps({
+    status: 'REJECTED',
+    createdAt: RECEIVED_AT,
+    history: [...adminHistory, { status: 'REJECTED', changedAt: '2026-08-05T11:00:00', reason: '허위 신고' }],
+  })
+
+  assert.deepEqual(steps.map((step) => step.status), ['RECEIVED', 'IN_PROGRESS', 'REJECTED'])
+  // 반려 제보에 처리 완료 단계를 덧붙이지 않는다.
+  assert.equal(steps.some((step) => step.status === 'CLOSED'), false)
+  assert.equal(steps.at(-1)?.isCurrent, true)
 })
 
 test('접수 번호는 제보 ID 를 그대로 쓴다', () => {

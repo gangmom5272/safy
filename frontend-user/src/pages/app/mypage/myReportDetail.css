@@ -422,6 +422,10 @@
   font-weight: 600;
 }
 
+.report-history-list li.is-done span {
+  color: #6b7280;
+}
+
 .report-history-list li.is-done::after {
   background: #9db6d8;
 }
