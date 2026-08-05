@@ -2,16 +2,14 @@
 --
 -- 왜 필요한가:
 -- seoul-control-centers.sql 은 구 코드와 센터 코드를 1:1 로 맞춰 PRIMARY 커버리지만 만든다.
--- 그러면 한 행정구역을 담당하는 센터가 정확히 하나뿐이라, "같은 행정구역을 담당하는
--- 다른 센터"를 찾는 두 기능이 구조적으로 후보 0개가 되어 동작하지 않는다.
---   - 자동 페일오버(ReportTransferService.failoverIfCenterUnavailable): 항상 STALLED
---   - 수동 이관(transferManually / findTransferTargets): 항상 빈 목록
+-- 그러면 한 행정구역을 담당하는 센터가 정확히 하나뿐이라, 수동 이관 화면에서
+-- "같은 행정구역을 지원하는 다른 센터" 후보를 찾을 수 없다.
 -- 이 파일은 서울시 도시기본계획 5대 생활권 안에서 구끼리 서로를 BACKUP 으로 등록해
--- 두 기능을 켠다. 119 상호응원협정과 같은 구조다.
+-- 수동 이관 선택지를 제공한다. 119 상호응원협정과 같은 구조다.
 --
 -- 라우팅 정렬은 PRIMARY 를 항상 먼저 보므로(JpaControlCenterAreaRepository.findRoutingCandidates)
--- 정상 제보는 여전히 관할 구 상황실로 간다. BACKUP 은 관할 센터에 근무중 담당자가
--- 0명일 때만 선택된다.
+-- 자동 라우팅과 자동 재배정은 관할 구 PRIMARY 상황실에만 머문다. BACKUP 은 관리자가
+-- 명시적으로 이관할 때만 선택된다.
 --
 -- priority 는 생활권 안에서 모두 2 로 둔다. 구 경계(boundary_geo_json)가 아직 비어 있어
 -- 인접 순서를 데이터로 정할 수 없기 때문이다. 같은 우선순위 안에서는 커버리지 id 순으로

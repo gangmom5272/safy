@@ -6,6 +6,8 @@ export interface AdminUser {
   displayName: string
   role: UserRole
   status: UserStatus
+  controlCenterId: number | null
+  controlCenterName: string | null
 }
 
 export interface TokenResponse {

@@ -101,6 +101,34 @@ class ReportRoutingTransactionServiceTest {
 		assertThat(report.getRoutingFailureReason()).contains("담당 관제센터");
 	}
 
+	@Test
+	void doesNotAutomaticallyRouteReportToAnotherDistrictBackupCenter() {
+		ReportRepository reportRepository = mock(ReportRepository.class);
+		AdministrativeAreaRepository areaRepository = mock(AdministrativeAreaRepository.class);
+		ControlCenterAreaRepository coverageRepository = mock(ControlCenterAreaRepository.class);
+		ReportCenterRouteRepository routeRepository = mock(ReportCenterRouteRepository.class);
+		Report report = report(10L);
+		AdministrativeArea area = mock(AdministrativeArea.class);
+		ControlCenterArea backupCoverage = mock(ControlCenterArea.class);
+		when(reportRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(report));
+		when(area.getId()).thenReturn(20L);
+		when(area.getCode()).thenReturn("1171000000");
+		when(areaRepository.findByCodeAndStatus("1171000000", AdministrativeAreaStatus.ACTIVE))
+				.thenReturn(Optional.of(area));
+		when(backupCoverage.getCoverageRole()).thenReturn(CoverageRole.BACKUP);
+		when(coverageRepository.findRoutingCandidates(
+				20L, NOW, CoverageStatus.ACTIVE, ControlCenterStatus.ACTIVE, CoverageRole.PRIMARY
+		)).thenReturn(List.of(backupCoverage));
+		ReportRoutingTransactionService service = service(
+				reportRepository, areaRepository, coverageRepository, routeRepository
+		);
+
+		service.completeAutomaticRouting(10L, new ResolvedAdministrativeArea("1171000000", "송파구"));
+
+		assertThat(report.getRoutingStatus()).isEqualTo(ReportRoutingStatus.MANUAL_REQUIRED);
+		assertThat(report.getRoutingFailureReason()).contains("담당 관제센터");
+	}
+
 	private ReportRoutingTransactionService service(
 			ReportRepository reportRepository,
 			AdministrativeAreaRepository areaRepository,

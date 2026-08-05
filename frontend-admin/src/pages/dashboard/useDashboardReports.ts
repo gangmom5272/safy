@@ -5,8 +5,8 @@ import { toTimestamp } from '../../utils/adminDate'
 import { getLiveSessions } from '../monitoring/monitoringApi'
 import { getDashboardReports, markReportChecked } from '../reports/reportApi'
 
-/** 홈 화면은 지도와 최근 배정 제보가 같은 목록을 쓰므로 조회 개수도 하나로 둔다. */
-const DASHBOARD_REPORT_SIZE = 5
+/** 긴급 알림도 같은 목록에서 계산하므로 서버가 허용하는 활성 배정 최대 개수를 조회한다. */
+const DASHBOARD_REPORT_SIZE = 100
 
 /** 최근 배정 순. 문자열 비교 대신 시각으로 비교하고, 시각이 없는 제보는 뒤로 보낸다. */
 function byRecentAssignment(left: AdminReport, right: AdminReport): number {
@@ -23,7 +23,7 @@ function byRecentAssignment(left: AdminReport, right: AdminReport): number {
  * 지도와 최근 배정 제보 테이블이 이 목록 하나만 보므로 두 영역의 확인 상태가 어긋나지 않는다.
  * 실시간 갱신은 기존 SSE 구독(subscribeToRealtimeSignals)을 그대로 재사용한다.
  */
-export function useDashboardReports(onDashboardUpdated?: () => void) {
+export function useDashboardReports(onDashboardUpdated?: () => void, enabled = true) {
   const [reports, setReports] = useState<AdminReport[]>([])
   const [connections, setConnections] = useState<WebRTCConnection[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -73,6 +73,7 @@ export function useDashboardReports(onDashboardUpdated?: () => void) {
   }, [mergeReports, onDashboardUpdated])
 
   useEffect(() => {
+    if (!enabled) return
     const initialLoad = window.setTimeout(() => void loadDashboard(), 0)
     // 배정·라이브·종결 이벤트는 목록을 바꾸므로 재조회한다. REPORT_MESSAGE 는 목록과 무관하다.
     const unsubscribe = subscribeToRealtimeSignals((signal) => {
@@ -86,7 +87,7 @@ export function useDashboardReports(onDashboardUpdated?: () => void) {
       // 화면을 떠난 뒤 완료되는 요청이 상태를 갱신하지 못하게 한다.
       loadRequestIdRef.current += 1
     }
-  }, [loadDashboard])
+  }, [enabled, loadDashboard])
 
   /** 담당자가 제보를 열면 지도 마커와 테이블 행을 동시에 '확인'으로 바꾼다. */
   const markChecked = useCallback((reportId: number) => {

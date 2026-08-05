@@ -9,13 +9,18 @@ import { ReportMap } from '../../components/admin/ReportMap'
 import { formatAdminTimestamp } from '../../utils/adminDate'
 import { isNewReport } from '../../utils/adminVerification'
 import { LiveViewer } from '../monitoring/LiveViewer'
-import { useDashboardReports } from './useDashboardReports'
 import type { AdminLayoutOutletContext } from '../../layouts/AdminLayout'
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const { markDashboardUpdated } = useOutletContext<AdminLayoutOutletContext>()
-  const { reports, connections, isLoading, loadError, markChecked } = useDashboardReports(markDashboardUpdated)
+  const {
+    reports,
+    connections,
+    isDashboardLoading: isLoading,
+    dashboardLoadError: loadError,
+    markReportChecked: markChecked,
+  } = useOutletContext<AdminLayoutOutletContext>()
+  const recentReports = reports.slice(0, 5)
 
   const activeConnections = connections.filter(
     (connection) => connection.connectionStatus !== 'ended',
@@ -43,7 +48,7 @@ export function DashboardPage() {
         >
           <ReportMap
             className="map-preview"
-            reports={reports}
+            reports={recentReports}
             showLegend
             onSelect={(report) => openReportDetail(report.id)}
           />
@@ -62,7 +67,7 @@ export function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {reports.map((report) => (
+                {recentReports.map((report) => (
                   <tr
                     key={report.id}
                     className={`clickable-row${isNewReport(report) ? ' recent-reports-table__row--new' : ''}`}
