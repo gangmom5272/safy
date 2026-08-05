@@ -71,17 +71,19 @@ public interface JpaReportRepository extends JpaRepository<Report, Long>, Report
 
 	@Override
 	@EntityGraph(attributePaths = {"administrativeArea", "representativeBlurAsset"})
-	List<Report> findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+	List<Report> findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
 			ReportPublicVisibility publicVisibility,
+			Instant from,
 			Instant cursor,
 			Pageable pageable
 	);
 
 	@Override
 	@EntityGraph(attributePaths = {"administrativeArea", "representativeBlurAsset"})
-	List<Report> findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+	List<Report> findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
 			Long administrativeAreaId,
 			ReportPublicVisibility publicVisibility,
+			Instant from,
 			Instant cursor,
 			Pageable pageable
 	);

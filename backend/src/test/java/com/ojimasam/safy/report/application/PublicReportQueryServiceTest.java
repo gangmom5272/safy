@@ -49,8 +49,8 @@ class PublicReportQueryServiceTest {
 		Report first = report(1L, NOW.minusSeconds(60));
 		Report second = report(2L, NOW.minusSeconds(120));
 		Report overflow = report(3L, NOW.minusSeconds(180));
-		when(reportRepository.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-				eq(ReportPublicVisibility.PUBLISHED), any(), any()))
+		when(reportRepository.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+				eq(ReportPublicVisibility.PUBLISHED), any(), any(), any()))
 				.thenReturn(List.of(first, second, overflow));
 
 		PublicReportCursorResponse result = service().reports(null, 2);
@@ -62,8 +62,8 @@ class PublicReportQueryServiceTest {
 
 	@Test
 	void marksLastPageWhenNoOverflowRow() {
-		when(reportRepository.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-				eq(ReportPublicVisibility.PUBLISHED), any(), any()))
+		when(reportRepository.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+				eq(ReportPublicVisibility.PUBLISHED), any(), any(), any()))
 				.thenReturn(List.of(report(1L, NOW.minusSeconds(60))));
 
 		PublicReportCursorResponse result = service().reports(null, 20);
@@ -75,17 +75,43 @@ class PublicReportQueryServiceTest {
 	/** 커서를 생략하면 최신부터 읽어야 하므로 상한 센티넬로 조회한다. */
 	@Test
 	void missingCursorReadsFromTheNewestRow() {
-		when(reportRepository.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-				eq(ReportPublicVisibility.PUBLISHED), any(), any()))
+		when(reportRepository.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+				eq(ReportPublicVisibility.PUBLISHED), any(), any(), any()))
 				.thenReturn(List.of());
 		ArgumentCaptor<Instant> cursor = ArgumentCaptor.forClass(Instant.class);
 
 		service().reports(null, 20);
 
 		org.mockito.Mockito.verify(reportRepository)
-				.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-						eq(ReportPublicVisibility.PUBLISHED), cursor.capture(), any(Pageable.class));
+				.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						eq(ReportPublicVisibility.PUBLISHED), any(), cursor.capture(), any(Pageable.class));
 		assertThat(cursor.getValue()).isAfter(NOW);
+	}
+
+	/** 마커로 보일 창을 30분으로 자른다. 창이 넓어지면 지도에 오래된 제보가 남는다. */
+	@Test
+	void listsOnlyReportsInsideTheRecentWindow() {
+		when(reportRepository.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+				eq(ReportPublicVisibility.PUBLISHED), any(), any(), any()))
+				.thenReturn(List.of());
+		ArgumentCaptor<Instant> from = ArgumentCaptor.forClass(Instant.class);
+
+		service().reports(null, 20);
+
+		org.mockito.Mockito.verify(reportRepository)
+				.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						eq(ReportPublicVisibility.PUBLISHED), from.capture(), any(), any(Pageable.class));
+		assertThat(from.getValue()).isEqualTo(NOW.minus(Duration.ofMinutes(30)));
+	}
+
+	/** 상황 요약의 '최근 제보' 수는 목록과 같은 조건이어야 한다. */
+	@Test
+	void recentAreaCountUsesPublishedVisibilityAndSameWindow() {
+		when(reportRepository.countByAdministrativeArea_IdAndPublicVisibilityAndReportedAtAfter(
+				7L, ReportPublicVisibility.PUBLISHED, NOW.minus(Duration.ofMinutes(30))))
+				.thenReturn(3L);
+
+		assertThat(service().countRecentByArea(7L)).isEqualTo(3L);
 	}
 
 	@Test
@@ -100,8 +126,9 @@ class PublicReportQueryServiceTest {
 
 	@Test
 	void areaFeedFiltersByAreaAndPublishedVisibility() {
-		when(reportRepository.findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-				eq(7L), eq(ReportPublicVisibility.PUBLISHED), any(), any()))
+		when(reportRepository
+				.findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						eq(7L), eq(ReportPublicVisibility.PUBLISHED), any(), any(), any()))
 				.thenReturn(List.of(report(1L, NOW.minusSeconds(60))));
 
 		PublicReportCursorResponse result = service().reportsByArea(7L, NOW, 20);

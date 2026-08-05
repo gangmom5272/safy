@@ -677,6 +677,13 @@
   background: #f3f6f8;
 }
 
+.area-status-source {
+  margin: 10px 0 0;
+  color: #65758b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .status-item span {
   color: #65758b;
   font-size: 12px;

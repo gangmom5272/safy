@@ -148,19 +148,7 @@ public class ReportFeedQueryService {
 		return size;
 	}
 
-	public long countActiveReports(Long areaId) {
-		return reportRepository.countByAdministrativeArea_IdAndStatusIn(areaId, VISIBLE_STATUSES);
-	}
-
 	public long countActiveReports(Long areaId, Collection<ReportStatus> statuses) {
 		return reportRepository.countByAdministrativeArea_IdAndStatusIn(areaId, statuses);
-	}
-
-	public long countActiveLiveReports(Long areaId) {
-		return reportRepository.countByAdministrativeArea_IdAndTypeAndStatusIn(
-				areaId,
-				ReportType.LIVE,
-				VISIBLE_STATUSES
-		);
 	}
 }

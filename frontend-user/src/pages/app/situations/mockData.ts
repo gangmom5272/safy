@@ -13,10 +13,11 @@ import type {
 } from './types'
 
 const riskOrder: Record<RiskLevel, number> = {
-  critical: 4,
-  high: 3,
-  medium: 2,
-  low: 1,
+  critical: 5,
+  high: 4,
+  medium: 3,
+  low: 2,
+  very_low: 1,
 }
 
 export const mockLocations: LocationSearchResult[] = [
@@ -195,14 +196,14 @@ export const mockReports: LiveReportSummary[] = [
 ]
 
 export const mockAreaStatus: AreaStatus = {
-  riskLevel: 'high',
-  congestionLevel: 'crowded',
-  recentReportCount: 6,
-  liveReportCount: 2,
-  weather: {
-    condition: '흐림',
-    temperature: 28,
+  congestion: {
+    placeName: '강남역',
+    level: 'crowded',
+    populationMin: 42000,
+    populationMax: 50000,
+    observedAt: '2026-07-21T09:40:00+09:00',
   },
+  recentReportCount: 6,
   updatedAt: '2026-07-21T09:41:00+09:00',
 }
 
@@ -214,8 +215,14 @@ export const mockReportDetails: ReportDetail[] = mockReports.map((report) => ({
 export const mockReportAnalyses: ReportAnalysis[] = mockReports.map((report) => ({
   reportId: report.id,
   status: report.riskLevel === 'low' ? 'pending' : 'completed',
-  congestionLevel: report.riskLevel,
-  riskScore: { critical: 88, high: 72, medium: 51, low: 18 }[report.riskLevel],
+  // 혼잡도는 국소 최대 혼잡도(stableL) 기반이라 위험도와 다른 값이 나올 수 있다.
+  // 목업도 같은 값으로 두지 않는다.
+  localPeakCongestionScore: { critical: 95, high: 67, medium: 82, low: 24, very_low: 12 }[
+    report.riskLevel
+  ],
+  riskLevel: report.riskLevel,
+  riskScore: { critical: 88, high: 72, medium: 51, low: 18, very_low: 9 }[report.riskLevel],
+  confidence: 0.72,
   estimatedPeopleCount: report.viewerCount ? report.viewerCount * 8 : undefined,
   aiSummary: `${report.locationName} 주변 상황을 목업 데이터로 표시하고 있습니다.`,
   analyzedAt: '2026-07-21T09:42:00+09:00',

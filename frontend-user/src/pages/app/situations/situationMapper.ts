@@ -3,6 +3,7 @@ import type {
   AreaDetail,
   AreaMapData,
   AreaStatus,
+  CongestionInfo,
   CongestionLevel,
   LiveReportSummary,
   LocationSearchResult,
@@ -100,6 +101,8 @@ function isLiveStreamStatus(value: unknown) {
   return value === 'CREATED' || value === 'ACTIVE'
 }
 
+// 백엔드 RiskLevel.jsonValue() 는 소문자 enum 이름(very_low~very_high)이다.
+// very_low 를 빠뜨리면 '매우 낮음'이 '낮음'으로 조용히 합쳐진다.
 export function normalizeRiskLevel(value: unknown): RiskLevel {
   if (value === 'critical' || value === 'very_high' || value === '매우 높음' || value === 4) {
     return 'critical'
@@ -113,32 +116,42 @@ export function normalizeRiskLevel(value: unknown): RiskLevel {
     return 'medium'
   }
 
+  if (value === 'very_low' || value === 'VERY_LOW' || value === '매우 낮음') {
+    return 'very_low'
+  }
+
   return 'low'
 }
 
+// 백엔드는 enum 이름(CROWDED)을 내려준다. 원본 한글 라벨도 받아 두면 수집 계층이 값을
+// 그대로 흘려보내도 단계가 '보통'으로 조용히 뭉개지지 않는다.
 function normalizeCongestionLevel(value: unknown): CongestionLevel {
-  if (value === 'very_crowded' || value === '매우 혼잡') {
-    return 'very_crowded'
-  }
-
-  if (value === 'crowded' || value === '혼잡') {
+  if (value === 'CROWDED' || value === 'crowded' || value === '붐빔') {
     return 'crowded'
   }
 
-  if (value === 'smooth' || value === '여유') {
-    return 'smooth'
+  if (value === 'SLIGHTLY_CROWDED' || value === 'slightly_crowded' || value === '약간 붐빔') {
+    return 'slightly_crowded'
+  }
+
+  if (value === 'RELAXED' || value === 'relaxed' || value === '여유') {
+    return 'relaxed'
   }
 
   return 'normal'
 }
 
+// 백엔드가 보내는 값은 NOT_STARTED · COMPLETED · NOT_ASSESSABLE 세 가지다.
+// NOT_ASSESSABLE 을 모르고 pending 으로 떨어뜨리면 프레임이 전부 무효라 평가가 끝난
+// 제보에 "분석 대기 중"이 영구히 표시된다.
 function normalizeAnalysisStatus(value: unknown): AnalysisStatus {
-  if (value === 'processing' || value === 'completed' || value === 'failed') {
+  if (value === 'processing' || value === 'completed' || value === 'failed' || value === 'not_assessable') {
     return value
   }
 
   if (value === 'PROCESSING') return 'processing'
   if (value === 'COMPLETED') return 'completed'
+  if (value === 'NOT_ASSESSABLE') return 'not_assessable'
   if (value === 'FAILED') return 'failed'
 
   return 'pending'
@@ -288,22 +301,33 @@ export function mapAreaMapData(raw: unknown): AreaMapData {
   }
 }
 
-export function mapAreaStatus(raw: unknown): AreaStatus {
+/**
+ * 근거가 없으면 백엔드가 null 로 내려준다. 없음을 '보통'으로 채우면 관측이 끊긴 상태가
+ * 정상으로 보이므로 undefined 를 그대로 넘긴다.
+ */
+function mapCongestionInfo(raw: unknown): CongestionInfo | undefined {
+  if (!raw) {
+    return undefined
+  }
+
   const item = asRecord(raw)
-  const weather = asRecord(item.weather)
 
   return {
-    riskLevel: normalizeRiskLevel(item.riskLevel ?? item.risk),
-    congestionLevel: normalizeCongestionLevel(item.congestionLevel),
-    recentReportCount: asNumber(item.recentReportCount ?? item.activeReportCount ?? item.reportCount, 0),
-    liveReportCount: asNumber(item.liveReportCount, 0),
-    weather: item.weather
-      ? {
-          condition: asString(weather.condition),
-          temperature: asOptionalNumber(weather.temperature),
-        }
-      : undefined,
-    updatedAt: asString(item.updatedAt ?? item.analyzedAt),
+    placeName: asString(item.placeName),
+    level: normalizeCongestionLevel(item.congestionLevel),
+    populationMin: asOptionalNumber(item.populationMin),
+    populationMax: asOptionalNumber(item.populationMax),
+    observedAt: asString(item.observedAt) || undefined,
+  }
+}
+
+export function mapAreaStatus(raw: unknown): AreaStatus {
+  const item = asRecord(raw)
+
+  return {
+    congestion: mapCongestionInfo(item.congestion),
+    recentReportCount: asNumber(item.recentReportCount, 0),
+    updatedAt: asString(item.updatedAt),
   }
 }
 
@@ -322,10 +346,12 @@ export function mapReportAnalysis(raw: unknown): ReportAnalysis {
   return {
     reportId: asString(item.reportId),
     status: normalizeAnalysisStatus(item.status),
-    congestionLevel: item.congestionLevel ?? item.riskLevel
-      ? normalizeRiskLevel(item.congestionLevel ?? item.riskLevel)
-      : undefined,
+    // 제보 분석은 그 제보를 분석한 결과만 담는다. 혼잡도도 AI가 계산한 국소 최대
+    // 혼잡도를 쓴다. 예전에는 이 필드가 없어 riskLevel 로 폴백해 두 값이 늘 같았다.
+    localPeakCongestionScore: asOptionalNumber(item.peakLocalCongestionScore),
+    riskLevel: item.riskLevel ? normalizeRiskLevel(item.riskLevel) : undefined,
     riskScore: asOptionalNumber(item.riskScore),
+    confidence: asOptionalNumber(item.confidence),
     estimatedPeopleCount: asOptionalNumber(item.estimatedPeopleCount ?? item.crowdCount),
     aiSummary: asString(item.aiSummary ?? item.summary),
     analyzedAt: asString(item.analyzedAt),

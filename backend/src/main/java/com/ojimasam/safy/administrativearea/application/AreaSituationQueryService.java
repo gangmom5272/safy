@@ -23,40 +23,52 @@ public class AreaSituationQueryService {
 	private final AdministrativeAreaRepository administrativeAreaRepository;
 	private final ReportFeedQueryService reportFeedQueryService;
 	private final PublicReportQueryService publicReportQueryService;
+	private final AreaCongestionReader areaCongestionReader;
 	private final Clock clock;
 
 	@Autowired
 	public AreaSituationQueryService(
 			AdministrativeAreaRepository administrativeAreaRepository,
 			ReportFeedQueryService reportFeedQueryService,
-			PublicReportQueryService publicReportQueryService
+			PublicReportQueryService publicReportQueryService,
+			AreaCongestionReader areaCongestionReader
 	) {
-		this(administrativeAreaRepository, reportFeedQueryService, publicReportQueryService, Clock.systemUTC());
+		this(administrativeAreaRepository, reportFeedQueryService, publicReportQueryService,
+				areaCongestionReader, Clock.systemUTC());
 	}
 
 	AreaSituationQueryService(
 			AdministrativeAreaRepository administrativeAreaRepository,
 			ReportFeedQueryService reportFeedQueryService,
 			PublicReportQueryService publicReportQueryService,
+			AreaCongestionReader areaCongestionReader,
 			Clock clock
 	) {
 		this.administrativeAreaRepository = administrativeAreaRepository;
 		this.reportFeedQueryService = reportFeedQueryService;
 		this.publicReportQueryService = publicReportQueryService;
+		this.areaCongestionReader = areaCongestionReader;
 		this.clock = clock;
 	}
 
+	/**
+	 * 혼잡도는 서울시 실시간 도시데이터에서, '최근 제보' 수는 지도 마커와 같은 공개 피드에서
+	 * 온다. 근거가 다른 두 값이라 각각 조회한다.
+	 *
+	 * <p>예전에는 미종료 제보 건수로 지역 위험도를 만들어 함께 내려보냈다. 제보가 몇 건
+	 * 들어왔는지는 현장이 얼마나 위험한지와 다른 값이라 걷어냈다.
+	 */
 	public AreaStatusResponse status(Long areaId) {
 		AdministrativeArea area = findActiveArea(areaId);
-		long activeCount = reportFeedQueryService.countActiveReports(areaId);
-		long liveCount = reportFeedQueryService.countActiveLiveReports(areaId);
-		return AreaStatusResponse.of(area, riskLevel(activeCount, liveCount), activeCount, liveCount, clock.instant());
+		return AreaStatusResponse.of(
+				area,
+				areaCongestionReader.peakOf(area.getCode()).orElse(null),
+				publicReportQueryService.countRecentByArea(areaId),
+				clock.instant()
+		);
 	}
 
-	/**
-	 * 지도 데이터는 시민 화면이 쓰므로 제보 목록은 공개된 건만 담는다.
-	 * 위험도 요약(status)은 미공개 제보까지 세는 집계라 그대로 둔다.
-	 */
+	/** 지도 데이터는 시민 화면이 쓰므로 제보 목록은 공개된 건만 담는다. */
 	public AreaMapResponse map(Long areaId, Instant cursor, int size) {
 		AdministrativeArea area = findActiveArea(areaId);
 		return new AreaMapResponse(
@@ -74,12 +86,5 @@ public class AreaSituationQueryService {
 	private AdministrativeArea findActiveArea(Long areaId) {
 		return administrativeAreaRepository.findByIdAndStatus(areaId, AdministrativeAreaStatus.ACTIVE)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
-	}
-
-	private String riskLevel(long activeCount, long liveCount) {
-		long score = activeCount + (liveCount * 2);
-		if (score >= 10) return "HIGH";
-		if (score >= 3) return "MEDIUM";
-		return "LOW";
 	}
 }

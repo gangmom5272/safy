@@ -5,8 +5,11 @@ import { formatDateTime } from '../../../utils/dateTime'
 import { ErrorState, LoadingSkeleton } from '../situations/SituationStates'
 import {
   analysisStatusLabels,
+  congestionLevelLabels,
+  localPeakCongestionLevel,
   reportTypeLabels,
   shortRiskLevelLabels,
+  type AnalysisStatus,
   type ReportAnalysis,
   type ReportDetail,
 } from '../situations/types'
@@ -197,23 +200,28 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
         {analysis.status === 'completed' ? <span className="analysis-complete-badge">{analysisStatusLabels[analysis.status]}</span> : <span />}
         {analysis.analyzedAt ? <span className="analysis-time">{formatDateTime(analysis.analyzedAt)}</span> : null}
       </div>
-      {analysis.status === 'completed' ? (
-        <dl className="report-detail-list analysis-detail-list">
-          <div>
-            <dt><DetailIcon name="congestion" />혼잡도</dt>
-            <dd>
-              {/* 항목명이 이미 '혼잡도'이므로 값에는 단계만 남긴다. */}
-              {analysis.congestionLevel ? shortRiskLevelLabels[analysis.congestionLevel] : '정보 없음'}
-            </dd>
-          </div>
-          {/* 인원 추정치는 정확도가 보장되지 않아 노출하지 않는다. 내부 판단 용도로만 쓴다. */}
-          <div>
-            <dt><DetailIcon name="risk" />위험도</dt>
-            <dd>
-              {typeof analysis.riskScore === 'number' ? `${Math.round(analysis.riskScore)}점` : '정보 없음'}
-            </dd>
-          </div>
-        </dl>
+      {/* 두 값 모두 이 제보를 분석한 AI 결과다. 지역 단위 서울시 공공데이터는 상황
+          요약이 담당하고 여기에는 섞지 않는다. */}
+      <dl className="report-detail-list analysis-detail-list">
+        <div>
+          <dt><DetailIcon name="congestion" />혼잡도</dt>
+          {/* 항목명이 이미 '혼잡도'이므로 값에는 단계만 남긴다. */}
+          <dd>{formatCongestionValue(analysis)}</dd>
+        </div>
+        {/* 인원 추정치는 정확도가 보장되지 않아 노출하지 않는다. 내부 판단 용도로만 쓴다. */}
+        <div>
+          <dt><DetailIcon name="risk" />위험도</dt>
+          <dd>{formatRiskValue(analysis)}</dd>
+        </div>
+      </dl>
+      {/* 두 값이 어긋나 보일 수 있어 기준을 밝힌다. 혼잡도는 가장 붐빈 구역만 보므로
+          전체가 한산하면 혼잡도가 높고 위험도는 낮게 나오는 조합이 정상이다. */}
+      <p className="analysis-source">
+        혼잡도는 AI 영상 분석 기준으로 가장 붐빈 구역을 영상 전체에서 집계한 값입니다.
+        전체가 한산하면 위험도와 다르게 보일 수 있습니다.
+      </p>
+      {analysis.status === 'not_assessable' ? (
+        <p className="muted-text">프레임 품질이 낮아 분석 결과를 산출하지 못했습니다.</p>
       ) : null}
       {analysis.status === 'pending' ? <p className="muted-text">분석 대기 중입니다.</p> : null}
       {analysis.status === 'processing' ? <p className="muted-text">분석이 진행 중입니다.</p> : null}
@@ -222,6 +230,40 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
       ) : null}
     </section>
   )
+}
+
+/** 평가 상태가 값 대신 표시할 문구를 정한다. 값이 나올 상태면 null 이다. */
+function statusPlaceholder(status: AnalysisStatus) {
+  if (status === 'completed') return null
+  if (status === 'not_assessable') return '분석 불가'
+  if (status === 'processing') return '분석 중'
+  if (status === 'failed') return '분석 실패'
+  return '분석 대기 중'
+}
+
+/** 점수(0~100)는 시민이 해석할 수 없으므로 단계로만 보여준다. */
+function formatCongestionValue(analysis: ReportAnalysis) {
+  const placeholder = statusPlaceholder(analysis.status)
+  if (placeholder) return placeholder
+
+  return typeof analysis.localPeakCongestionScore === 'number'
+    ? congestionLevelLabels[localPeakCongestionLevel(analysis.localPeakCongestionScore)]
+    : '정보 없음'
+}
+
+/**
+ * 등급을 앞세우고 점수를 괄호로 보조한다. 점수만 보여주면 시민이 '72점'을 해석할 수 없고,
+ * 관리자 콘솔도 등급 라벨을 주고 점수를 배지 안 부가 정보로 둔다.
+ */
+function formatRiskValue(analysis: ReportAnalysis) {
+  const placeholder = statusPlaceholder(analysis.status)
+  if (placeholder) return placeholder
+
+  const level = analysis.riskLevel ? shortRiskLevelLabels[analysis.riskLevel] : null
+  const score = typeof analysis.riskScore === 'number' ? `${Math.round(analysis.riskScore)}점` : null
+
+  if (level && score) return `${level} (${score})`
+  return level ?? score ?? '정보 없음'
 }
 
 type DetailIconName = 'address' | 'time' | 'congestion' | 'people' | 'risk' | 'note'

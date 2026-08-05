@@ -219,6 +219,14 @@
   border-bottom: 0;
 }
 
+/* 값의 출처와 한계를 밝히는 각주. 값 자체보다 약하게 보여야 한다. */
+.report-detail-page .analysis-source {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .report-detail-page .area-map .section-title-row h2 {
   color: #004aad;
 }
