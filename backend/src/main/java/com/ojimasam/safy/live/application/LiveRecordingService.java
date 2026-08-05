@@ -1,6 +1,7 @@
 package com.ojimasam.safy.live.application;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -62,7 +63,8 @@ public class LiveRecordingService {
 
 	/**
 	 * 제보자가 실제로 방에 들어와 송출을 시작한 시점에 호출한다. 이미 진행 중인 녹화가 있으면 아무것도 하지 않는다.
-	 * 녹화 실패가 라이브 시청 자체를 막아서는 안 되므로 예외를 삼킨다.
+	 * Egress 시작은 일시적 CPU 포화로도 실패할 수 있어 짧게 재시도한다. 재시도를 다 써도 실패하면
+	 * 녹화 실패가 라이브 시청 자체를 막아서는 안 되므로 예외를 삼키고 녹화 없이 진행한다.
 	 */
 	@Transactional
 	public void startForSession(LiveSession session, String participantIdentity) {
@@ -73,13 +75,40 @@ public class LiveRecordingService {
 		String recordingToken = Long.toString(now.toEpochMilli());
 		String objectKey = recordingObjectKey(session, recordingToken);
 		String framePrefix = framePrefix(session, recordingToken);
+		LiveRecordingRequest request = new LiveRecordingRequest(
+				session.getRoomName(), participantIdentity, objectKey, framePrefix);
+
+		String egressId = startRecordingWithRetry(session, request);
+		if (egressId == null) return;
+
+		recordingRepository.save(StreamRecording.start(
+				session.getId(), session.getReportId(), egressId, objectKey, framePrefix, now));
+	}
+
+	private String startRecordingWithRetry(LiveSession session, LiveRecordingRequest request) {
+		int maxAttempts = properties.startMaxAttempts();
+		for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+			try {
+				return mediaGateway.startRecording(request);
+			} catch (LiveMediaException exception) {
+				if (attempt == maxAttempts) {
+					log.warn("Failed to start recording for live session {} after {} attempts",
+							session.getId(), attempt, exception);
+					return null;
+				}
+				log.warn("Retrying recording start for live session {} ({}/{})",
+						session.getId(), attempt, maxAttempts, exception);
+				sleep(properties.startRetryDelay());
+			}
+		}
+		return null;
+	}
+
+	private void sleep(Duration delay) {
 		try {
-			String egressId = mediaGateway.startRecording(new LiveRecordingRequest(
-					session.getRoomName(), participantIdentity, objectKey, framePrefix));
-			recordingRepository.save(StreamRecording.start(
-					session.getId(), session.getReportId(), egressId, objectKey, framePrefix, now));
-		} catch (LiveMediaException exception) {
-			log.warn("Failed to start recording for live session {}", session.getId(), exception);
+			Thread.sleep(delay.toMillis());
+		} catch (InterruptedException interruptedException) {
+			Thread.currentThread().interrupt();
 		}
 	}
 

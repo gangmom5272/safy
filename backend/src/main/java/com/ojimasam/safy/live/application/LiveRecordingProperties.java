@@ -18,7 +18,9 @@ public record LiveRecordingProperties(
 		String region,
 		Duration frameInterval,
 		int frameWidth,
-		int frameHeight
+		int frameHeight,
+		int startMaxAttempts,
+		Duration startRetryDelay
 ) {
 	public LiveRecordingProperties {
 		region = region == null || region.isBlank() ? "us-east-1" : region;
@@ -26,5 +28,9 @@ public record LiveRecordingProperties(
 				? Duration.ofSeconds(5) : frameInterval;
 		frameWidth = frameWidth <= 0 ? 1280 : frameWidth;
 		frameHeight = frameHeight <= 0 ? 720 : frameHeight;
+		// Egress 시작 실패는 CPU 포화 같은 일시적 사유가 많아 짧게 재시도한다.
+		startMaxAttempts = startMaxAttempts <= 0 ? 4 : startMaxAttempts;
+		startRetryDelay = startRetryDelay == null || startRetryDelay.isZero() || startRetryDelay.isNegative()
+				? Duration.ofSeconds(2) : startRetryDelay;
 	}
 }

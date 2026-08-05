@@ -36,7 +36,7 @@ class OpenViduRecordingIntegrationTest {
 		LiveKitMediaGateway gateway = new LiveKitMediaGateway(
 				new OpenViduProperties(openViduUrl, apiKey, apiSecret, null, null, null, null),
 				new LiveRecordingProperties(true, bucket, egressS3Endpoint, minioAccessKey,
-						minioSecretKey, null, Duration.ofSeconds(2), 640, 360));
+						minioSecretKey, null, Duration.ofSeconds(2), 640, 360, 4, Duration.ofSeconds(2)));
 		MinioClient minioClient = MinioClient.builder()
 				.endpoint(minioEndpoint)
 				.credentials(minioAccessKey, minioSecretKey)
