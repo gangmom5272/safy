@@ -25,9 +25,13 @@ import com.ojimasam.safy.publicdata.domain.CityCongestionObservationRepository;
 @Component
 public class AreaCongestionReader {
 	/**
-	 * 이 시간 안에 관측된 값만 쓴다. {@code findLatestPerPlace} 는 시각과 무관하게 장소별 최신
-	 * 1건을 주므로, 수집이 멈추면 몇 시간 전 관측이 계속 '실시간'으로 잡힌다. 수집 주기가
-	 * 3분이라 15분이면 5회 연속 실패까지 견딘다(격자 위험도의 창과 같은 값이다).
+	 * 이 시간 안에 <b>수집한</b> 값만 쓴다. {@code findLatestPerPlace} 는 시각과 무관하게
+	 * 장소별 최신 1건을 주므로, 수집이 멈추면 몇 시간 전 관측이 계속 '실시간'으로 잡힌다.
+	 * 수집 주기가 3분이라 15분이면 5회 연속 실패까지 견딘다.
+	 *
+	 * <p>기준은 {@code collectedAt} 이다. 서울시 {@code observedAt}(PPLTN_TIME)은 수집
+	 * 시각보다 28~31분 뒤쳐져서, 그것으로 자르면 정상 수집 중에도 혼잡도가 항상 비어
+	 * 있다(운영 실측 24시간 288배치에서 15분 창 통과 0건).
 	 */
 	static final Duration FRESH_WINDOW = Duration.ofMinutes(15);
 
@@ -76,7 +80,7 @@ public class AreaCongestionReader {
 		Instant freshSince = clock.instant().minus(FRESH_WINDOW);
 		return observationRepository.findLatestPerPlace().stream()
 				.filter(observation -> placeIds.contains(observation.getPlace().getId()))
-				.filter(observation -> !observation.getObservedAt().isBefore(freshSince))
+				.filter(observation -> !observation.getCollectedAt().isBefore(freshSince))
 				.max(BY_CONGESTION)
 				.map(CongestionObservationView::from);
 	}

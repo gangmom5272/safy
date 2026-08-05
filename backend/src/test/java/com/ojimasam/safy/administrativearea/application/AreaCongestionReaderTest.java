@@ -72,6 +72,21 @@ class AreaCongestionReaderTest {
 	}
 
 	/**
+	 * 운영 회귀: 서울시 PPLTN_TIME 은 수집 시각보다 28~31분 뒤쳐진다. observedAt 으로
+	 * 자르면 정상 수집 중에도 혼잡도가 항상 비어 상황 요약이 '정보 없음'만 표시했다.
+	 */
+	@Test
+	void usesFreshlyCollectedObservationWithStaleObservedAt() {
+		when(areaPlaceIndex.placeIdsOf(GANGNAM)).thenReturn(Set.of(1L));
+		when(observationRepository.findLatestPerPlace()).thenReturn(List.of(
+				observation(1L, "강남역", CongestionLevel.CROWDED, 50000,
+						NOW.minus(Duration.ofMinutes(30)), NOW)
+		));
+
+		assertThat(reader().peakOf(GANGNAM)).isPresent();
+	}
+
+	/**
 	 * 수집이 멈춰도 findLatestPerPlace 는 장소별 최신 1건을 계속 준다. 창 밖 관측을
 	 * 실시간으로 보여주면 안 된다.
 	 */
@@ -108,13 +123,20 @@ class AreaCongestionReaderTest {
 		return new AreaCongestionReader(observationRepository, areaPlaceIndex, Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 
+	/** 신선도 판정은 수집 시각으로 하므로 관측 시각과 같은 값을 쓴다(별도 지연 없음). */
 	private CityCongestionObservation observation(
-			Long placeId, String placeName, CongestionLevel level, Integer populationMax, Instant observedAt) {
+			Long placeId, String placeName, CongestionLevel level, Integer populationMax, Instant collectedAt) {
+		return observation(placeId, placeName, level, populationMax, collectedAt, collectedAt);
+	}
+
+	private CityCongestionObservation observation(
+			Long placeId, String placeName, CongestionLevel level, Integer populationMax,
+			Instant observedAt, Instant collectedAt) {
 		Place place = Place.create("POI001", placeName, PlaceCategory.POPULATION_DENSE,
 				new BigDecimal("37.5"), new BigDecimal("127.0"), "seoul-citydata");
 		ReflectionTestUtils.setField(place, "id", placeId);
 		return CityCongestionObservation.create(place, null, "POI001", placeName, level,
 				"안내 문구", populationMax == null ? null : populationMax / 2, populationMax,
-				observedAt, observedAt, "seoul-citydata");
+				observedAt, collectedAt, "seoul-citydata");
 	}
 }

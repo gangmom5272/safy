@@ -3,12 +3,14 @@ package com.ojimasam.safy.analysis.domain.risk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.ojimasam.safy.place.domain.type.CongestionLevel;
+import com.ojimasam.safy.report.application.PublicReportQueryService;
 
 /**
  * 격자 명세 10장의 테스트 벡터다.
@@ -168,6 +170,18 @@ class GridRiskAssessorTest {
 
 		assertEquals(30.0, snapshot.score(), DELTA);
 		assertEquals(GridObservationStatus.PUBLIC_DATA, snapshot.observationStatus());
+	}
+
+	/**
+	 * 두 창이 어긋나면 지도에 마커는 있는데 그 칸의 격자 위험도는 비어 있는 상태가 생긴다.
+	 * 한쪽만 바꾸는 것을 막기 위해 같은 값임을 고정한다.
+	 */
+	@Test
+	@DisplayName("근거 창이 시민 지도의 제보 마커 창과 같다")
+	void windowMatchesPublicReportWindow() {
+		assertEquals(
+				PublicReportQueryService.RECENT_WINDOW,
+				Duration.ofMinutes(GridRiskAssessor.WINDOW_MINUTES));
 	}
 
 	private static GridObservation report(

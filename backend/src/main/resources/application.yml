@@ -88,9 +88,15 @@ app:
     # 한 회차가 다음 회차를 밀어내지 않는다(현재 혼잡도 3분 > read-timeout 2분).
     # 관측 시각이 같은 값은 (place_id, observed_at) 유일 제약으로 걸러지므로 중복 적재는 없다.
     city-congestion-delay: ${PUBLIC_DATA_CITY_CONGESTION_DELAY:PT3M}
-    disaster-message-delay: ${PUBLIC_DATA_DISASTER_MESSAGE_DELAY:PT2M}
+    # 2분(하루 720회)은 실측에서 매일 한도를 소진했다. 운영 로그에 code=22
+    # LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS 가 반복되고, 이틀 연속 오후부터
+    # 하루 끝까지 전량 실패했다(08-04 성공 58/실패 296, 08-05 성공 390/실패 48로
+    # 13:22 KST 이후 전부 실패). 공식 문서의 1일 1,000회와 실측이 맞지 않아
+    # 하루 144회로 낮춘다. lookback-days=1 이라 매 요청이 어제부터 다시 받으므로
+    # 주기를 늘려도 누락되는 문자는 없고, 최신 문자 반영이 최대 10분 늦어진다.
+    disaster-message-delay: ${PUBLIC_DATA_DISASTER_MESSAGE_DELAY:PT10M}
     # 재난문자 조회 시작일을 며칠 전으로 둘지. 원본 crtDt 는 조회 '시작'일자라서
-    # 1이면 어제부터 최신까지 받는다(2분 주기에 하루 여유). 하루 넘는 장애 뒤에는
+    # 1이면 어제부터 최신까지 받는다(10분 주기에도 하루 여유). 하루 넘는 장애 뒤에는
     # 이 값을 늘려 재수집한다. 다만 원본 1회 응답 상한이 1,000건이고 정렬이 없어
     # 창을 너무 넓히면 어떤 건이 빠질지 예측할 수 없다(실측 이틀치 348건).
     disaster-message-lookback-days: ${PUBLIC_DATA_DISASTER_MESSAGE_LOOKBACK_DAYS:1}
