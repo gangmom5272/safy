@@ -3,27 +3,19 @@ import { PageHeader } from '../../../components/common/PageHeader'
 import { formatDateTime, formatRelativeTime } from '../../../utils/dateTime'
 import { mockFaqs, mockNotices } from './mypageMock'
 import type { Inquiry, MyPageView, MyReport, Notice, ReportAttachment, ReportStatus } from './mypageTypes'
-import { APP_VERSION, formatReceiptNumber, getReportCategoryLabel, getReportMediaTypeLabel, isVideoAttachment, pickReportThumbnailUrl, toReportProgressSteps } from './mypageUtils'
+import { APP_VERSION, formatReceiptNumber, getReportCategoryLabel, getReportMediaTypeLabel, getStatusLabel, isVideoAttachment, pickReportThumbnailUrl, toReportProgressSteps } from './mypageUtils'
 
-// 접수 대기 중(RECEIVED)은 담당자 확인 전이라 시민이 취소할 수 있는 구간이다.
-const statusLabel: Record<ReportStatus, string> = { RECEIVED: '접수 대기 중', IN_PROGRESS: '처리중', CLOSED: '처리완료', REJECTED: '반려됨', CANCELLED: '취소됨' }
-
-// 서버에 상태가 추가돼 모르는 값이 와도 배지가 빈칸으로 남지 않게 기본 문구를 준다.
-function getStatusLabel(status: ReportStatus) {
-  return statusLabel[status] ?? '상태 확인 중'
-}
 type ReportDisplayStatus = 'ALL' | ReportStatus
 type ReportDateFilter = 'ALL' | '7_DAYS' | '1_MONTH' | '3_MONTHS' | 'CUSTOM'
 
 // 취소됨은 사용자가 고를 필요가 없는 상태라 탭에서만 뺐다. CANCELLED 상태값과 취소 API 는
 // 상세 화면의 제보 취소가 계속 쓰므로 statusLabel·ReportStatus 에 그대로 남겨 둔다.
 // 전체 탭은 서버가 주는 목록을 그대로 보여주므로 취소된 제보도 여기에 포함된다.
+// 라벨은 getStatusLabel 한 곳에서만 정한다. 탭과 배지 문구가 갈라지지 않게 한다.
 const reportStatusFilters: { value: ReportDisplayStatus; label: string }[] = [
   { value: 'ALL', label: '전체' },
-  { value: 'RECEIVED', label: '접수 대기 중' },
-  { value: 'IN_PROGRESS', label: '처리중' },
-  { value: 'CLOSED', label: '처리완료' },
-  { value: 'REJECTED', label: '반려됨' },
+  ...(['RECEIVED', 'IN_PROGRESS', 'CLOSED', 'REJECTED'] as const)
+    .map((value) => ({ value, label: getStatusLabel(value) })),
 ]
 
 // 상태값을 CSS 클래스로 쓸 때는 다른 클래스와 같은 kebab-case 로 맞춘다(IN_PROGRESS → in-progress).
@@ -273,6 +265,7 @@ function ReportProgressTimeline({ report }: { report: MyReport }) {
       <ol className="report-history-list">
         {steps.map((step) => <li key={step.status} className={step.isCurrent ? 'is-current' : 'is-done'} aria-current={step.isCurrent ? 'step' : undefined}>
           <b>{getStatusLabel(step.status)}</b>
+          <span>{step.description}</span>
           {step.changedAt ? <time dateTime={step.changedAt}>{formatDateTime(step.changedAt)}</time> : null}
         </li>)}
       </ol>

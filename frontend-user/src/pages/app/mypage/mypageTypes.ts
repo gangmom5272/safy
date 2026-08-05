@@ -11,7 +11,11 @@ export type ReportCategoryCode = 'CROWD_CONGESTION' | 'ACCIDENT_RISK' | 'FLOOD_W
 export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 'SUPPORT' | 'FAQ' | 'NOTICES' | 'NOTICE_DETAIL' | 'INQUIRY_FORM' | 'INQUIRIES' | 'INQUIRY_DETAIL' | 'GUIDE' | 'SETTINGS' | 'PROFILE_EDIT' | 'ACCOUNT' | 'PRIVACY' | 'NOTIFICATION_SETTINGS'
 export interface UserProfile { id: number; nickname: string; email: string; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }
 export interface ReportSummary { totalCount: number; receivedCount: number; inProgressCount: number; closedCount: number; rejectedCount: number }
-export interface StatusHistory { status: ReportStatus; changedAt: string; description: string }
+// reason 은 서버가 준 값을 그대로 담는다. 상태에 따라 관리자 내부 코드
+// (AUTO_OPERATOR_ASSIGNMENT·OPERATOR_VIEWING·WORK_COMPLETED 등)나 담당자 재배정·센터
+// 이관 사유가 들어 있으므로 화면에 그대로 쓰면 안 된다. 사용자에게 보여도 되는 값은
+// 반려(REJECTED) 이력의 reason 뿐이며, 그 판단은 mypageUtils 가 한 곳에서 한다.
+export interface StatusHistory { status: ReportStatus; changedAt: string; reason: string | null }
 // 제보에 붙은 첨부 파일 하나. contentType 은 서버가 준 MIME 이며, 사진·영상 구분에
 // 이 값을 먼저 쓴다. 값이 없을 때만 확장자로 추정한다.
 export interface ReportAttachment { url: string; contentType: string | null; filename: string | null }

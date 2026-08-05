@@ -1,4 +1,4 @@
-import type { MyReport, ReportAttachment, ReportCategoryCode, ReportStatus } from './mypageTypes'
+import type { MyReport, ReportAttachment, ReportCategoryCode, ReportStatus, StatusHistory } from './mypageTypes'
 
 export const APP_VERSION = '1.0.0'
 
@@ -97,6 +97,32 @@ export function pickReportThumbnailUrl(
   return report.attachments.find((attachment) => !isVideoAttachment(attachment))?.url ?? null
 }
 
+// 사용자에게 보여줄 상태 라벨. 목록 카드 배지·상태 필터 탭·상세 배지·처리 이력이 모두 이
+// 표 하나만 쓴다. 같은 상태가 화면마다 다른 문구로 보이지 않게 하려는 것이다.
+// 접수 대기 중(RECEIVED)은 담당자 확인 전이라 시민이 취소할 수 있는 구간이다.
+const REPORT_STATUS_LABELS: Record<ReportStatus, string> = {
+  RECEIVED: '접수 대기 중',
+  IN_PROGRESS: '처리 중',
+  CLOSED: '처리 완료',
+  REJECTED: '반려됨',
+  CANCELLED: '취소됨',
+}
+
+// 서버에 상태가 추가돼 모르는 값이 와도 배지가 빈칸으로 남지 않게 기본 문구를 준다.
+export function getStatusLabel(status: ReportStatus) {
+  return REPORT_STATUS_LABELS[status] ?? '상태 확인 중'
+}
+
+// 처리 이력 각 단계의 두 번째 줄. 서버 reason 에는 관리자 내부 코드가 들어 있어 그대로
+// 쓸 수 없으므로, 사용자 관점의 문구를 상태별로 여기서 정해 둔다.
+const REPORT_PROGRESS_DESCRIPTIONS: Record<ReportStatus, string> = {
+  RECEIVED: '접수가 진행 중입니다.',
+  IN_PROGRESS: '관리자가 처리 중입니다.',
+  CLOSED: '관리자가 제보 처리를 완료했습니다.',
+  REJECTED: '관리자 검토 결과 제보가 반려되었습니다.',
+  CANCELLED: '요청에 따라 제보가 취소되었습니다.',
+}
+
 // 사용자에게 보여줄 처리 단계 순서다. 종결 상태 세 개는 서로 배타적이라 같은 자리를 쓴다.
 const REPORT_PROGRESS_ORDER: Record<ReportStatus, number> = {
   RECEIVED: 0,
@@ -111,7 +137,37 @@ export interface ReportProgressStep {
   // 그 단계에 처음 진입한 시각(종결 단계는 마지막 시각)이다. 이력에 없으면 시각을
   // 만들어내지 않고 null 로 두고, 화면은 시각을 생략한다.
   changedAt: string | null
+  // 화면에 그대로 쓰는 사용자용 안내 문구. 서버 원문이 아니다.
+  description: string
   isCurrent: boolean
+}
+
+// 사용자에게 보여도 되는 사유는 최종 반려 이력의 reason 하나뿐이다. 다른 상태의 reason 은
+// 관리자 내부 값이다. 백엔드가 쓰는 값을 확인한 결과는 다음과 같다.
+//   RECEIVED    ← AUTO_OPERATOR_ASSIGNMENT, OPERATOR_OFFLINE 등 회수 사유,
+//                 담당자 재배정 사유, 센터 이관 사유 (모두 관리자 업무용)
+//   IN_PROGRESS ← OPERATOR_VIEWING, OPERATOR_CLAIMED
+//   CLOSED      ← WORK_COMPLETED
+//   CANCELLED   ← REPORTER_CANCELLED
+//   REJECTED    ← 관리자가 입력한 반려 사유  ← 이것만 사용자에게 보여준다
+// 그래서 상태로 걸러야 하고, 사유 문자열을 내용으로 판별하려 해서는 안 된다.
+function findRejectReason(history: StatusHistory[]) {
+  const reason = history
+    .filter((item) => item.status === 'REJECTED')
+    .at(-1)
+    ?.reason
+    ?.trim()
+
+  return reason ? reason : null
+}
+
+// 반려 사유가 있으면 원문을 그대로 붙인다. 문장을 다듬거나 잘라내지 않는다.
+function describeProgressStep(status: ReportStatus, rejectReason: string | null) {
+  if (status === 'REJECTED' && rejectReason) {
+    return `관리자가 다음 사유로 제보를 반려했습니다: ${rejectReason}`
+  }
+
+  return REPORT_PROGRESS_DESCRIPTIONS[status] ?? '처리 상태가 변경되었습니다.'
 }
 
 // 원본 처리 이력에는 담당자 자동 배정·오프라인·재배정·센터 이관 같은 관리자 업무 이력이
@@ -131,7 +187,7 @@ export function toReportProgressSteps(
     return false
   })
   const currentOrder = REPORT_PROGRESS_ORDER[report.status] ?? 0
-  const steps: Omit<ReportProgressStep, 'isCurrent'>[] = [
+  const steps: Omit<ReportProgressStep, 'isCurrent' | 'description'>[] = [
     // 접수는 늘 도달한 단계다. 시각도 이력이 아니라 제보 접수 시각을 쓴다.
     { status: 'RECEIVED', changedAt: report.createdAt },
   ]
@@ -154,7 +210,12 @@ export function toReportProgressSteps(
   }
 
   // 현재 단계보다 뒤선 단계는 넣지 않으므로 마지막 단계가 곧 현재 단계다.
-  return steps.map((step, index) => ({ ...step, isCurrent: index === steps.length - 1 }))
+  const rejectReason = findRejectReason(knownHistory)
+  return steps.map((step, index) => ({
+    ...step,
+    description: describeProgressStep(step.status, rejectReason),
+    isCurrent: index === steps.length - 1,
+  }))
 }
 
 // 백엔드에는 사용자 표시용 접수 번호가 따로 없고 제보 PK(Long)만 있다. 그 값을 접수 번호로
