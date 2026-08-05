@@ -2932,19 +2932,20 @@ button:disabled {
 }
 
 .report-action-buttons {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-items: stretch;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
   width: 100%;
 }
 
 .report-action-buttons > button {
   display: inline-flex;
-  width: 100%;
-  min-height: 56px;
+  width: auto;
+  min-width: 96px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
-  padding: 10px 12px;
+  padding: 10px 20px;
   border-radius: 8px;
   font-weight: 800;
   line-height: 1.4;
