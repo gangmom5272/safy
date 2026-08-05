@@ -61,4 +61,8 @@ public class SocialAccount extends BaseEntity {
 	}
 
 	public User getUser() { return user; }
+
+	public String getEmail() { return email; }
+
+	public String getProviderProfileImageUrl() { return providerProfileImageUrl; }
 }

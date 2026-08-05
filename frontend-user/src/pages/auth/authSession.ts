@@ -6,6 +6,9 @@ export interface UserResponse {
   displayName: string
   role: UserRole
   status: UserStatus
+  // 소셜 로그인으로 받은 값이라 소셜 계정이 없으면 null 이다.
+  email: string | null
+  profileImageUrl: string | null
   createdAt: string
   updatedAt: string
 }

@@ -6,6 +6,8 @@ export const mockCitizen: UserResponse = {
   displayName: '김싸피',
   role: 'CITIZEN',
   status: 'ACTIVE',
+  email: 'ssafy@example.com',
+  profileImageUrl: null,
   createdAt: '2026-07-01T00:00:00Z',
   updatedAt: '2026-07-01T00:00:00Z',
 }

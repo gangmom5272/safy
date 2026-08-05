@@ -9,7 +9,9 @@ export type ReportStatus = 'RECEIVED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 
 export type ReportTypeCode = 'IMAGE' | 'LIVE'
 export type ReportCategoryCode = 'CROWD_CONGESTION' | 'ACCIDENT_RISK' | 'FLOOD_WEATHER' | 'FACILITY_ROAD' | 'OTHER'
 export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 'SUPPORT' | 'FAQ' | 'NOTICES' | 'NOTICE_DETAIL' | 'INQUIRY_FORM' | 'INQUIRIES' | 'INQUIRY_DETAIL' | 'GUIDE' | 'SETTINGS' | 'PROFILE_EDIT' | 'ACCOUNT' | 'PRIVACY' | 'NOTIFICATION_SETTINGS'
-export interface UserProfile { id: number; nickname: string; email: string; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }
+// email·profileImageUrl 은 소셜 계정에서 온 값이라 없을 수 있다. 값이 없을 때 빈 문자열로
+// 채우면 화면에 빈 줄이 남으므로 null 을 그대로 둔다.
+export interface UserProfile { id: number; nickname: string; email: string | null; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }
 export interface ReportSummary { totalCount: number; receivedCount: number; inProgressCount: number; closedCount: number; rejectedCount: number }
 export interface StatusHistory { status: ReportStatus; changedAt: string; description: string }
 // 제보에 붙은 첨부 파일 하나. contentType 은 서버가 준 MIME 이며, 사진·영상 구분에
