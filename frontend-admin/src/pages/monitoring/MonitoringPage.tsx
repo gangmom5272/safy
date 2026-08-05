@@ -173,12 +173,14 @@ export function MonitoringPage() {
       }
 
       const { event } = signal
+      if (event.reportId == null) return
+      const reportId = event.reportId
       const noticeConfig = realtimeNoticeMessages[event.eventType]
       if (noticeConfig) {
         setNotice({
           id: event.eventId,
           tone: noticeConfig.tone,
-          message: `제보 #${event.reportId} · ${noticeConfig.text}`,
+          message: `제보 #${reportId} · ${noticeConfig.text}`,
         })
       }
 
@@ -186,15 +188,15 @@ export function MonitoringPage() {
         || event.eventType === 'LIVE_ACTIVE'
         || event.eventType === 'LIVE_RECONNECTED') {
         setDismissedEndedReports((current) => {
-          if (!current.has(event.reportId)) return current
+          if (!current.has(reportId)) return current
           const next = new Set(current)
-          next.delete(event.reportId)
+          next.delete(reportId)
           persistDismissedEndedReports(next)
           return next
         })
       }
 
-      if (event.eventType === 'RISK_ASSESSMENT_UPDATED') void loadAnalysis(event.reportId)
+      if (event.eventType === 'RISK_ASSESSMENT_UPDATED') void loadAnalysis(reportId)
 
       if (event.eventType !== 'REPORT_MESSAGE') void loadReports()
     })

@@ -1,6 +1,11 @@
 import type { AppNotification } from './notificationsTypes'
 
 export function getNotificationTargetUrl(notification: AppNotification) {
+  if (notification.targetType === 'AREA_REPORT_REQUEST') {
+    const id = notification.areaReportRequestId ?? notification.targetId
+    return id != null ? `/app/report?requestId=${encodeURIComponent(String(id))}` : '/app/report'
+  }
+
   if (notification.type === 'REPORT') {
     const id = notification.reportId ?? notification.targetId
     return id != null ? `/app/mypage/reports/${encodeURIComponent(String(id))}` : null

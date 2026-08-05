@@ -769,6 +769,25 @@ button:focus-visible,
   }
 }
 
+.area-report-request-banner {
+  margin: 16px 20px 0;
+  padding: 16px;
+  border: 1px solid #b8d4ff;
+  border-radius: 14px;
+  background: #eef6ff;
+  color: #163d70;
+}
+
+.area-report-request-banner strong,
+.area-report-request-banner p,
+.area-report-request-banner small {
+  display: block;
+}
+
+.area-report-request-banner p {
+  margin: 6px 0;
+}
+
 /* Photo report */
 .report-media-page {
   gap: 12px;

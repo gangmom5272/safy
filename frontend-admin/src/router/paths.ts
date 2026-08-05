@@ -7,6 +7,7 @@ export const ROUTE_PATHS = {
   MONITORING: '/monitoring',
   MONITORING_DETAIL: '/monitoring/:connectionId',
   RISK_MAP: '/risk-map',
+  AREA_REPORT_REQUESTS: '/area-report-requests',
   SETTINGS: '/settings',
   OPERATORS: '/operators',
 } as const

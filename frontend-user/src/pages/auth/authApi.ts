@@ -2,6 +2,7 @@ import { clearAccessToken, setAccessToken } from '../../api/accessToken'
 import apiClient from '../../api/client'
 import type { ApiResponse } from '../../api/types'
 import type { TokenResponse, UserResponse } from './authSession'
+import { disableWebPush } from '../app/notifications/webPush'
 
 export async function exchangeSocialCode(code: string) {
   const response = await apiClient.post<ApiResponse<TokenResponse>>('/auth/social/exchange', { code })
@@ -16,6 +17,7 @@ export async function getCurrentUser() {
 
 export async function logout() {
   try {
+    await disableWebPush().catch((error: unknown) => console.warn('Web Push unsubscribe failed', error))
     await apiClient.post('/auth/logout')
   } finally {
     clearAccessToken()

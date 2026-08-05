@@ -4,7 +4,9 @@ import { USE_MOCK_API } from './mockMode'
 import { notifySessionExpired } from './sessionEvents'
 
 export type RealtimeEventType =
+  | 'REPORT_RECEIVED'
   | 'REPORT_ASSIGNED'
+  | 'REPORT_IN_PROGRESS'
   | 'IMAGE_READY'
   | 'LIVE_READY'
   | 'LIVE_ACTIVE'
@@ -16,11 +18,12 @@ export type RealtimeEventType =
   | 'REPORT_CANCELLED'
   | 'REPORT_REASSIGNED'
   | 'REPORT_MESSAGE'
+  | 'AREA_REPORT_REQUEST'
 
 export interface RealtimeEvent {
   eventId: number
   eventType: RealtimeEventType
-  reportId: number
+  reportId: number | null
   resourceId: string | null
   messageId: number | null
   createdAt: string
@@ -120,7 +123,9 @@ async function consumeEventStream(signal: AbortSignal, cursor: { value: string |
         if (parsed.id) cursor.value = parsed.id
         try {
           const event = JSON.parse(parsed.data) as RealtimeEvent
-          if (event.eventType && event.reportId) publishSignal({ kind: 'event', event })
+          if (event.eventType && (event.reportId != null || event.eventType === 'AREA_REPORT_REQUEST')) {
+            publishSignal({ kind: 'event', event })
+          }
         } catch {
           // CONNECTED 이벤트처럼 제보 이벤트가 아닌 데이터는 무시한다.
         }

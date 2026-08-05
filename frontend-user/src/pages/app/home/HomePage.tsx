@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { SafyLogo } from '../../../components/SafyLogo'
+import { useNotificationUnreadCount } from '../notifications/notificationUnread'
 import './home.css'
 
 const HOME_INTRO_KEY = 'safy-home-intro-completed'
@@ -33,6 +34,7 @@ function QuickAccessIcon({ name }: { name: 'notification' | 'menu' }) {
 
 export function HomePage() {
   const navigate = useNavigate()
+  const unreadCount = useNotificationUnreadCount()
   const [expanded, setExpanded] = useState(() =>
     sessionStorage.getItem(HOME_INTRO_KEY) === 'true'
     || window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -54,7 +56,7 @@ export function HomePage() {
   return (
     <div className={`landing-home ${expanded ? 'landing-home--expanded' : 'landing-home--intro'}`}>
       <nav className={`home-quick-access ${showHomeActions ? 'home-quick-access--visible' : ''}`} aria-label="빠른 접근" aria-hidden={!showHomeActions}>
-        <button type="button" aria-label="알림" tabIndex={showHomeActions ? 0 : -1} onClick={() => navigate('/app/notifications')}><QuickAccessIcon name="notification" /></button>
+        <button type="button" aria-label={unreadCount ? `알림, 읽지 않은 알림 ${unreadCount}개` : '알림'} tabIndex={showHomeActions ? 0 : -1} onClick={() => navigate('/app/notifications')}><QuickAccessIcon name="notification" />{unreadCount > 0 && <span className="notification-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}</button>
         <button type="button" aria-label="마이페이지" tabIndex={showHomeActions ? 0 : -1} onClick={() => navigate('/app/mypage')}><QuickAccessIcon name="menu" /></button>
       </nav>
 

@@ -10,6 +10,7 @@ type SidebarIconName =
   | 'queue'
   | 'monitoring'
   | 'map'
+  | 'request'
   | 'settings'
   | 'user'
   | 'logout'
@@ -45,6 +46,12 @@ function SidebarIcon({ name, className }: SidebarIconProps) {
       <>
         <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z" />
         <path d="M9 3v15M15 6v15" />
+      </>
+    ),
+    request: (
+      <>
+        <path d="M4 5h16v12H7l-3 3V5Z" />
+        <path d="M8 9h8M8 13h5" />
       </>
     ),
     settings: (
@@ -98,6 +105,7 @@ const operatorItems: SidebarItem[] = [
   { label: '위험도 지도', path: ROUTE_PATHS.RISK_MAP, end: true, icon: 'map' },
   { label: '제보 목록', path: ROUTE_PATHS.REPORTS, end: false, icon: 'reports' },
   { label: '미배정', path: ROUTE_PATHS.QUEUE, end: true, icon: 'queue' },
+  { label: '현장 제보 요청', path: ROUTE_PATHS.AREA_REPORT_REQUESTS, end: true, icon: 'request' },
   { label: '계정 설정', path: ROUTE_PATHS.SETTINGS, end: true, icon: 'settings' },
 ]
 

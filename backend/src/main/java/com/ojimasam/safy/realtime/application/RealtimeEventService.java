@@ -36,6 +36,12 @@ public class RealtimeEventService {
 		eventPublisher.publishEvent(new RealtimeEventRecorded(recipientUserId, RealtimeEventView.from(event)));
 	}
 
+	@Transactional
+	public void recordOncePerReport(Long recipientUserId, RealtimeEventType eventType, Long reportId) {
+		if (repository.existsByReportIdAndEventType(reportId, eventType)) return;
+		record(recipientUserId, eventType, reportId, null, null);
+	}
+
 	@Transactional(readOnly = true)
 	public SseEmitter subscribe(Long userId, Long lastEventId) {
 		SseEmitter emitter = broadcaster.subscribe(userId);

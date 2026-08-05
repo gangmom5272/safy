@@ -1,6 +1,6 @@
 import type { AppNotification, NotificationSettingsData } from './notificationsTypes'
 
-export const USE_NOTIFICATIONS_MOCK_FALLBACK = true
+export const USE_NOTIFICATIONS_MOCK_FALLBACK = false
 
 const now = new Date()
 const at = (daysAgo: number, hour: number, minute: number) => {
@@ -25,4 +25,5 @@ export const mockNotificationSettings: NotificationSettingsData = {
   safetyEnabled: true,
   systemEnabled: true,
   savedLocationEnabled: false,
+  locationRequestEnabled: false,
 }

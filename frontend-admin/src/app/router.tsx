@@ -13,6 +13,7 @@ import { ReportDetailPage } from '../pages/reports/ReportDetailPage'
 import { ReportListPage } from '../pages/reports/ReportListPage'
 import { RiskMapPage } from '../pages/risk-map/RiskMapPage'
 import { SystemSettingsPage } from '../pages/settings/SystemSettingsPage'
+import { AreaReportRequestPage } from '../pages/area-report-requests/AreaReportRequestPage'
 
 // 관제(OPERATOR) 화면과 인사 관리(SUPER_ADMIN) 화면은 역할별로 완전히 분리한다.
 const operatorOnly = (element: React.ReactNode) => (
@@ -58,6 +59,7 @@ export const router = createBrowserRouter(
             { path: 'monitoring', element: operatorOnly(<MonitoringPage />) },
             { path: 'monitoring/:connectionId', element: operatorOnly(<MonitoringPage />) },
             { path: 'risk-map', element: operatorOnly(<RiskMapPage />) },
+            { path: 'area-report-requests', element: operatorOnly(<AreaReportRequestPage />) },
             { path: 'operators', element: superAdminOnly(<OperatorManagementPage />) },
             { path: 'settings', element: <SystemSettingsPage /> },
             { path: '*', element: <NotFoundPage /> },

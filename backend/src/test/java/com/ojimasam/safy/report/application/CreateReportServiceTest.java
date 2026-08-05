@@ -35,6 +35,7 @@ class CreateReportServiceTest {
 	@Mock GridCellRegistry gridCellRegistry;
 	@Mock PlaceLocator placeLocator;
 	@Mock ApplicationEventPublisher eventPublisher;
+	@Mock ReportRealtimeNotifier realtimeNotifier;
 	@InjectMocks CreateReportService service;
 
 	@Test
@@ -53,6 +54,7 @@ class CreateReportServiceTest {
 		assertThat(result.reportId()).isEqualTo(42L);
 		assertThat(result.status()).isEqualTo(ReportStatus.RECEIVED);
 		verify(eventPublisher).publishEvent(any(ReportRoutingRequestedEvent.class));
+		verify(realtimeNotifier).reportReceived(42L, 1L);
 	}
 
 	@Test

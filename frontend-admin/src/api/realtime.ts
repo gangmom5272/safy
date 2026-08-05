@@ -4,7 +4,9 @@ import { USE_MOCK_API } from './mockMode'
 import { notifySessionExpired } from './sessionEvents'
 
 export type RealtimeEventType =
+  | 'REPORT_RECEIVED'
   | 'REPORT_ASSIGNED'
+  | 'REPORT_IN_PROGRESS'
   | 'IMAGE_READY'
   | 'LIVE_READY'
   | 'LIVE_ACTIVE'
@@ -18,11 +20,12 @@ export type RealtimeEventType =
   | 'REPORT_MESSAGE'
   | 'RISK_ASSESSMENT_UPDATED'
   | 'REPORT_ASSIGNMENT_STALLED'
+  | 'AREA_REPORT_REQUEST'
 
 export interface RealtimeEvent {
   eventId: number
   eventType: RealtimeEventType
-  reportId: number
+  reportId: number | null
   resourceId: string | null
   messageId: number | null
   createdAt: string

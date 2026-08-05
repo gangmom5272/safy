@@ -18,17 +18,20 @@ public class CreateReportService {
 	private final GridCellRegistry gridCellRegistry;
 	private final PlaceLocator placeLocator;
 	private final ApplicationEventPublisher eventPublisher;
+	private final ReportRealtimeNotifier realtimeNotifier;
 
 	public CreateReportService(
 			ReportRepository reportRepository,
 			GridCellRegistry gridCellRegistry,
 			PlaceLocator placeLocator,
-			ApplicationEventPublisher eventPublisher
+			ApplicationEventPublisher eventPublisher,
+			ReportRealtimeNotifier realtimeNotifier
 	) {
 		this.reportRepository = reportRepository;
 		this.gridCellRegistry = gridCellRegistry;
 		this.placeLocator = placeLocator;
 		this.eventPublisher = eventPublisher;
+		this.realtimeNotifier = realtimeNotifier;
 	}
 
 	@Transactional
@@ -46,6 +49,7 @@ public class CreateReportService {
 				.ifPresent(report::applyResolvedPlace);
 
 		Report saved = reportRepository.save(report);
+		realtimeNotifier.reportReceived(saved.getId(), saved.getReporterId());
 		eventPublisher.publishEvent(new ReportRoutingRequestedEvent(saved.getId()));
 		return CreateReportResult.from(saved);
 	}

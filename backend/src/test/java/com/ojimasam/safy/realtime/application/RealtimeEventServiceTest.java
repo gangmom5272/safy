@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +58,18 @@ class RealtimeEventServiceTest {
 		service.subscribe(30L, 100L);
 
 		verify(broadcaster).send(org.mockito.ArgumentMatchers.eq(emitter), any(RealtimeEventView.class));
+	}
+
+	@Test
+	void doesNotRecordTheSameReportStageTwice() {
+		when(repository.existsByReportIdAndEventType(10L, RealtimeEventType.REPORT_IN_PROGRESS))
+				.thenReturn(true);
+		RealtimeEventService service = new RealtimeEventService(repository, publisher, broadcaster);
+
+		service.recordOncePerReport(30L, RealtimeEventType.REPORT_IN_PROGRESS, 10L);
+
+		verify(repository, never()).save(any());
+		verify(publisher, never()).publishEvent(any());
 	}
 
 	@Test

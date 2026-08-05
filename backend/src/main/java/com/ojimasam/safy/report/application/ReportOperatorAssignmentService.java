@@ -232,6 +232,7 @@ public class ReportOperatorAssignmentService {
 		historyRepository.save(ReportStatusHistory.record(
 				report, previous, report.getStatus(), assignment.getOperator(), "OPERATOR_VIEWING", now
 		));
+		realtimeNotifier.reportInProgress(report.getId(), report.getReporterId());
 	}
 
 	@Transactional
