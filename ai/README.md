@@ -222,6 +222,10 @@ C·L, 처리시간, 실패 코드와 예측 차이를 기록하는 오프라인 
 
 ## YOLO·P2PNet 이중 모델 분석
 
+현재 운영의 전체 흐름, API 필드, C·L 보정, 위험도 계산, GPU 주력·CPU 자동
+폴백과 운영 설정은
+[SAFY 운영 AI 분석 최종 명세](docs/production-ai-analysis.md)를 먼저 참고합니다.
+
 정상 분석 프레임은 YOLO11n과 P2PNet v2 epoch3로 모두 분석합니다.
 YOLO는 공식 인원수를 담당하고 P2PNet은 고밀도 장면의 C·L 누락을 보완합니다.
 
