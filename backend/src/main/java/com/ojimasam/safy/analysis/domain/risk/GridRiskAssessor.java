@@ -15,7 +15,14 @@ import java.util.List;
 public final class GridRiskAssessor {
 
 	public static final String CALCULATION_VERSION = "safy-grid-risk-v0.1";
-	public static final int WINDOW_MINUTES = 15;
+
+	/**
+	 * 근거로 인정하는 시간 창. 시민 지도의 제보 마커 창
+	 * ({@code PublicReportQueryService.RECENT_WINDOW}) 과 같은 30분이다. 지도에 마커가
+	 * 보이는 제보는 그 칸의 격자 위험도에도 반영되어야 하는데, 창이 더 짧으면 마커는
+	 * 있는데 칸은 비어 있는 상태가 생긴다.
+	 */
+	public static final int WINDOW_MINUTES = 30;
 	public static final double REPORTER_CONFIDENCE_BASE = 0.3;
 	public static final double REPORTER_CONFIDENCE_STEP = 0.2;
 

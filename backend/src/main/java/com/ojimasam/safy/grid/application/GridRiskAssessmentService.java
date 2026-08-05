@@ -71,7 +71,7 @@ public class GridRiskAssessmentService {
 	}
 
 	/**
-	 * 최근 15분 창으로 계산한다. 값이 바뀐 격자 수를 돌려준다.
+	 * {@link GridRiskAssessor#WINDOW_MINUTES} 창으로 계산한다. 값이 바뀐 격자 수를 돌려준다.
 	 *
 	 * <p>창 끝을 분 단위로 자른다. 같은 분에 두 번 돌면 같은 행을 갱신하므로
 	 * {@code UNIQUE(grid_cell_id, window_ended_at)} 와 충돌하지 않는다.

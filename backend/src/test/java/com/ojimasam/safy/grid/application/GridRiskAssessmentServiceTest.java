@@ -21,6 +21,7 @@ import org.mockito.ArgumentCaptor;
 
 import com.ojimasam.safy.analysis.domain.risk.GridObservation;
 import com.ojimasam.safy.analysis.domain.risk.GridObservationStatus;
+import com.ojimasam.safy.analysis.domain.risk.GridRiskAssessor;
 import com.ojimasam.safy.analysis.domain.risk.GridRiskSnapshot;
 import com.ojimasam.safy.analysis.domain.risk.RiskLevel;
 import com.ojimasam.safy.grid.domain.GridRiskHistory;
@@ -31,7 +32,10 @@ class GridRiskAssessmentServiceTest {
 	/** 초·나노를 일부러 붙였다. 창 끝이 분 단위로 잘리는지 보려면 필요하다. */
 	private static final Instant NOW = Instant.parse("2026-08-03T12:03:47.512Z");
 	private static final Instant WINDOW_END = Instant.parse("2026-08-03T12:03:00Z");
-	private static final Instant WINDOW_START = WINDOW_END.minus(Duration.ofMinutes(15));
+	// 창 길이를 여기 다시 적으면 상수를 바꿀 때 조용히 어긋난다. 이 테스트가 확인하는
+	// 것은 창 끝을 분 단위로 자르는지이지 창 길이가 아니다.
+	private static final Instant WINDOW_START =
+			WINDOW_END.minus(Duration.ofMinutes(GridRiskAssessor.WINDOW_MINUTES));
 	private static final Instant EARLIER_WINDOW_END = WINDOW_END.minus(Duration.ofMinutes(3));
 
 	private final GridReportReader reportReader = mock(GridReportReader.class);

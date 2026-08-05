@@ -84,7 +84,7 @@ class GridCongestionReaderTest {
 	}
 
 	@Test
-	@DisplayName("시간 창보다 오래된 관측은 쓰지 않는다")
+	@DisplayName("수집이 시간 창보다 오래됐으면 쓰지 않는다")
 	void ignoresObservationOlderThanWindow() {
 		// findLatestPerPlace 는 시각과 무관하게 장소별 최신 1건을 준다. 수집이 멈추면
 		// 오래된 값이 계속 최신으로 잡히므로 창 밖은 여기서 걸러야 한다(명세 7.3).
@@ -93,6 +93,24 @@ class GridCongestionReaderTest {
 		givenMappings(mapping(1L, 100L));
 
 		assertThat(reader.latestByGridCell(WINDOW_START)).isEmpty();
+	}
+
+	@Test
+	@DisplayName("서울시 관측 시각이 창보다 오래돼도 방금 수집했으면 쓴다")
+	void usesFreshlyCollectedObservationWithStaleObservedAt() {
+		// 운영 회귀: PPLTN_TIME 은 수집 시각보다 28~31분 뒤쳐진다. observedAt 으로 자르면
+		// 정상 수집 중에도 공공데이터 근거가 전멸했다(24시간 288배치 중 통과 0건).
+		Place place = mock(Place.class);
+		when(place.getId()).thenReturn(1L);
+		CityCongestionObservation observation = mock(CityCongestionObservation.class);
+		when(observation.getPlace()).thenReturn(place);
+		when(observation.getCongestionLevel()).thenReturn(CongestionLevel.CROWDED);
+		when(observation.getCollectedAt()).thenReturn(WINDOW_END);
+		givenObservations(observation);
+		givenMappings(mapping(1L, 100L));
+
+		assertThat(reader.latestByGridCell(WINDOW_START))
+				.containsEntry(100L, CongestionLevel.CROWDED);
 	}
 
 	@Test
@@ -126,15 +144,16 @@ class GridCongestionReaderTest {
 		return observation(placeId, level, OBSERVED_AT);
 	}
 
+	/** 창 판정은 수집 시각으로 한다. 인자 이름을 그대로 collectedAt 으로 둔다. */
 	private static CityCongestionObservation observation(
-			Long placeId, CongestionLevel level, Instant observedAt) {
+			Long placeId, CongestionLevel level, Instant collectedAt) {
 		Place place = mock(Place.class);
 		when(place.getId()).thenReturn(placeId);
 
 		CityCongestionObservation observation = mock(CityCongestionObservation.class);
 		when(observation.getPlace()).thenReturn(place);
 		when(observation.getCongestionLevel()).thenReturn(level);
-		when(observation.getObservedAt()).thenReturn(observedAt);
+		when(observation.getCollectedAt()).thenReturn(collectedAt);
 		return observation;
 	}
 
