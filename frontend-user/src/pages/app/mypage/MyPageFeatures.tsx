@@ -3,7 +3,7 @@ import { PageHeader } from '../../../components/common/PageHeader'
 import { formatDateTime, formatRelativeTime } from '../../../utils/dateTime'
 import { mockFaqs, mockNotices } from './mypageMock'
 import type { Inquiry, MyPageView, MyReport, Notice, ReportAttachment, ReportStatus } from './mypageTypes'
-import { APP_VERSION, formatReceiptNumber, getReportCategoryLabel, getReportMediaTypeLabel, isVideoAttachment } from './mypageUtils'
+import { APP_VERSION, formatReceiptNumber, getReportCategoryLabel, getReportMediaTypeLabel, isVideoAttachment, pickReportThumbnailUrl, toReportProgressSteps } from './mypageUtils'
 
 // 접수 대기 중(RECEIVED)은 담당자 확인 전이라 시민이 취소할 수 있는 구간이다.
 const statusLabel: Record<ReportStatus, string> = { RECEIVED: '접수 대기 중', IN_PROGRESS: '처리중', CLOSED: '처리완료', REJECTED: '반려됨', CANCELLED: '취소됨' }
@@ -84,8 +84,33 @@ export function Reports({ reports, onBack, onOpen }: { reports: MyReport[]; onBa
 
   const selectedDateLabel = reportDateFilters.find((item) => item.value === dateFilter)?.label ?? '전체 기간'
 
-  return <><PageHeader title="내 제보 관리" onBack={onBack} /><div className="report-filters"><div className="report-status-filters" role="tablist" aria-label="제보 상태">{reportStatusFilters.map((item) => <button type="button" role="tab" aria-selected={statusFilter === item.value} className={statusFilter === item.value ? 'active' : ''} key={item.value} onClick={() => setStatusFilter(item.value)}>{item.label}</button>)}</div><div className="report-filter-toolbar"><span>조회 기간</span><div className="report-date-filter" ref={dateMenuRef}><button type="button" className="report-date-filter__trigger" aria-haspopup="listbox" aria-expanded={dateMenuOpen} onClick={() => setDateMenuOpen((open) => !open)}><span>{selectedDateLabel}</span><span aria-hidden="true">⌄</span></button>{dateMenuOpen && <div className="report-date-filter__menu" role="listbox" aria-label="제보 기간">{reportDateFilters.map((item) => <button type="button" role="option" aria-selected={dateFilter === item.value} className={dateFilter === item.value ? 'active' : ''} key={item.value} onClick={() => { setDateFilter(item.value); setDateMenuOpen(false) }}>{item.label}</button>)}</div>}</div></div>{dateFilter === 'CUSTOM' && <div className="report-custom-dates"><label>시작일<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} /></label><span aria-hidden="true">~</span><label>종료일<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} /></label></div>}</div>{filteredReports.length ? <div className="my-report-list">{filteredReports.map((report) => <button type="button" className="my-report-card" key={report.id} onClick={() => onOpen(report.id)}><span className="report-thumb"><em className={`report-card-status report-card-status--${toStatusModifier(report.status)}`}>{getStatusLabel(report.status)}</em><time className="report-card-relative-date" dateTime={report.createdAt}>{formatRelativeTime(report.createdAt)}</time>{report.maskedThumbnailUrl || report.thumbnailUrl ? <img src={(report.maskedThumbnailUrl || report.thumbnailUrl) ?? ''} alt="제보 현장" /> : <span className="report-image-placeholder">이미지 준비중</span>}</span><span className="report-card-body"><small>{report.type} · {report.locationName}</small><strong>{report.title}</strong><time dateTime={report.createdAt}>{formatDateTime(report.createdAt)}</time></span></button>)}</div> : <Empty text="선택한 조건에 해당하는 제보가 없습니다." />}</>
+  return <><PageHeader title="내 제보 관리" onBack={onBack} /><div className="report-filters"><div className="report-status-filters" role="tablist" aria-label="제보 상태">{reportStatusFilters.map((item) => <button type="button" role="tab" aria-selected={statusFilter === item.value} className={statusFilter === item.value ? 'active' : ''} key={item.value} onClick={() => setStatusFilter(item.value)}>{item.label}</button>)}</div><div className="report-filter-toolbar"><span>조회 기간</span><div className="report-date-filter" ref={dateMenuRef}><button type="button" className="report-date-filter__trigger" aria-haspopup="listbox" aria-expanded={dateMenuOpen} onClick={() => setDateMenuOpen((open) => !open)}><span>{selectedDateLabel}</span><span aria-hidden="true">⌄</span></button>{dateMenuOpen && <div className="report-date-filter__menu" role="listbox" aria-label="제보 기간">{reportDateFilters.map((item) => <button type="button" role="option" aria-selected={dateFilter === item.value} className={dateFilter === item.value ? 'active' : ''} key={item.value} onClick={() => { setDateFilter(item.value); setDateMenuOpen(false) }}>{item.label}</button>)}</div>}</div></div>{dateFilter === 'CUSTOM' && <div className="report-custom-dates"><label>시작일<input type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} /></label><span aria-hidden="true">~</span><label>종료일<input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} /></label></div>}</div>{filteredReports.length ? <div className="my-report-list">{filteredReports.map((report) => <button type="button" className="my-report-card" key={report.id} onClick={() => onOpen(report.id)}><span className="report-thumb"><em className={`report-card-status report-card-status--${toStatusModifier(report.status)}`}>{getStatusLabel(report.status)}</em><time className="report-card-relative-date" dateTime={report.createdAt}>{formatRelativeTime(report.createdAt)}</time><ReportCardThumbnail report={report} /></span><span className="report-card-body"><small>{report.type} · {report.locationName}</small><strong>{report.title}</strong><time dateTime={report.createdAt}>{formatDateTime(report.createdAt)}</time></span></button>)}</div> : <Empty text="선택한 조건에 해당하는 제보가 없습니다." />}</>
 }
+// 목록 카드의 썸네일. 실제 썸네일이 있을 때는 무조건 그것을 그리고, 없거나 URL 이 만료·
+// 깨져서 로딩에 실패했을 때만 대체 표시로 내려간다. 라이브 제보는 서버가 대표 이미지를
+// 주지 않는 경우가 있어(getMyList 가 ReportImage 행이 있는 제보만 대표 이미지를 채운다)
+// 사진 제보의 '이미지 준비중' 대신 영상 제보임을 알 수 있는 문구를 쓴다.
+function ReportCardThumbnail({ report }: { report: MyReport }) {
+  // URL 을 기억해 둬야 presigned URL 이 갱신됐을 때 다시 시도한다. boolean 이면 한 번
+  // 실패한 카드가 새 URL 을 받아도 계속 대체 표시로 남는다.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  const thumbnailUrl = pickReportThumbnailUrl(report)
+
+  if (thumbnailUrl && thumbnailUrl !== failedUrl) {
+    return <img src={thumbnailUrl} alt="제보 현장" loading="lazy" decoding="async" onError={() => setFailedUrl(thumbnailUrl)} />
+  }
+
+  if (report.reportType === 'LIVE') {
+    return <span className="report-thumb-fallback"><LiveThumbIcon />영상 미리보기 없음</span>
+  }
+
+  return <span className="report-image-placeholder">이미지 준비중</span>
+}
+
+function LiveThumbIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2" /><path d="M15 10l4.5-2.5v9L15 14" /></svg>
+}
+
 // 첨부는 여러 개일 수 있다. 가로 스크롤 + scroll-snap 으로 스와이프를 만들고, 현재
 // 위치는 스크롤 위치에서 계산한다. 캐러셀 라이브러리를 새로 넣지 않으려는 선택이다.
 function ReportMediaCarousel({ attachments }: { attachments: ReportAttachment[] }) {
@@ -231,9 +256,28 @@ export function ReportDetail({ report, onBack, onCancel }: { report: MyReport; o
         {cancelled || cancellable ? <button type="button" className={cancelled ? 'report-detail-cancel is-cancelled' : 'report-detail-cancel'} disabled={cancelled || cancelling} onClick={() => { if (!onCancel) return; setCancelling(true); void onCancel().finally(() => setCancelling(false)) }}>{getCancelButtonLabel(cancelled, cancelling)}</button> : null}
       </div>
     </section>
-    <section className="report-detail-section"><h2 className="report-detail-section__title">관리자 답변</h2><div className="mypage-card report-detail-section__card"><p>{report.adminReply ?? '아직 관리자 답변이 등록되지 않았습니다.'}</p></div></section>
-    <section className="report-detail-section"><h2 className="report-detail-section__title">처리 이력</h2><div className="mypage-card report-detail-section__card">{report.history.length ? <ol className="report-history-list">{report.history.map((item) => <li key={`${item.status}-${item.changedAt}`}><b>{getStatusLabel(item.status)}</b><span>{item.description}</span><time>{formatDateTime(item.changedAt)}</time></li>)}</ol> : <p>등록된 처리 이력이 없습니다.</p>}</div></section>
+    <ReportProgressTimeline report={report} />
   </div>
+}
+
+// 처리 이력은 원본(report.history)을 그대로 그리지 않는다. 원본에는 담당자 배정·재배정·
+// 센터 이관 같은 관리자 업무 이력과 내부 코드가 들어 있어 사용자에게 노출하면 안 되고,
+// 같은 상태가 여러 번 반복돼 처리 과정이 오히려 복잡해 보인다. 사용자용 단계 계산은
+// mypageUtils 의 toReportProgressSteps 한 곳에만 둔다.
+function ReportProgressTimeline({ report }: { report: MyReport }) {
+  const steps = toReportProgressSteps(report)
+
+  return <section className="report-detail-section">
+    <h2 className="report-detail-section__title">처리 이력</h2>
+    <div className="mypage-card report-detail-section__card">
+      <ol className="report-history-list">
+        {steps.map((step) => <li key={step.status} className={step.isCurrent ? 'is-current' : 'is-done'} aria-current={step.isCurrent ? 'step' : undefined}>
+          <b>{getStatusLabel(step.status)}</b>
+          {step.changedAt ? <time dateTime={step.changedAt}>{formatDateTime(step.changedAt)}</time> : null}
+        </li>)}
+      </ol>
+    </div>
+  </section>
 }
 
 export function Support({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageView) => void }) { const items: [SupportIconName, string, MyPageView][] = [['help','자주 묻는 질문','FAQ'],['notice','공지사항','NOTICES'],['inquiry','1:1 문의','INQUIRY_FORM'],['history','문의 내역','INQUIRIES']]; return <><PageHeader title="고객센터" onBack={onBack} className="support-header" /><section className="mypage-menu support-menu">{items.map(([icon,label,target]) => <button type="button" key={target} onClick={() => onGo(target)}><span><SupportIcon name={icon} /></span><b>{label}</b><em><ChevronRightIcon /></em></button>)}</section></> }

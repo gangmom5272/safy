@@ -6,6 +6,7 @@ import {
   DEFAULT_REPORT_CATEGORY,
   DEFAULT_REPORT_METHOD,
   REPORT_CATEGORY_LABELS,
+  REPORT_METHOD_LABELS,
 } from './reportConstants'
 import type { ReportFormData } from './reportTypes'
 import './report-create.css'
@@ -31,7 +32,7 @@ export function ReportCompletePage({ formData = fallbackFormData, onRestart }: R
   const [receivedAt] = useState(() => new Date())
   const [locationName, setLocationName] = useState(formData.location ? '위치명을 확인하는 중입니다.' : '위치 정보 없음')
   const categoryLabel = formData.category ? REPORT_CATEGORY_LABELS[formData.category] : '선택 없음'
-  const methodLabel = formData.method === 'live' ? '실시간 영상 제보' : '사진·영상 제보'
+  const methodLabel = REPORT_METHOD_LABELS[formData.method]
 
   useEffect(() => {
     if (!formData.location) return

@@ -10,6 +10,7 @@ import {
   REPORT_CONTENT_MIN_LENGTH,
   REPORT_CATEGORIES,
   REPORT_CATEGORY_LABELS,
+  REPORT_METHOD_LABELS,
   REPORT_TAG_LABELS,
 } from './reportConstants'
 import type { ReportCategory, ReportFormData, ReportLocation, ReportMethod, ReportTag } from './reportTypes'
@@ -134,7 +135,11 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
     })
   }
 
-  const ctaLabel = method === 'live' ? '실시간 영상 제보 시작하기' : '사진·영상 제보 등록하기'
+  // 방식 이름은 REPORT_METHOD_LABELS 한 곳에서만 관리한다. 실시간은 방송을 시작하고
+  // 사진은 등록 화면으로 넘어가므로 뒤에 붙는 동작만 다르다.
+  const ctaLabel = method === 'live'
+    ? `${REPORT_METHOD_LABELS.live} 시작하기`
+    : `${REPORT_METHOD_LABELS.photo} 등록하기`
   const hasLocation = status === 'success' && effectiveLocation
   // 지도를 옮기는 동안에는 직전 주소를 그대로 둔다. 매번 안내 문구로 돌아가면 깜빡인다.
   const locationName = resolvedLocation?.name ?? '위치명을 확인하는 중입니다.'
@@ -178,7 +183,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
             <span className="report-radio-dot" aria-hidden="true" />
             <MethodIcon method="live" />
             <span className="report-method-copy">
-              <span className="report-method-title">실시간 영상 제보</span>
+              <span className="report-method-title">{REPORT_METHOD_LABELS.live}</span>
             </span>
           </button>
 
@@ -192,7 +197,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
             <span className="report-radio-dot" aria-hidden="true" />
             <MethodIcon method="photo" />
             <span className="report-method-copy">
-              <span className="report-method-title">사진·영상 제보</span>
+              <span className="report-method-title">{REPORT_METHOD_LABELS.photo}</span>
             </span>
           </button>
         </div>

@@ -782,6 +782,24 @@
   text-align: center;
 }
 
+/* 라이브 제보에 대표 이미지가 없을 때만 쓰는 대체 표시. 사진 제보 썸네일과 같은 칸을
+   채우므로 카드 높이가 흔들리지 않는다. */
+.report-thumb-fallback {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  padding: 0 6px;
+  color: #9ca3af;
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.report-thumb-fallback svg {
+  width: 22px;
+  height: 22px;
+}
+
 .report-card-status {
   position: absolute;
   top: 8px;
