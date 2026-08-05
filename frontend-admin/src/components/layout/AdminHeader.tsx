@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/useAuth'
 import { OperatorPresenceToggle } from './OperatorPresenceToggle'
 import { ROUTE_PATHS } from '../../router/paths'
 import { isEmergencyRisk } from '../../utils/adminRisk'
-import { formatLastUpdated, formatSeoulDateTime } from '../../utils/adminDate'
+import { formatSeoulDateTime } from '../../utils/adminDate'
 import { isNewReport } from '../../utils/adminVerification'
 import type { AdminReport } from '../../types/admin'
 
@@ -41,12 +41,11 @@ function SirenIcon() {
 }
 
 interface AdminHeaderProps {
-  lastDashboardUpdatedAt: number | null
   reports: AdminReport[]
   onCheckReport: (reportId: number) => void
 }
 
-export function AdminHeader({ lastDashboardUpdatedAt, reports, onCheckReport }: AdminHeaderProps) {
+export function AdminHeader({ reports, onCheckReport }: AdminHeaderProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -76,12 +75,8 @@ export function AdminHeader({ lastDashboardUpdatedAt, reports, onCheckReport }: 
       <div className="admin-header__left">
         <h1>{getPageTitle(pathname)}</h1>
         {isDashboard && (
-          <div className="admin-header__status" aria-label="대시보드 갱신 정보">
+          <div className="admin-header__status" aria-label="현재 시간">
             <time dateTime={currentTime.toISOString()}>{formatSeoulDateTime(currentTime)}</time>
-            <span className="admin-header__divider" aria-hidden="true" />
-            <span className="admin-header__updated">
-              {formatLastUpdated(lastDashboardUpdatedAt, currentTime.getTime())}
-            </span>
           </div>
         )}
       </div>

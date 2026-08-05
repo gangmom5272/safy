@@ -63,15 +63,6 @@ function LocationIcon() {
   )
 }
 
-function RefreshIcon() {
-  return (
-    <svg className="filter-reset-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-15.3 6.4L3 16M3 21v-5h5" />
-    </svg>
-  )
-}
-
 export function RiskMapPage() {
   const navigate = useNavigate()
   const [draftFilters, setDraftFilters] = useState<MapFilters>(initialMapFilters)
@@ -394,18 +385,6 @@ export function RiskMapPage() {
           </select>
           <button type="button" className="secondary-button" onClick={resetFilters}>
             초기화
-          </button>
-          <button
-            type="button"
-            className="secondary-button filter-reset-button"
-            onClick={() => {
-              setAppliedFilters({ ...draftFilters, region: draftFilters.region.trim() })
-              void loadGridRisks()
-            }}
-            aria-label="위험도 지도 새로고침"
-            title="새로고침"
-          >
-            <RefreshIcon />
           </button>
           <button type="submit" className="primary-button">필터 적용</button>
         </div>
