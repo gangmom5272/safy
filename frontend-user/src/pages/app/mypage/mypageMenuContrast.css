@@ -1,40 +1,40 @@
 .mypage-shell .mypage-menu button {
-  color: #102033;
+  color: var(--color-text-primary);
   opacity: 1;
 }
 
 .mypage-shell .mypage-menu button > span {
-  background: #ddf8f2;
-  color: #007864;
+  background: var(--color-success-light);
+  color: var(--color-success);
 }
 
 .mypage-shell .mypage-menu button > b {
-  color: #102033;
+  color: var(--color-text-primary);
   font-weight: 800;
 }
 
 .mypage-shell .mypage-menu button:hover {
-  background: #f8fbfa;
+  background: var(--color-success-light);
 }
 
 .mypage-shell .report-status-grid span:nth-child(1) {
-  background: #fff5e8;
-  color: #a85b16;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
 }
 
 .mypage-shell .report-status-grid span:nth-child(2) {
-  background: #eef4ff;
-  color: #315f9f;
+  background: var(--color-primary-light);
+  color: var(--color-info);
 }
 
 .mypage-shell .report-status-grid span:nth-child(3) {
-  background: #ecfbf6;
-  color: #087a63;
+  background: var(--color-success-light);
+  color: var(--color-success);
 }
 
 .mypage-shell .report-status-grid span:nth-child(4) {
-  background: #fff1f1;
-  color: #b44242;
+  background: var(--color-danger-light);
+  color: var(--color-danger);
 }
 
 .mypage-shell .report-status-grid span > b {

@@ -5,13 +5,14 @@ const GROUP_PRECISION = 4
 
 const RISK_ORDER: Record<RiskLevel, number> = { critical: 5, high: 4, medium: 3, low: 2, very_low: 1 }
 
-// 관리자 콘솔의 RISK_LEVEL_CONFIG markerColor 와 같은 색이다.
+// safy-user-v1 테마 색으로 갱신했다. 관리자 콘솔의 RISK_LEVEL_CONFIG markerColor 는
+// 아직 이전 색을 쓰므로 두 화면의 위험도 색이 더 이상 같지 않다(관리자 쪽 재테마 전까지).
 export const RISK_MARKER_COLORS: Record<RiskLevel, string> = {
-  critical: '#dc2626',
-  high: '#f97316',
-  medium: '#eab308',
-  low: '#16a34a',
-  very_low: '#2563eb',
+  critical: '#C63B37',
+  high: '#BB5A29',
+  medium: '#B0781A',
+  low: '#3B7F5B',
+  very_low: '#2E6FE0',
 }
 
 export interface ReportMarkerGroup {

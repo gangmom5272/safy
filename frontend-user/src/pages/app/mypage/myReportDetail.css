@@ -6,16 +6,16 @@
 }
 
 .my-report-detail-page .mypage-header > button:focus-visible {
-  outline: 3px solid rgba(0, 74, 173, .25);
+  outline: 3px solid rgba(46, 111, 224, .25);
   outline-offset: 2px;
 }
 
 .my-report-detail-page .mypage-card {
   min-width: 0;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 24px;
   background: #fff;
-  box-shadow: 0 7px 22px rgba(17, 24, 39, .055);
+  box-shadow: 0 7px 22px rgba(22, 33, 58, .055);
 }
 
 .report-detail-card {
@@ -40,7 +40,7 @@
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   border-radius: 20px;
-  background: #f1f3f5;
+  background: var(--color-surface-soft);
 }
 
 .my-report-detail-page .report-detail-media-track::-webkit-scrollbar {
@@ -55,7 +55,7 @@
   min-height: 200px;
   place-items: center;
   scroll-snap-align: center;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -84,8 +84,8 @@
   min-height: 200px;
   place-items: center;
   border-radius: 20px;
-  color: #6b7280;
-  background: #f1f3f5;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-soft);
   font-size: 12px;
 }
 
@@ -96,7 +96,7 @@
   padding: 4px 9px;
   border-radius: 999px;
   color: #fff;
-  background: rgba(17, 24, 39, .66);
+  background: rgba(22, 33, 58, .66);
   font-size: 11px;
   font-weight: 700;
   pointer-events: none;
@@ -115,7 +115,7 @@
   border: 0;
   border-radius: 50%;
   color: #fff;
-  background: rgba(17, 24, 39, .5);
+  background: rgba(22, 33, 58, .5);
   font-size: 17px;
   line-height: 1;
   cursor: pointer;
@@ -147,14 +147,14 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #d1d5db;
+  background: var(--color-border-strong);
   cursor: pointer;
 }
 
 .my-report-detail-page .report-detail-media-dots button.active {
   width: 18px;
   border-radius: 999px;
-  background: #004aad;
+  background: var(--color-primary);
 }
 
 .report-detail-heading {
@@ -170,7 +170,7 @@
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 700;
   line-height: 1.4;
@@ -189,36 +189,36 @@
 }
 
 .report-detail-heading .status-received {
-  color: #4b5563;
-  background: #f1f3f5;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-soft);
 }
 
 .report-detail-heading .status-in-progress {
-  color: #b45309;
-  background: #fff1dc;
+  color: var(--color-warning);
+  background: var(--color-warning-light);
 }
 
 .report-detail-heading .status-rejected {
-  color: #b42318;
-  background: #fee4e2;
+  color: var(--color-danger);
+  background: var(--color-danger-light);
 }
 
 .report-detail-heading .status-closed {
-  color: #047857;
-  background: #dcfce7;
+  color: var(--color-success);
+  background: var(--color-success-light);
 }
 
 /* 취소된 제보 상세로 바로 들어올 수 있어 배지 색을 비워 두지 않는다. */
 .report-detail-heading .status-cancelled {
-  color: #6b7280;
-  background: #e5e7eb;
+  color: var(--color-text-secondary);
+  background: var(--color-border);
 }
 
 .report-detail-description,
 .report-detail-section__card > p {
   margin: 0;
   overflow-wrap: anywhere;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 1.7;
 }
@@ -235,14 +235,14 @@
 }
 
 .report-detail-info dt {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .report-detail-info dd {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
-  color: #111827;
+  color: var(--color-text-primary);
 }
 
 .report-detail-info dd strong,
@@ -252,11 +252,11 @@
 
 .report-detail-info dd strong {
   margin-bottom: 2px;
-  color: #004aad;
+  color: var(--color-primary-hover);
 }
 
 .report-detail-info dd span {
-  color: #4b5563;
+  color: var(--color-text-secondary);
 }
 
 /* 메타데이터와 제보 내용을 가르는 구분선. */
@@ -265,7 +265,7 @@
   min-width: 0;
   gap: 10px;
   padding-top: 18px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
 }
 
 .report-detail-content h3 {
@@ -273,7 +273,7 @@
   align-items: center;
   gap: 7px;
   margin: 0;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 700;
   line-height: 1.4;
@@ -283,7 +283,7 @@
   width: 17px;
   height: 17px;
   flex: none;
-  color: #004aad;
+  color: var(--color-primary);
 }
 
 /* 사용자가 입력한 줄바꿈을 그대로 보여주고, 긴 글은 카드 안에서 줄바꿈한다. */
@@ -297,8 +297,8 @@
   padding: 8px 12px;
   border: 1px solid #f4c7c2;
   border-radius: 16px;
-  color: #b42318;
-  background: #fee4e2;
+  color: var(--color-danger);
+  background: var(--color-danger-light);
   font-size: 14px;
   font-weight: 700;
   line-height: 1.4;
@@ -321,13 +321,13 @@
 
 .report-detail-cancel.is-cancelled {
   border-color: #f4c7c2;
-  color: #912018;
-  background: #fef3f2;
+  color: var(--color-danger);
+  background: var(--color-danger-light);
   font-size: 13px;
 }
 
 .report-detail-cancel:focus-visible {
-  outline: 3px solid rgba(180, 35, 24, .25);
+  outline: 3px solid rgba(198, 59, 55, .25);
   outline-offset: 2px;
 }
 
@@ -343,7 +343,7 @@
 
 .report-detail-section__title {
   margin: 0;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 700;
   line-height: 1.4;
@@ -377,7 +377,7 @@
   bottom: -7px;
   left: 5px;
   width: 2px;
-  background: #004aad;
+  background: var(--color-primary);
   content: '';
 }
 
@@ -389,8 +389,8 @@
   height: 12px;
   border: 3px solid #fff;
   border-radius: 50%;
-  background: #004aad;
-  box-shadow: 0 0 0 1px rgba(0, 74, 173, .2);
+  background: var(--color-primary);
+  box-shadow: 0 0 0 1px rgba(46, 111, 224, .2);
   content: '';
 }
 
@@ -399,35 +399,35 @@
 }
 
 .report-history-list b {
-  color: #004aad;
+  color: var(--color-primary-hover);
   font-size: 13px;
 }
 
 .report-history-list span {
   overflow-wrap: anywhere;
-  color: #374151;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.55;
 }
 
 .report-history-list time {
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   font-size: 11px;
 }
 
 /* 지난 단계는 톤을 낮추고 현재 단계만 진하게 둔다. 지난 단계도 점과 선은 남아 있어
    어디까지 진행됐는지 그대로 읽힌다. */
 .report-history-list li.is-done b {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
 .report-history-list li.is-done span {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .report-history-list li.is-done::after {
-  background: #9db6d8;
+  background: var(--color-border-strong);
 }
 
 .report-history-list li.is-current b {
@@ -435,7 +435,7 @@
 }
 
 .report-history-list li.is-current::after {
-  box-shadow: 0 0 0 4px rgba(0, 74, 173, .15);
+  box-shadow: 0 0 0 4px rgba(46, 111, 224, .15);
 }
 
 @media (max-width: 360px) {

@@ -1,6 +1,6 @@
 .mypage-shell {
   gap: 18px;
-  color: #111827;
+  color: var(--color-text-primary);
   background: var(--color-background);
 }
 
@@ -8,8 +8,8 @@
   margin: 0;
   padding: 10px 12px;
   border-radius: 12px;
-  color: #004aad;
-  background: #eef4ff;
+  color: var(--color-primary-hover);
+  background: var(--color-primary-light);
   font-size: 11px;
 }
 
@@ -19,10 +19,10 @@
 .settings-cards,
 .privacy-list,
 .notification-setting-list {
-  border-color: #e5eaf2;
+  border-color: var(--color-border);
   border-radius: 24px;
   background: #fff;
-  box-shadow: 0 7px 24px rgba(17, 24, 39, .055);
+  box-shadow: 0 7px 24px rgba(22, 33, 58, .055);
 }
 
 .profile-card {
@@ -35,7 +35,7 @@
   width: 70px;
   height: 70px;
   color: #fff;
-  background: #004aad;
+  background: var(--color-primary);
   font-size: 25px;
 }
 
@@ -56,9 +56,9 @@
   place-items: center;
   border: 2px solid #fff;
   border-radius: 50%;
-  color: #004aad;
+  color: var(--color-primary);
   background: #fff;
-  box-shadow: 0 3px 10px rgba(17, 24, 39, .2);
+  box-shadow: 0 3px 10px rgba(22, 33, 58, .2);
   cursor: pointer;
 }
 
@@ -72,7 +72,7 @@
 }
 
 .profile-card .profile-details h2 {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 22px;
   line-height: 1.25;
 }
@@ -80,7 +80,7 @@
 .profile-card .profile-details p {
   margin-top: 3px;
   overflow: hidden;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 13px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -92,13 +92,13 @@
 }
 
 .mypage-title h2 {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 18px;
 }
 
 .mypage-title button {
   padding: 5px 0;
-  color: #004aad;
+  color: var(--color-primary-hover);
   background: transparent;
   font-size: 11px;
   cursor: pointer;
@@ -122,18 +122,18 @@
 }
 
 .mypage-shell .report-status-grid span:nth-child(1) {
-  color: #004aad;
-  background: #eef4ff;
+  color: var(--color-primary-hover);
+  background: var(--color-primary-light);
 }
 
 .mypage-shell .report-status-grid span:nth-child(2) {
-  color: #16835d;
-  background: #ecf8f2;
+  color: var(--color-success);
+  background: var(--color-success-light);
 }
 
 .mypage-shell .report-status-grid span:nth-child(3) {
-  color: #d14343;
-  background: #fff0f0;
+  color: var(--color-danger);
+  background: var(--color-danger-light);
 }
 
 .report-status-grid b {
@@ -150,14 +150,14 @@
   min-height: 70px;
   gap: 13px;
   padding: 0 18px;
-  border-bottom: 1px solid #edf0f4;
-  color: #111827;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   background: #fff;
   cursor: pointer;
 }
 
 .mypage-shell .mypage-menu button:hover {
-  background: #fafcff;
+  background: var(--color-surface-secondary);
 }
 
 .mypage-shell .mypage-menu button > .mypage-menu-icon {
@@ -168,8 +168,8 @@
   padding: 0;
   place-items: center;
   border-radius: 13px;
-  color: #004aad;
-  background: #eef4ff;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .mypage-menu-icon svg {
@@ -178,14 +178,14 @@
 }
 
 .mypage-shell .mypage-menu button > b {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 700;
 }
 
 .mypage-menu em {
   display: grid;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   place-items: center;
 }
 
@@ -199,7 +199,7 @@
   min-height: 50px;
   border: 1px solid #f1b5b5;
   border-radius: 16px;
-  color: #d92d20;
+  color: var(--color-danger);
   background: #fff;
   font-size: 14px;
   font-weight: 800;
@@ -209,35 +209,35 @@
 .mypage-title button:focus-visible,
 .mypage-menu button:focus-visible,
 .logout-button:focus-visible {
-  outline: 3px solid rgba(0, 74, 173, .25);
+  outline: 3px solid rgba(46, 111, 224, .25);
   outline-offset: 2px;
 }
 
 /* Keep MyPage subviews in the same blue design system. */
 .mypage-tabs button.active {
-  border-color: #004aad;
+  border-color: var(--color-primary);
   color: #fff;
-  background: #004aad;
+  background: var(--color-primary);
 }
 
 .history-list li {
-  border-left-color: #004aad;
+  border-left-color: var(--color-primary);
 }
 
 .detail-actions button,
 .mypage-form > button,
 .inline-actions button {
-  background: #004aad;
+  background: var(--color-primary);
 }
 
 .mypage-form input:focus,
 .mypage-form select:focus,
 .mypage-form textarea:focus {
-  border-color: #004aad;
+  border-color: var(--color-primary);
 }
 
 .accordion-list button span {
-  color: #004aad;
+  color: var(--color-primary);
 }
 
 /* 공지사항은 배지가 없어 자식이 항상 3개다. .notice-list 의 4칸 그리드를 그대로 쓰면
@@ -249,21 +249,21 @@
 
 .settings-cards button > span:first-child,
 .privacy-list article > span {
-  color: #004aad;
-  background: #eef4ff;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .settings-banner {
-  border-color: #dce9fb;
-  background: #edf5ff;
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-light);
 }
 
 .settings-banner p {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .setting-toggle.on {
-  background: #004aad;
+  background: var(--color-primary);
 }
 
 .mypage-shell .support-menu button > span,
@@ -273,8 +273,8 @@
   height: 38px;
   place-items: center;
   border-radius: 12px;
-  color: #004aad;
-  background: rgba(0, 74, 173, .08);
+  color: var(--color-primary);
+  background: rgba(46, 111, 224, .08);
 }
 
 .mypage-shell .support-menu button > span svg,
@@ -284,14 +284,14 @@
 }
 
 .mypage-shell .support-menu button > b {
-  color: #004aad;
+  color: var(--color-primary-hover);
 }
 
 .support-menu button > em,
 .settings-cards button > b {
   display: grid;
   place-items: center;
-  color: #004aad;
+  color: var(--color-primary);
 }
 
 .support-menu button > em svg,
@@ -303,32 +303,32 @@
 .support-menu button:focus-visible,
 .settings-cards button:focus-visible,
 .account-form > button:focus-visible {
-  outline: 3px solid rgba(0, 74, 173, .25);
+  outline: 3px solid rgba(46, 111, 224, .25);
   outline-offset: 2px;
 }
 
 .account-form .profile-edit-avatar .avatar {
   color: #ffffff;
-  background: #004aad;
+  background: var(--color-primary);
 }
 
 .account-form .profile-edit-avatar > span {
-  color: #004aad;
+  color: var(--color-primary-hover);
 }
 
 .account-form input:focus {
-  border-color: #004aad;
-  box-shadow: 0 0 0 3px rgba(0, 74, 173, .12);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(46, 111, 224, .12);
 }
 
 .account-form > button {
   color: #ffffff;
-  background: #004aad;
+  background: var(--color-primary);
 }
 
 .account-form > button:disabled {
   color: #ffffff;
-  background: rgba(0, 74, 173, .25);
+  background: rgba(46, 111, 224, .25);
   cursor: not-allowed;
 }
 
@@ -336,7 +336,7 @@
   gap: 16px;
   padding: 24px;
   border-radius: 20px;
-  box-shadow: 0 4px 16px rgba(17, 24, 39, .045);
+  box-shadow: 0 4px 16px rgba(22, 33, 58, .045);
 }
 
 .profile-edit-form .profile-edit-avatar {
@@ -362,9 +362,9 @@
   min-height: 34px;
   padding: 0 13px;
   align-items: center;
-  border: 1px solid #c8d8ef;
+  border: 1px solid var(--color-border-strong);
   border-radius: 999px;
-  color: #004aad;
+  color: var(--color-primary-hover);
   background: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -372,16 +372,16 @@
 }
 
 .profile-edit-form .profile-photo-reset {
-  border-color: #dce1e8;
-  color: #6b7280;
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
 }
 
 /* 업로드 중에는 파일 입력이 disabled 라 라벨을 눌러도 열리지 않는다. 그 상태를 눈에 보이게 한다. */
 .profile-edit-form .profile-photo-button.disabled,
 .profile-edit-form .profile-photo-reset:disabled {
-  border-color: #e5e7eb;
-  color: #9ca3af;
-  background: #f3f4f6;
+  border-color: var(--color-border);
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-soft);
   cursor: not-allowed;
 }
 
@@ -396,24 +396,24 @@
 
 .profile-edit-form label {
   gap: 7px;
-  color: #374151;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .profile-edit-form .profile-edit-field input {
   height: 50px;
   padding: 0 14px;
-  border: 1px solid #d8e0eb;
+  border: 1px solid var(--color-border-strong);
   border-radius: 13px;
-  color: #111827;
+  color: var(--color-text-primary);
   background: #fff;
   font-size: 14px;
 }
 
 /* 이메일은 소셜 로그인 값이라 수정할 수 없다. 편집 가능한 이름 칸과 구분되게 둔다. */
 .profile-edit-form .profile-edit-field input[readonly] {
-  color: #4b5563;
-  background: #f5f7fa;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-soft);
   cursor: default;
 }
 
@@ -423,13 +423,13 @@
 }
 
 .profile-edit-field > label {
-  color: #374151;
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 700;
 }
 
 .profile-field-error {
-  color: #d92d20;
+  color: var(--color-danger);
   font-size: 12px;
 }
 
@@ -440,16 +440,16 @@
 }
 
 .profile-edit-form > button:disabled {
-  background: #b9cbed;
+  background: var(--color-disabled-background);
 }
 
 .account-menu {
   display: grid;
   overflow: hidden;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   border-radius: 24px;
   background: #fff;
-  box-shadow: 0 7px 24px rgba(17, 24, 39, .055);
+  box-shadow: 0 7px 24px rgba(22, 33, 58, .055);
 }
 
 .account-menu button {
@@ -460,8 +460,8 @@
   align-items: center;
   gap: 8px;
   border: 0;
-  border-bottom: 1px solid #edf0f4;
-  color: #111827;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   background: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -474,12 +474,12 @@
 }
 
 .account-menu button:hover {
-  background: #fafcff;
+  background: var(--color-surface-secondary);
 }
 
 .account-menu small {
   overflow: hidden;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 11px;
   font-weight: 400;
   text-overflow: ellipsis;
@@ -487,7 +487,7 @@
 }
 
 .account-menu b {
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   font-size: 21px;
   font-weight: 400;
 }
@@ -496,7 +496,7 @@
   min-height: 48px;
   border: 1px solid #f1b5b5;
   border-radius: 16px;
-  color: #d92d20;
+  color: var(--color-danger);
   background: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -510,7 +510,7 @@
   display: grid;
   padding: 24px;
   place-items: center;
-  background: rgba(17, 24, 39, .45);
+  background: rgba(22, 33, 58, .45);
 }
 
 .account-modal {
@@ -520,7 +520,7 @@
   padding: 22px;
   border-radius: 22px;
   background: #fff;
-  box-shadow: 0 18px 45px rgba(17, 24, 39, .2);
+  box-shadow: 0 18px 45px rgba(22, 33, 58, .2);
 }
 
 .account-modal h2,
@@ -533,7 +533,7 @@
 }
 
 .account-modal p {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -549,15 +549,15 @@
   min-height: 44px;
   border: 0;
   border-radius: 13px;
-  color: #374151;
-  background: #f3f4f6;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-soft);
   font-weight: 700;
   cursor: pointer;
 }
 
 .account-modal button.danger {
   color: #fff;
-  background: #d92d20;
+  background: var(--color-danger);
 }
 
 .report-filters {
@@ -574,7 +574,7 @@
   gap: 2px;
   padding: 4px;
   border-radius: 14px;
-  background: #eef2f7;
+  background: var(--color-surface-soft);
 }
 
 .report-status-filters button {
@@ -582,7 +582,7 @@
   padding: 0 2px;
   border: 0;
   border-radius: 10px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   background: transparent;
   font-size: 12px;
   font-weight: 500;
@@ -592,9 +592,9 @@
 }
 
 .report-status-filters button.active {
-  color: #004aad;
+  color: var(--color-primary-hover);
   background: #fff;
-  box-shadow: 0 1px 4px rgba(17, 24, 39, .08);
+  box-shadow: 0 1px 4px rgba(22, 33, 58, .08);
   font-weight: 600;
 }
 
@@ -608,7 +608,7 @@
 }
 
 .report-filter-toolbar > span {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 600;
 }
@@ -625,9 +625,9 @@
   padding: 0 13px;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid #d9e1ec;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  color: #374151;
+  color: var(--color-text-secondary);
   background: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -643,10 +643,10 @@
   width: 168px;
   max-width: calc(100vw - 32px);
   padding: 6px;
-  border: 1px solid #d9e1ec;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 8px 22px rgba(17, 24, 39, .1);
+  box-shadow: 0 8px 22px rgba(22, 33, 58, .1);
 }
 
 .report-date-filter__menu button {
@@ -654,7 +654,7 @@
   padding: 0 10px;
   border: 0;
   border-radius: 8px;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   background: #fff;
   font-size: 13px;
   text-align: left;
@@ -662,8 +662,8 @@
 }
 
 .report-date-filter__menu button.active {
-  color: #004aad;
-  background: rgba(0, 74, 173, .08);
+  color: var(--color-primary-hover);
+  background: rgba(46, 111, 224, .08);
   font-weight: 600;
 }
 
@@ -678,7 +678,7 @@
   display: grid;
   min-width: 0;
   gap: 5px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 11px;
 }
 
@@ -687,16 +687,16 @@
   min-width: 0;
   height: 42px;
   padding: 0 8px;
-  border: 1px solid #d9e1ec;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  color: #374151;
+  color: var(--color-text-secondary);
   background: #fff;
   font-size: 12px;
 }
 
 .report-custom-dates > span {
   padding-bottom: 11px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
 }
 
 .my-report-list {
@@ -710,10 +710,10 @@
   overflow: hidden;
   padding: 0;
   gap: 0;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   border-radius: 20px;
   background: #fff;
-  box-shadow: 0 5px 18px rgba(17, 24, 39, .05);
+  box-shadow: 0 5px 18px rgba(22, 33, 58, .05);
 }
 
 .mypage-shell .report-thumb {
@@ -724,9 +724,9 @@
   min-height: 112px;
   place-items: center;
   overflow: hidden;
-  border-right: 1px solid #e5eaf2;
-  color: #9ca3af;
-  background: #eef2f6;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-soft);
 }
 
 .report-thumb img {
@@ -736,7 +736,7 @@
 }
 
 .report-image-placeholder {
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.4;
   text-align: center;
@@ -749,7 +749,7 @@
   gap: 4px;
   place-items: center;
   padding: 0 6px;
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   font-size: 11px;
   line-height: 1.3;
   text-align: center;
@@ -781,9 +781,9 @@
   z-index: 2;
   padding: 4px 7px;
   border-radius: 999px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   background: rgba(255, 255, 255, .92);
-  box-shadow: 0 2px 8px rgba(17, 24, 39, .1);
+  box-shadow: 0 2px 8px rgba(22, 33, 58, .1);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
@@ -791,29 +791,29 @@
 }
 
 .report-card-status--received {
-  color: #004aad;
-  background: rgba(232, 241, 255, .94);
+  color: var(--color-primary-hover);
+  background: rgba(235, 243, 255, .94);
 }
 
 .report-card-status--in-progress {
-  color: #b45309;
-  background: rgba(255, 241, 220, .94);
+  color: var(--color-warning);
+  background: rgba(251, 241, 223, .94);
 }
 
 .report-card-status--closed {
-  color: #047857;
-  background: rgba(220, 252, 231, .94);
+  color: var(--color-success);
+  background: rgba(231, 244, 236, .94);
 }
 
 .report-card-status--rejected {
-  color: #b42318;
-  background: rgba(254, 228, 226, .94);
+  color: var(--color-danger);
+  background: rgba(252, 235, 233, .94);
 }
 
 /* 취소됨 탭은 없지만 전체 목록에는 취소된 제보가 그대로 내려온다. */
 .report-card-status--cancelled {
-  color: #6b7280;
-  background: rgba(229, 231, 235, .94);
+  color: var(--color-text-secondary);
+  background: rgba(226, 233, 244, .94);
 }
 
 .mypage-shell .report-card-body {
@@ -827,7 +827,7 @@
 
 .report-card-body small {
   overflow: hidden;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 500;
   text-overflow: ellipsis;
@@ -837,7 +837,7 @@
 .report-card-body strong {
   display: -webkit-box;
   overflow: hidden;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 15px;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -846,7 +846,7 @@
 }
 
 .report-card-body time {
-  color: #9ca3af;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -855,7 +855,7 @@
 .report-date-filter button:focus-visible,
 .report-custom-dates input:focus-visible,
 .my-report-card:focus-visible {
-  outline: 3px solid rgba(0, 74, 173, .25);
+  outline: 3px solid rgba(46, 111, 224, .25);
   outline-offset: 2px;
 }
 
@@ -873,7 +873,7 @@
 .profile-edit-button:focus-visible,
 .account-menu button:focus-visible,
 .account-withdrawal:focus-visible {
-  outline: 3px solid rgba(0, 74, 173, .25);
+  outline: 3px solid rgba(46, 111, 224, .25);
   outline-offset: 2px;
 }
 
@@ -888,9 +888,9 @@
 .favorites-header .favorite-add-button {
   border: 0;
   border-radius: 50%;
-  color: #004aad;
-  background: #e8f1ff;
-  box-shadow: 0 2px 8px rgba(0, 74, 173, .12);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  box-shadow: 0 2px 8px rgba(46, 111, 224, .12);
   cursor: pointer;
 }
 
@@ -900,7 +900,7 @@
 }
 
 .favorites-header .favorite-add-button:active {
-  background: #d6e6ff;
+  background: var(--color-primary-light);
 }
 
 @media (max-width: 360px) {
