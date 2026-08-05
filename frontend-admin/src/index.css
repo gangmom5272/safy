@@ -195,14 +195,6 @@ button:disabled {
   letter-spacing: -0.02em;
 }
 
-.admin-sidebar__brand-copy span {
-  overflow: hidden;
-  color: #b7c2d0;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .admin-sidebar__nav {
   display: grid;
   gap: 6px;

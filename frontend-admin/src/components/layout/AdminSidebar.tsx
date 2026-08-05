@@ -113,7 +113,6 @@ export function AdminSidebar() {
   const sidebarItems = isSuperAdmin ? superAdminItems : operatorItems
   const displayName = user?.displayName || adminName || 'SAFY Super Admin'
   const roleLabel = isSuperAdmin ? '최고 관리자' : '관리자'
-  const assignedRegion = user?.controlCenterName?.replace(/\s*재난안전상황실$/, '')
 
   const handleLogout = async () => {
     await logout().catch(() => undefined)
@@ -128,9 +127,6 @@ export function AdminSidebar() {
         </span>
         <span className="admin-sidebar__brand-copy">
           <strong>SAFY</strong>
-          <span>
-            {isSuperAdmin ? '통합 관리 콘솔' : `관제 콘솔 · ${assignedRegion ?? '담당 지역 미지정'}`}
-          </span>
         </span>
       </div>
 
