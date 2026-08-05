@@ -1,7 +1,7 @@
 .landing-home { position: relative; display: grid; min-height: 100dvh; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); place-items: center; overflow: hidden; background: var(--color-background); }
 .home-quick-access { position: absolute; top: max(26px, calc(env(safe-area-inset-top) + 6px)); right: max(24px, env(safe-area-inset-right)); z-index: 2; display: flex; gap: 4px; opacity: 0; visibility: hidden; transform: translateY(-8px); pointer-events: none; transition: opacity 500ms ease-out 220ms, transform 500ms ease-out 220ms, visibility 0s linear 720ms; }
 .home-quick-access--visible { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; transition-delay: 220ms, 220ms, 0ms; }
-.home-quick-access button { position: relative; display: grid; width: 44px; height: 44px; padding: 0; place-items: center; border: 0; border-radius: 14px; color: var(--color-primary); background: transparent; cursor: pointer; transition: transform var(--motion-tap), background-color var(--motion-tap); }
+.home-quick-access button { position: relative; display: grid; width: 56px; height: 56px; padding: 0; place-items: center; border: 0; border-radius: 14px; color: var(--color-primary); background: transparent; cursor: pointer; transition: transform var(--motion-tap), background-color var(--motion-tap); }
 .home-quick-access svg { width: 20px; height: 20px; }
 .home-quick-access button:hover { background: rgba(46, 111, 224, .055); }
 .home-quick-access button:active { transform: scale(.96); }

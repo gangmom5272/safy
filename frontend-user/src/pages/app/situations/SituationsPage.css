@@ -41,7 +41,7 @@
 .selected-area-header button,
 .map-controls button,
 .report-card-actions button {
-  min-height: 44px;
+  min-height: 56px;
   border: 0;
   border-radius: var(--radius-badge);
   color: var(--color-text-primary);
@@ -119,10 +119,10 @@
 .filter-icon-button {
   position: relative;
   display: inline-grid;
-  flex: 0 0 44px;
+  flex: 0 0 56px;
   place-items: center;
-  width: 44px;
-  min-width: 44px;
+  width: 56px;
+  min-width: 56px;
   padding: 0;
   color: var(--color-text-secondary);
   background: var(--color-success-light);
@@ -223,7 +223,7 @@
 .selected-area-header h2 {
   overflow: hidden;
   color: var(--color-text-primary);
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
   line-height: 1.3;
   text-overflow: ellipsis;
@@ -267,9 +267,9 @@
 
 .selected-area-actions .favorite-star-button {
   display: grid;
-  width: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  width: 56px;
+  min-width: 56px;
+  min-height: 56px;
   padding: 0;
   place-items: center;
   border: 1px solid rgba(46, 111, 224, .2);
@@ -307,7 +307,7 @@
 }
 
 .section-title-row.compact h2 {
-  font-size: 18px;
+  font-size: 19px;
 }
 
 .situation-content-section {
@@ -346,9 +346,9 @@
 .sort-icon-button {
   display: inline-grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 50%;
@@ -639,12 +639,12 @@
   box-sizing: border-box;
   flex: none;
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
-  max-width: 40px;
-  max-height: 40px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  max-width: 56px;
+  max-height: 56px;
   aspect-ratio: 1 / 1;
   padding: 0;
   border-radius: 50%;
@@ -899,7 +899,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 48px;
+  min-height: 56px;
   padding: 0 16px;
   border: 1px solid var(--color-border);
   border-radius: 14px;
@@ -957,7 +957,7 @@
 
 .report-detail-header button,
 .inline-action-button {
-  min-height: 40px;
+  min-height: 56px;
   padding: 0 16px;
   border: 0;
   border-radius: var(--radius-badge);

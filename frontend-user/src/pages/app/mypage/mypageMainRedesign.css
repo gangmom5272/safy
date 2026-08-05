@@ -73,7 +73,7 @@
 
 .profile-card .profile-details h2 {
   color: var(--color-text-primary);
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1.25;
 }
 
@@ -93,7 +93,7 @@
 
 .mypage-title h2 {
   color: var(--color-text-primary);
-  font-size: 18px;
+  font-size: 19px;
 }
 
 .mypage-title button {
@@ -493,7 +493,7 @@
 }
 
 .account-withdrawal {
-  min-height: 48px;
+  min-height: 56px;
   border: 1px solid #f1b5b5;
   border-radius: 16px;
   color: var(--color-danger);
@@ -529,7 +529,7 @@
 }
 
 .account-modal h2 {
-  font-size: 19px;
+  font-size: 20px;
 }
 
 .account-modal p {
@@ -546,7 +546,7 @@
 }
 
 .account-modal button {
-  min-height: 44px;
+  min-height: 56px;
   border: 0;
   border-radius: 13px;
   color: var(--color-text-secondary);
@@ -621,7 +621,7 @@
 .report-date-filter__trigger {
   display: flex;
   width: 100%;
-  height: 40px;
+  height: 56px;
   padding: 0 12px;
   align-items: center;
   justify-content: space-between;
@@ -650,7 +650,7 @@
 }
 
 .report-date-filter__menu button {
-  min-height: 40px;
+  min-height: 56px;
   padding: 0 8px;
   border: 0;
   border-radius: 8px;
