@@ -26,11 +26,11 @@ import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 
 public interface JpaReportRepository extends JpaRepository<Report, Long>, ReportRepository {
 	@Override
-	@EntityGraph(attributePaths = "administrativeArea")
+	@EntityGraph(attributePaths = {"administrativeArea", "representativeBlurAsset"})
 	Optional<Report> findByIdAndReporterId(Long id, Long reporterId);
 
 	@Override
-	@EntityGraph(attributePaths = "administrativeArea")
+	@EntityGraph(attributePaths = {"administrativeArea", "representativeBlurAsset"})
 	org.springframework.data.domain.Page<Report> findAllByReporterId(Long reporterId, Pageable pageable);
 
 	@Override
@@ -133,6 +133,7 @@ public interface JpaReportRepository extends JpaRepository<Report, Long>, Report
 	);
 
 	@Override
+	@EntityGraph(attributePaths = {"representativeBlurAsset", "representativeBlurAsset.sourceMediaAsset"})
 	@Query(value = """
 			select report
 			from Report report

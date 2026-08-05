@@ -42,14 +42,16 @@ public interface JpaReportOperatorAssignmentRepository
 	);
 
 	@Override
-	@EntityGraph(attributePaths = {"report", "route", "route.controlCenter", "operator"})
+	@EntityGraph(attributePaths = {"report", "report.representativeBlurAsset",
+			"report.representativeBlurAsset.sourceMediaAsset", "route", "route.controlCenter", "operator"})
 	org.springframework.data.domain.Page<ReportOperatorAssignment> findAllByStatusIn(
 			java.util.Collection<com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus> statuses,
 			org.springframework.data.domain.Pageable pageable
 	);
 
 	@Override
-	@EntityGraph(attributePaths = {"report", "route", "route.controlCenter", "operator"})
+	@EntityGraph(attributePaths = {"report", "report.representativeBlurAsset",
+			"report.representativeBlurAsset.sourceMediaAsset", "route", "route.controlCenter", "operator"})
 	@Query("""
 			select assignment
 			from ReportOperatorAssignment assignment

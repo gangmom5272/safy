@@ -121,8 +121,8 @@ public class ReportQueryService {
 		Instant expiresAt = clock.instant().plus(PREVIEW_URL_EXPIRY);
 		List<ReportImage> reportImages = reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(reportId);
 		List<ReportImageView> images = exposeOriginal
-				? reportImages.stream().map(image -> toImageView(image, image.getMediaAsset(), expiresAt)).toList()
-				: blurredImageViews(reportImages, expiresAt);
+				? operatorImageViews(report, reportImages, expiresAt)
+				: citizenImageViews(report, reportImages, expiresAt);
 		AdministrativeArea area = report.getAdministrativeArea();
 		var currentRoute = routeRepository.findByReport_IdAndStatus(reportId, ReportCenterRouteStatus.ACTIVE)
 				.or(() -> routeRepository.findTopByReport_IdOrderByRoutedAtDesc(reportId));
@@ -199,8 +199,7 @@ public class ReportQueryService {
 		List<ReportListItemView> content = reports.getContent().stream().map(report -> {
 			List<ReportImage> images = imagesByReportId.getOrDefault(report.getId(), List.of());
 			MediaAsset blurred = report.getRepresentativeBlurAsset();
-			ReportImageView representative = images.isEmpty() || blurred == null ? null
-					: toImageView(images.getFirst(), blurred, expiresAt);
+			ReportImageView representative = representativeImageView(images, blurred, expiresAt);
 			AdministrativeArea area = report.getAdministrativeArea();
 			ReportStatus visibleStatus = citizenCurrentStatus(report);
 			return new ReportListItemView(
@@ -212,6 +211,30 @@ public class ReportQueryService {
 			);
 		}).toList();
 		return new PageImpl<>(content, pageable, reports.getTotalElements());
+	}
+
+	/**
+	 * 담당자에게는 원본을 그대로 내보낸다. LIVE 제보는 report_image 행이 없으므로
+	 * 대표 블러본이 파생된 원본 프레임 한 장을 미디어로 취급한다.
+	 * 프레임 전체 열람은 별도 API의 몫이고 여기서는 대표 한 장만 다룬다.
+	 */
+	private List<ReportImageView> operatorImageViews(Report report, List<ReportImage> reportImages, Instant expiresAt) {
+		if (!reportImages.isEmpty()) {
+			return reportImages.stream().map(image -> toImageView(image, image.getMediaAsset(), expiresAt)).toList();
+		}
+		MediaAsset blurred = report.getRepresentativeBlurAsset();
+		MediaAsset frame = blurred == null ? null : blurred.getSourceMediaAsset();
+		return frame == null ? List.of() : List.of(toImageView(null, 0, frame, expiresAt));
+	}
+
+	/**
+	 * 시민에게는 블러본만 내보낸다. LIVE 제보는 Egress 프레임만 있어 report_image 행이 없으므로
+	 * 목록 썸네일과 같은 기준으로 대표 블러 자산 한 장을 미디어로 취급한다.
+	 */
+	private List<ReportImageView> citizenImageViews(Report report, List<ReportImage> reportImages, Instant expiresAt) {
+		if (!reportImages.isEmpty()) return blurredImageViews(reportImages, expiresAt);
+		MediaAsset representative = report.getRepresentativeBlurAsset();
+		return representative == null ? List.of() : List.of(toImageView(null, 0, representative, expiresAt));
 	}
 
 	private ReportStatus citizenCurrentStatus(Report report) {
@@ -242,12 +265,26 @@ public class ReportQueryService {
 		}).toList();
 	}
 
+	/**
+	 * 목록 썸네일은 report_image 행이 아니라 대표 블러 자산이 기준이다.
+	 * LIVE 제보는 Egress 프레임만 있어 report_image 행이 없으므로 그때는 자산 정보만으로 만든다.
+	 */
+	private ReportImageView representativeImageView(List<ReportImage> images, MediaAsset blurred, Instant expiresAt) {
+		if (blurred == null) return null;
+		if (!images.isEmpty()) return toImageView(images.getFirst(), blurred, expiresAt);
+		return toImageView(null, 0, blurred, expiresAt);
+	}
+
 	private ReportImageView toImageView(ReportImage reportImage, MediaAsset asset, Instant expiresAt) {
+		return toImageView(reportImage.getId(), reportImage.getDisplayOrder(), asset, expiresAt);
+	}
+
+	private ReportImageView toImageView(Long reportImageId, int displayOrder, MediaAsset asset, Instant expiresAt) {
 		String previewUrl = asset.getStorageStatus() == MediaStorageStatus.AVAILABLE
 				? mediaObjectStorage.createPresignedGetUrl(asset.getBucketName(), asset.getObjectKey(), PREVIEW_URL_EXPIRY)
 				: null;
 		return new ReportImageView(
-				reportImage.getId(), asset.getId(), reportImage.getDisplayOrder(), asset.getOriginalFilename(),
+				reportImageId, asset.getId(), displayOrder, asset.getOriginalFilename(),
 				asset.getContentType(), asset.getFileSize(), asset.getStorageStatus(), previewUrl,
 				previewUrl == null ? null : expiresAt
 		);
