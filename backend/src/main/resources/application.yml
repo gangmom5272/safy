@@ -180,3 +180,6 @@ live:
     frame-width: ${LIVE_FRAME_WIDTH:1280}
     frame-height: ${LIVE_FRAME_HEIGHT:720}
     frame-poll-delay: ${LIVE_FRAME_POLL_DELAY:PT2S}
+    # Egress 시작 실패 시 재시도 횟수(최초 시도 포함)와 재시도 간 대기 시간.
+    start-max-attempts: ${LIVE_RECORDING_START_MAX_ATTEMPTS:4}
+    start-retry-delay: ${LIVE_RECORDING_START_RETRY_DELAY:PT2S}
