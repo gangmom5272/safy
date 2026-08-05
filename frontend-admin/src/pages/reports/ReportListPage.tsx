@@ -302,8 +302,15 @@ export function ReportListPage() {
           </div>
         )}
 
-        <div className="report-filter__result-bar">
-          <strong>총 {filteredReports.length}건</strong>
+      </form>
+
+      {/* 건수와 정렬은 검색 카드가 아니라 목록 헤더에 둔다. 검색 조건이 아니라
+          지금 보고 있는 목록을 설명하는 정보이기 때문이다. 정렬 버튼은 위치만
+          옮기고 기존 클래스를 그대로 써서 디자인과 동작을 유지한다. */}
+      <AdminSection
+        className="report-list-section"
+        title={`총 ${filteredReports.length}건의 제보 목록`}
+        action={(
           <div className="report-filter__sort" role="group" aria-label="제보 정렬">
             {Object.entries(sortOrderLabels).map(([value, label]) => (
               <button
@@ -316,11 +323,8 @@ export function ReportListPage() {
               </button>
             ))}
           </div>
-        </div>
-
-      </form>
-
-      <AdminSection title="제보 목록">
+        )}
+      >
         {isLoading ? (
           <p role="status">제보 목록을 불러오는 중입니다...</p>
         ) : loadError ? (
@@ -335,13 +339,13 @@ export function ReportListPage() {
         ) : (
           <div className="table-wrap">
             <table className="admin-table">
-              <thead><tr><th>제보 ID</th><th>위치</th><th>카테고리</th><th>위험도</th><th>제보 시간</th><th>AI 분석 상태</th><th>담당자</th><th>처리 상태</th></tr></thead>
+              <thead><tr><th>제보 ID</th><th>위치</th><th>카테고리</th><th>위험도</th><th>제보 시간</th><th>담당자</th><th>처리 상태</th></tr></thead>
               <tbody>
                 {filteredReports.map((report) => (
                   <tr key={report.id} className="clickable-row" onClick={() => navigate(createReportDetailPath(report.id))}>
                     <td>#{report.id}</td><td>{report.location}</td><td>{reportTypeLabels[report.type]}</td>
                     <td><RiskBadge value={report.riskLevel} score={report.riskScore} /></td>
-                    <td>{formatAdminTimestamp(report.reportedAt) ?? '정보 없음'}</td><td>{report.aiAnalysisStatus ? aiAnalysisStatusLabels[report.aiAnalysisStatus] : '-'}</td><td>{report.managerName}</td>
+                    <td>{formatAdminTimestamp(report.reportedAt) ?? '정보 없음'}</td><td>{report.managerName}</td>
                     <td><StatusBadge tone={getReportStatusTone(report.status)}>{reportStatusLabels[report.status]}</StatusBadge></td>
                   </tr>
                 ))}

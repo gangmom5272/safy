@@ -32,7 +32,14 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
 
 export function getSubcategoryLabel(value: string | null | undefined) {
   if (!value) return null
-  return SUBCATEGORY_LABELS[value] ?? value
+
+  const label = SUBCATEGORY_LABELS[value]
+  if (label) return label
+
+  // 백엔드에 세부 분류가 추가돼도 영문 enum 이 화면에 그대로 나가면 안 된다.
+  // 매핑이 빠졌다는 사실은 개발 중에만 로그로 남긴다.
+  if (import.meta.env?.DEV) console.warn('세부 분류 한글 라벨이 없습니다.', value)
+  return '기타'
 }
 
 // RiskAssessmentStatus(COMPLETED·NOT_ASSESSABLE) + 결과가 없을 때의 NOT_STARTED.

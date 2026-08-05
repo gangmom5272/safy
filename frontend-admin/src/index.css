@@ -2597,18 +2597,10 @@ button:disabled {
   accent-color: var(--accent);
 }
 
-.report-filter__result-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.report-filter__result-bar > strong {
-  color: var(--text);
-  font-size: 14px;
+/* 정렬 버튼이 목록 헤더로 옮겨졌다. 제목이 길어지면 같은 줄에 못 들어가므로
+   이 화면에서만 줄바꿈을 허용한다. 다른 화면의 섹션 헤더는 그대로 둔다. */
+.report-list-section .admin-section__heading {
+  flex-wrap: wrap;
 }
 
 .report-filter__sort {
@@ -3233,7 +3225,6 @@ button:disabled {
   }
   .report-filter__search-field { grid-column: auto; }
   .report-filter__basic > button { width: 100%; }
-  .report-filter__result-bar { align-items: stretch; flex-direction: column; }
   .report-filter__sort {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

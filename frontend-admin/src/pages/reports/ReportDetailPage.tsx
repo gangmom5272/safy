@@ -9,7 +9,7 @@ import { ROUTE_PATHS } from '../../router/paths'
 import type { AdminReport, ReportStatus } from '../../types/admin'
 import { formatAdminDate } from '../../utils/adminDate'
 import { getReportStatusTone } from '../../utils/adminStatus'
-import { getAnalysisStatusLabel } from '../../utils/reportLabels'
+import { getAnalysisStatusLabel, getSubcategoryLabel } from '../../utils/reportLabels'
 import {
   detailToAdminReport,
   getOperatorReportDetail,
@@ -99,6 +99,12 @@ export function ReportDetailPage() {
   // 상세 조회 응답에는 위험도가 없다. 점수는 분석 API(최종 위험 점수)에서만 온다.
   const riskScore = analysis?.riskScore ?? report.riskScore
   const summary = analysis?.summary ?? report.aiSummary
+  // '내 처리 결과'와 '제보 상태'를 한 줄로 합친 값이다. 내 배정이 끝났으면 그 결과가
+  // 더 정확하다(재배정으로 넘긴 건은 제보 상태만 보면 '확인 중'으로 보여 내가 넘겼다는
+  // 사실이 사라진다). 아직 끝나지 않았으면 결과가 없으므로 제보 상태를 쓴다.
+  // 목록의 '처리 상태' 열도 같은 기준(reportApi 의 toAssignmentOutcome)이라 두 화면
+  // 값이 어긋나지 않는다.
+  const handlingOutcome = myOutcome ?? report.status
 
   return (
     <section className="page-stack report-detail-page">
@@ -140,7 +146,9 @@ export function ReportDetailPage() {
             <div className="report-summary__identity"><dt>제보 형태</dt><dd>{report.isLive ? '라이브' : '이미지'}</dd></div>
             <div className="report-summary__identity">
               <dt>카테고리</dt>
-              <dd>{[reportTypeLabels[report.type], report.subcategory].filter(Boolean).join(' · ')}</dd>
+              {/* 세부 분류는 서버가 enum 이름(OTHER_SITUATION 등)을 그대로 주므로
+                  반드시 한글 라벨로 바꿔서 붙인다. 세부 분류가 없으면 상위만 남긴다. */}
+              <dd>{[reportTypeLabels[report.type], getSubcategoryLabel(report.subcategory)].filter(Boolean).join(' · ')}</dd>
             </div>
             <div className="report-summary__time"><dt>제보 시간</dt><dd>{formatAdminDate(report.reportedAt)}</dd></div>
             <div className="report-summary__time">
@@ -155,13 +163,10 @@ export function ReportDetailPage() {
             </div>
             <div className="report-summary__group">
               <dt>처리 정보</dt>
-              {myOutcome && (
-                <dd>
-                  <span>내 처리 결과</span>
-                  <StatusBadge tone={getReportStatusTone(myOutcome)}>{reportStatusLabels[myOutcome]}</StatusBadge>
-                </dd>
-              )}
-              <dd><span>제보 상태</span><StatusBadge tone={getReportStatusTone(report.status)}>{reportStatusLabels[report.status]}</StatusBadge></dd>
+              <dd>
+                <span>처리 결과</span>
+                <StatusBadge tone={getReportStatusTone(handlingOutcome)}>{reportStatusLabels[handlingOutcome]}</StatusBadge>
+              </dd>
               <dd><span>관제센터</span><strong>{report.controlCenterName || '미배정'}</strong></dd>
             </div>
             <div className="report-summary__wide"><dt>주소</dt><dd>{report.location}</dd></div>
