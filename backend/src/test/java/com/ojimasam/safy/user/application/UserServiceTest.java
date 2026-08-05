@@ -38,7 +38,7 @@ class UserServiceTest {
 		when(membership.getControlCenter()).thenReturn(controlCenter);
 		when(controlCenter.getName()).thenReturn("강남구 재난안전상황실");
 		UserService service = new UserService(userRepository, refreshTokenStore, membershipRepository,
-				mock(SocialAccountRepository.class));
+				mock(SocialAccountRepository.class), mock(ProfileImageService.class));
 
 		var response = service.me(15L);
 
@@ -65,7 +65,7 @@ class UserServiceTest {
 		when(socialAccount.getEmail()).thenReturn("citizen@example.com");
 		when(socialAccount.getProviderProfileImageUrl()).thenReturn("http://k.kakaocdn.net/dn/profile.jpg");
 		UserService service = new UserService(userRepository, mock(RefreshTokenStore.class), membershipRepository,
-				socialAccountRepository);
+				socialAccountRepository, mock(ProfileImageService.class));
 
 		var response = service.me(15L);
 
@@ -87,7 +87,7 @@ class UserServiceTest {
 		when(membershipRepository.findByUserIdAndIsPrimaryTrue(15L)).thenReturn(Optional.empty());
 		when(socialAccountRepository.findFirstByUserIdOrderByLastLoginAtDesc(15L)).thenReturn(Optional.empty());
 		UserService service = new UserService(userRepository, mock(RefreshTokenStore.class), membershipRepository,
-				socialAccountRepository);
+				socialAccountRepository, mock(ProfileImageService.class));
 
 		var response = service.me(15L);
 
@@ -95,10 +95,37 @@ class UserServiceTest {
 		assertThat(response.profileImageUrl()).isNull();
 	}
 
+	// 직접 올린 사진이 있으면 소셜 사진 대신 그것을 준다. 되돌리기 전까지는 이 값이 이긴다.
+	@Test
+	void mePrefersUploadedProfileImageOverSocialImage() {
+		UserRepository userRepository = mock(UserRepository.class);
+		AdminCenterMembershipRepository membershipRepository = mock(AdminCenterMembershipRepository.class);
+		SocialAccountRepository socialAccountRepository = mock(SocialAccountRepository.class);
+		ProfileImageService profileImageService = mock(ProfileImageService.class);
+		User user = mock(User.class);
+		SocialAccount socialAccount = mock(SocialAccount.class);
+		when(userRepository.findById(15L)).thenReturn(Optional.of(user));
+		when(user.getId()).thenReturn(15L);
+		when(user.getRole()).thenReturn(UserRole.CITIZEN);
+		when(user.getStatus()).thenReturn(UserStatus.ACTIVE);
+		when(membershipRepository.findByUserIdAndIsPrimaryTrue(15L)).thenReturn(Optional.empty());
+		when(socialAccountRepository.findFirstByUserIdOrderByLastLoginAtDesc(15L))
+				.thenReturn(Optional.of(socialAccount));
+		when(socialAccount.getProviderProfileImageUrl()).thenReturn("https://k.kakaocdn.net/dn/profile.jpg");
+		when(profileImageService.findUploadedImageUrl(15L)).thenReturn("https://minio.example.com/profile/15/current");
+		UserService service = new UserService(userRepository, mock(RefreshTokenStore.class), membershipRepository,
+				socialAccountRepository, profileImageService);
+
+		var response = service.me(15L);
+
+		assertThat(response.profileImageUrl()).isEqualTo("https://minio.example.com/profile/15/current");
+	}
+
 	@Test
 	void withdrawalInvalidatesAccessAndAllRefreshTokens() {
 		UserRepository userRepository = mock(UserRepository.class);
 		RefreshTokenStore refreshTokenStore = mock(RefreshTokenStore.class);
+		ProfileImageService profileImageService = mock(ProfileImageService.class);
 		User user = mock(User.class);
 		when(userRepository.findById(15L)).thenReturn(Optional.of(user));
 		when(user.getRole()).thenReturn(UserRole.CITIZEN);
@@ -106,7 +133,8 @@ class UserServiceTest {
 				userRepository,
 				refreshTokenStore,
 				mock(AdminCenterMembershipRepository.class),
-				mock(SocialAccountRepository.class)
+				mock(SocialAccountRepository.class),
+				profileImageService
 		);
 
 		service.withdraw(15L);
@@ -114,5 +142,7 @@ class UserServiceTest {
 		verify(user).changeStatus(UserStatus.WITHDRAWN);
 		verify(user).invalidateTokens();
 		verify(refreshTokenStore).revokeAll(15L);
+		// 프로필 사진은 DB 가 아니라 MinIO 에만 있으므로 탈퇴에서 함께 지워야 남지 않는다.
+		verify(profileImageService).deleteUploadedImage(15L);
 	}
 }

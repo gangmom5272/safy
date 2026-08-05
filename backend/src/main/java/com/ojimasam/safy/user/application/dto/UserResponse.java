@@ -15,19 +15,22 @@ public record UserResponse(
 		@Schema(allowableValues = {"ACTIVE", "SUSPENDED", "WITHDRAWN"}) String status,
 		@Schema(example = "23", nullable = true) Long controlCenterId,
 		@Schema(example = "강남구 재난안전상황실", nullable = true) String controlCenterName,
-		// 소셜 로그인으로 받은 값이라 회원이 앱에서 바꿀 수 없다. 로그인마다 갱신된다.
-		// 소셜 계정이 없는 관리자 계정은 둘 다 null 이다.
+		// 이메일은 소셜 로그인으로 받은 값이라 회원이 앱에서 바꿀 수 없다. 로그인마다 갱신된다.
+		// 소셜 계정이 없는 관리자 계정은 null 이다.
 		@Schema(example = "citizen@example.com", nullable = true) String email,
+		// 회원이 직접 올린 사진이 있으면 그것을, 없으면 소셜 로그인 사진을 준다.
 		@Schema(example = "https://k.kakaocdn.net/dn/profile.jpg", nullable = true) String profileImageUrl,
 		Instant createdAt,
 		Instant updatedAt) {
-	public static UserResponse from(User user, AdminCenterMembership membership, SocialAccount socialAccount) {
+	public static UserResponse from(User user, AdminCenterMembership membership, SocialAccount socialAccount,
+			String uploadedProfileImageUrl) {
 		return new UserResponse(user.getId(), user.getDisplayName(), user.getRole().name(),
 				user.getStatus().name(),
 				membership == null ? null : membership.getControlCenterId(),
 				membership == null ? null : membership.getControlCenter().getName(),
 				socialAccount == null ? null : socialAccount.getEmail(),
-				secureUrl(socialAccount == null ? null : socialAccount.getProviderProfileImageUrl()),
+				uploadedProfileImageUrl != null ? uploadedProfileImageUrl
+						: secureUrl(socialAccount == null ? null : socialAccount.getProviderProfileImageUrl()),
 				user.getCreatedAt(), user.getUpdatedAt());
 	}
 

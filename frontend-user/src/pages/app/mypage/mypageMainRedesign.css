@@ -350,6 +350,50 @@
   font-size: 28px;
 }
 
+.profile-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.profile-edit-form .profile-photo-button,
+.profile-edit-form .profile-photo-reset {
+  display: inline-flex;
+  min-height: 34px;
+  padding: 0 13px;
+  align-items: center;
+  border: 1px solid #c8d8ef;
+  border-radius: 999px;
+  color: #004aad;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-edit-form .profile-photo-reset {
+  border-color: #dce1e8;
+  color: #6b7280;
+}
+
+/* 업로드 중에는 파일 입력이 disabled 라 라벨을 눌러도 열리지 않는다. 그 상태를 눈에 보이게 한다. */
+.profile-edit-form .profile-photo-button.disabled,
+.profile-edit-form .profile-photo-reset:disabled {
+  border-color: #e5e7eb;
+  color: #9ca3af;
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.profile-photo-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .profile-edit-form label {
   gap: 7px;
   color: #374151;

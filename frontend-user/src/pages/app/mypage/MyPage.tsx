@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
-import { cancelMyReport, getMe, getMyReport, getMyReports, getNotificationSettings, getReportSummary, logout, updateMyProfile, updateNotificationSettings } from './mypageApi'
+import { cancelMyReport, getMe, getMyReport, getMyReports, getNotificationSettings, getReportSummary, logout, PROFILE_IMAGE_CONTENT_TYPES, resetProfileImage, updateMyProfile, updateNotificationSettings, uploadProfileImage } from './mypageApi'
 import { mockInquiries, mockNotificationSettings, mockReports, mockSummary, mockUser, USE_MYPAGE_MOCK_FALLBACK } from './mypageMock'
 import type { Inquiry, MyPageView, MyReport, Notice, NotificationSettingsData, ReportSummary, UserProfile } from './mypageTypes'
 import { useAuthStore } from '../../../stores/authStore'
@@ -130,7 +130,7 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
   return <div className="mypage-shell">{view === 'MAIN' && <PageHeader title="마이페이지" onBack={() => navigate('/app', { replace: true })} />}{message && <p className="mypage-message" role="status">{message}</p>}
     {view === 'MAIN' && <Main user={user} summary={summary} reports={reports} onGo={(next) => { if (next === 'REPORTS') navigate('/app/mypage/reports'); else go(next) }} onLogout={handleLogout} />}
     {view === 'SETTINGS' && <Settings onBack={back} onGo={go} />}
-    {view === 'PROFILE_EDIT' && <ProfileEdit user={user} onBack={back} onSaved={(nextUser) => { setUser(nextUser); setMessage('프로필이 수정되었습니다.'); setHistory([]); setView('MAIN') }} />}
+    {view === 'PROFILE_EDIT' && <ProfileEdit user={user} onBack={back} onUserChanged={setUser} onSaved={(nextUser) => { setUser(nextUser); setMessage('프로필이 수정되었습니다.'); setHistory([]); setView('MAIN') }} />}
     {view === 'ACCOUNT' && <Account user={user} onBack={back} onLogout={handleLogout} />}
     {view === 'PRIVACY' && <Privacy onBack={back} />}
     {view === 'NOTIFICATION_SETTINGS' && <NotificationPreferences settings={notificationSettings} usingMock={notificationUsingMock} onBack={back} onChange={setNotificationSettings} />}
@@ -167,18 +167,51 @@ function Settings({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageVie
 // 입력 자체를 20자로 제한하고, 여기서는 빈 값만 막는다.
 const PROFILE_NAME_MAX_LENGTH = 20
 
-// 이 화면에서 회원이 바꿀 수 있는 값은 PATCH /users/me 의 displayName 하나뿐이다.
-// 이메일과 사진은 social_accounts 에 저장된 소셜 로그인 값이라 수정 API 가 없다.
-// 로그인마다 갱신되므로 읽기 전용으로 보여주기만 한다.
-function ProfileEdit({ user, onBack, onSaved }: { user: UserProfile; onBack: () => void; onSaved: (user: UserProfile) => void }) {
+// 이름은 저장 버튼으로 PATCH /users/me 에 보낸다. 사진은 MinIO 로 직접 업로드하는
+// 별도 흐름이라 선택·되돌리기 즉시 반영하고, 성공 후 서버 값을 다시 받아 화면에 쓴다.
+// 미리보기를 만들어 두면 저장 전까지 서버 상태와 다른 사진이 보여 이전 QA 와 같은 혼동이 된다.
+// 이메일은 소셜 로그인 값이라 수정 API 가 없어 읽기 전용이다.
+function ProfileEdit({ user, onBack, onSaved, onUserChanged }: { user: UserProfile; onBack: () => void; onSaved: (user: UserProfile) => void; onUserChanged: (user: UserProfile) => void }) {
   const [name, setName] = useState(user.nickname)
   const [nameTouched, setNameTouched] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [imageBusy, setImageBusy] = useState(false)
+  const [imageError, setImageError] = useState('')
   const trimmedName = name.trim()
   const validName = trimmedName.length > 0
   const nameChanged = trimmedName !== user.nickname
   const canSave = !saving && nameChanged && validName
+
+  // 업로드와 되돌리기가 같은 순서를 쓴다. 성공하면 getMe 로 새 조회 URL 을 받아 아바타에
+  // 반영한다. presigned URL 은 만료되므로 프론트가 URL 을 만들어 쓸 수는 없다.
+  const applyImageChange = async (change: () => Promise<unknown>, failureMessage: string) => {
+    setImageBusy(true)
+    setImageError('')
+    try {
+      await change()
+      onUserChanged(await getMe())
+    } catch (requestError) {
+      console.error(failureMessage, requestError)
+      setImageError(requestError instanceof Error ? requestError.message : failureMessage)
+    } finally {
+      setImageBusy(false)
+    }
+  }
+
+  const selectImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    // 같은 파일을 다시 고를 수 있게 비워 둔다. 업로드가 실패했을 때 재시도가 막히지 않는다.
+    event.target.value = ''
+    if (!file) return
+    if (!PROFILE_IMAGE_CONTENT_TYPES.includes(file.type)) { setImageError('jpg, jpeg, png, webp 파일만 등록할 수 있습니다.'); return }
+    void applyImageChange(() => uploadProfileImage(file), '프로필 사진을 등록하지 못했습니다.')
+  }
+
+  const resetImage = () => {
+    if (!window.confirm('프로필 사진을 기본 사진으로 되돌릴까요?')) return
+    void applyImageChange(() => resetProfileImage(), '프로필 사진을 되돌리지 못했습니다.')
+  }
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -197,7 +230,7 @@ function ProfileEdit({ user, onBack, onSaved }: { user: UserProfile; onBack: () 
     }
   }
 
-  return <><PageHeader title="프로필 수정" onBack={onBack} className="profile-edit-header" /><form className="mypage-form account-form profile-edit-form" onSubmit={(event) => void submit(event)}><div className="profile-edit-avatar"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0, 1)}</div></div>{error && <p className="profile-edit-error" role="alert">{error}</p>}<div className="profile-edit-field"><label htmlFor="profile-name">이름</label><input id="profile-name" value={name} maxLength={PROFILE_NAME_MAX_LENGTH} placeholder="이름을 입력해주세요." onBlur={() => setNameTouched(true)} onChange={(event) => setName(event.target.value)} />{nameTouched && !validName && <small className="profile-field-error">이름을 입력해주세요.</small>}</div>{user.email && <div className="profile-edit-field"><label htmlFor="profile-email">이메일</label><input id="profile-email" value={user.email} readOnly /></div>}<button type="submit" disabled={!canSave}>{saving ? '저장 중...' : '저장'}</button></form></>
+  return <><PageHeader title="프로필 수정" onBack={onBack} className="profile-edit-header" /><form className="mypage-form account-form profile-edit-form" onSubmit={(event) => void submit(event)}><div className="profile-edit-avatar"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0, 1)}</div><div className="profile-photo-actions"><label className={imageBusy ? 'profile-photo-button disabled' : 'profile-photo-button'}>{imageBusy ? '적용 중...' : '사진 변경'}<input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" disabled={imageBusy} onChange={selectImage} /></label><button type="button" className="profile-photo-reset" disabled={imageBusy} onClick={resetImage}>기본 사진으로</button></div>{imageError && <small className="profile-field-error">{imageError}</small>}</div>{error && <p className="profile-edit-error" role="alert">{error}</p>}<div className="profile-edit-field"><label htmlFor="profile-name">이름</label><input id="profile-name" value={name} maxLength={PROFILE_NAME_MAX_LENGTH} placeholder="이름을 입력해주세요." onBlur={() => setNameTouched(true)} onChange={(event) => setName(event.target.value)} />{nameTouched && !validName && <small className="profile-field-error">이름을 입력해주세요.</small>}</div>{user.email && <div className="profile-edit-field"><label htmlFor="profile-email">이메일</label><input id="profile-email" value={user.email} readOnly /></div>}<button type="submit" disabled={!canSave}>{saving ? '저장 중...' : '저장'}</button></form></>
 }
 function Account({ user, onBack, onLogout }: { user: UserProfile; onBack: () => void; onLogout: () => void }) { const [showWithdrawal, setShowWithdrawal] = useState(false); return <><PageHeader title="계정 관리" onBack={onBack} className="account-header" /><section className="account-menu"><button type="button"><span>계정 정보</span>{user.email && <small>{user.email}</small>}<b aria-hidden="true">›</b></button><button type="button" onClick={onLogout}><span>로그아웃</span><b aria-hidden="true">›</b></button></section><button type="button" className="account-withdrawal" onClick={() => setShowWithdrawal(true)}>회원 탈퇴</button>{showWithdrawal && <div className="account-modal-backdrop" role="presentation"><section className="account-modal" role="dialog" aria-modal="true" aria-labelledby="withdrawal-title"><h2 id="withdrawal-title">회원 탈퇴</h2><p>회원 탈퇴 시 계정 정보가 삭제될 수 있습니다. 계속하시겠어요?</p><div><button type="button" onClick={() => setShowWithdrawal(false)}>취소</button><button type="button" className="danger" onClick={() => setShowWithdrawal(false)}>탈퇴하기</button></div></section></div>}</> }
 
