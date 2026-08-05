@@ -1295,10 +1295,10 @@ button:focus-visible,
 .report-type-page .report-classification-card,
 .report-type-page .report-content-card {
   min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
 }
 
 .report-type-page .report-classification-card,

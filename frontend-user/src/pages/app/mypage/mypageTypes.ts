@@ -8,7 +8,7 @@ export type ReportStatus = 'RECEIVED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 
 // mypageUtils 의 getReportMediaTypeLabel·getReportCategoryLabel 에서 붙인다.
 export type ReportTypeCode = 'IMAGE' | 'LIVE'
 export type ReportCategoryCode = 'CROWD_CONGESTION' | 'ACCIDENT_RISK' | 'FLOOD_WEATHER' | 'FACILITY_ROAD' | 'OTHER'
-export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 'SUPPORT' | 'FAQ' | 'NOTICES' | 'NOTICE_DETAIL' | 'INQUIRY_FORM' | 'INQUIRIES' | 'INQUIRY_DETAIL' | 'GUIDE' | 'SETTINGS' | 'PROFILE_EDIT' | 'ACCOUNT' | 'PRIVACY' | 'NOTIFICATION_SETTINGS'
+export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 'SUPPORT' | 'FAQ' | 'NOTICES' | 'NOTICE_DETAIL' | 'INQUIRY_FORM' | 'INQUIRIES' | 'INQUIRY_DETAIL' | 'GUIDE' | 'SETTINGS' | 'PROFILE_EDIT' | 'ACCOUNT' | 'PRIVACY' | 'PRIVACY_DETAIL' | 'NOTIFICATION_SETTINGS'
 // email·profileImageUrl 은 소셜 계정에서 온 값이라 없을 수 있다. 값이 없을 때 빈 문자열로
 // 채우면 화면에 빈 줄이 남으므로 null 을 그대로 둔다.
 export interface UserProfile { id: number; nickname: string; email: string | null; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }

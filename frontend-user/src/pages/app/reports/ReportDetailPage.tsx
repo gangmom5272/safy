@@ -70,7 +70,7 @@ export function ReportDetailPage() {
       <div className="situation-page">
         <ErrorState message="해당 제보 정보를 찾을 수 없습니다." />
         <button className="inline-action-button" type="button" onClick={() => navigate('/app/situations')}>
-          상황 확인으로 돌아가기
+          실시간 지도로 돌아가기
         </button>
       </div>
     )
@@ -89,7 +89,7 @@ export function ReportDetailPage() {
             onAction={() => void retryReport()}
           />
           <button className="inline-action-button" type="button" onClick={() => navigate('/app/situations')}>
-            상황 확인으로 돌아가기
+            실시간 지도로 돌아가기
           </button>
         </>
       ) : null}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { startRealtimeEvents, subscribeToRealtimeSignals } from '../api/realtime'
+import { BottomNav } from '../components/common/BottomNav'
 import { startLocationPresence } from '../pages/app/notifications/locationPresence'
 import { getUnreadNotificationCount } from '../pages/app/notifications/notificationsApi'
 import { NotificationUnreadContext, NOTIFICATIONS_UPDATED_EVENT } from '../pages/app/notifications/notificationUnread'
@@ -38,6 +39,12 @@ export function AppLayout() {
   const isSituationsMain = pathname === '/app/situations'
   const isReportDetail = pathname.startsWith('/app/situations/reports/') || pathname.startsWith('/app/reports/')
   const isReportCreate = pathname === '/app/report'
+  const showBottomNav =
+    pathname === '/app/situations' ||
+    pathname === '/app/report' ||
+    pathname === '/app/notifications' ||
+    pathname === '/app/mypage' ||
+    pathname === '/app/mypage/settings'
 
   return (
     <NotificationUnreadContext.Provider value={unreadCount}>
@@ -46,9 +53,10 @@ export function AppLayout() {
         <div className="app-brand"><strong>SAFY</strong><span>Safe Area For You</span></div>
         <NavLink className="app-header__notification" to="/app/notifications" aria-label={unreadCount ? `알림, 읽지 않은 알림 ${unreadCount}개` : '알림'}><NotificationIcon />{unreadCount > 0 && <span className="notification-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}</NavLink>
       </header>}
-      <main className={`app-main ${isHome ? 'app-main--landing' : ''}`}>
+      <main className={`app-main ${isHome ? 'app-main--landing' : ''} ${showBottomNav ? 'app-main--with-nav' : ''}`}>
         <Outlet />
       </main>
+      {showBottomNav && <BottomNav />}
     </div>
     </NotificationUnreadContext.Provider>
   )
