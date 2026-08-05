@@ -415,6 +415,25 @@
   font-size: 11px;
 }
 
+/* 지난 단계는 톤을 낮추고 현재 단계만 진하게 둔다. 지난 단계도 점과 선은 남아 있어
+   어디까지 진행됐는지 그대로 읽힌다. */
+.report-history-list li.is-done b {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.report-history-list li.is-done::after {
+  background: #9db6d8;
+}
+
+.report-history-list li.is-current b {
+  font-weight: 700;
+}
+
+.report-history-list li.is-current::after {
+  box-shadow: 0 0 0 4px rgba(0, 74, 173, .15);
+}
+
 @media (max-width: 360px) {
   .report-detail-card {
     padding: 17px;

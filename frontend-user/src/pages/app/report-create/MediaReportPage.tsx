@@ -6,6 +6,7 @@ import {
   DEFAULT_REPORT_CATEGORY,
   MAX_PHOTO_SIZE_BYTES,
   REPORT_CATEGORY_LABELS,
+  REPORT_METHOD_LABELS,
 } from './reportConstants'
 import type { ReportFormData } from './reportTypes'
 import { createReport } from './reportApi'
@@ -536,7 +537,7 @@ export function MediaReportPage({
 
   return (
     <section className="report-create-page report-media-page" aria-labelledby="media-report-title">
-      <PageHeader title="사진 제보" titleId="media-report-title" backLabel="제보 방식 선택으로 돌아가기" onBack={handleBack} />
+      <PageHeader title={REPORT_METHOD_LABELS.photo} titleId="media-report-title" backLabel="제보 방식 선택으로 돌아가기" onBack={handleBack} />
       <p className="report-media-intro">카메라로 현장을 촬영하거나 갤러리에서 사진을 선택해주세요.</p>
 
       <section className="report-create-card" aria-labelledby="media-summary-title">
@@ -660,7 +661,7 @@ export function MediaReportPage({
             disabled={!selectedPhotos.length || isSubmitting}
             onClick={requestPhotoSubmit}
           >
-            사진 제출하기
+            {REPORT_METHOD_LABELS.photo} 등록하기
           </button>
         </div>
       </section>
