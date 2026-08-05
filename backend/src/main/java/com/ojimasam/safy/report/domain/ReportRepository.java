@@ -44,17 +44,30 @@ public interface ReportRepository {
 			Instant cursor,
 			Pageable pageable
 	);
-	/** 시민 피드: 공개 상태만 조회한다. 처리 진행 상태는 따지지 않는다. */
-	List<Report> findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+	/**
+	 * 시민 피드: 공개 상태만 조회한다. 처리 진행 상태는 따지지 않는다.
+	 *
+	 * <p>{@code from} 은 최근 창의 시작이고 {@code cursor} 는 페이지 경계다. 둘 다
+	 * {@code reportedAt} 을 자르지만 역할이 달라 하나로 합치지 않는다.
+	 */
+	List<Report> findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
 			ReportPublicVisibility publicVisibility,
+			Instant from,
 			Instant cursor,
 			Pageable pageable
 	);
-	List<Report> findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+	List<Report> findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
 			Long administrativeAreaId,
 			ReportPublicVisibility publicVisibility,
+			Instant from,
 			Instant cursor,
 			Pageable pageable
+	);
+	/** 상황 요약의 '최근 제보' 수. 지도 마커와 같은 조건이어야 하므로 공개 + 최근 창으로 센다. */
+	long countByAdministrativeArea_IdAndPublicVisibilityAndReportedAtAfter(
+			Long administrativeAreaId,
+			ReportPublicVisibility publicVisibility,
+			Instant from
 	);
 	Optional<Report> findByIdAndPublicVisibility(Long id, ReportPublicVisibility publicVisibility);
 
@@ -69,11 +82,6 @@ public interface ReportRepository {
 	List<Report> findByGridCellCodeIsNotNullAndReportedAtBetween(Instant from, Instant to);
 
 	long countByAdministrativeArea_IdAndStatusIn(Long administrativeAreaId, Collection<ReportStatus> statuses);
-	long countByAdministrativeArea_IdAndTypeAndStatusIn(
-			Long administrativeAreaId,
-			ReportType type,
-			Collection<ReportStatus> statuses
-	);
 	long countByReporterId(Long reporterId);
 	long countByReporterIdAndStatusIn(Long reporterId, Collection<ReportStatus> statuses);
 	List<Long> findPendingRoutingIds(ReportRoutingStatus routingStatus, Instant dueAt, Pageable pageable);

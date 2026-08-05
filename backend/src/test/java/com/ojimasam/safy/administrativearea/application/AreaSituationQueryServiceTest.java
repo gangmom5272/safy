@@ -3,7 +3,6 @@ package com.ojimasam.safy.administrativearea.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
@@ -21,6 +20,8 @@ import com.ojimasam.safy.administrativearea.application.dto.AreaMapResponse;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeAreaRepository;
 import com.ojimasam.safy.administrativearea.domain.type.AdministrativeAreaStatus;
+import com.ojimasam.safy.place.domain.type.CongestionLevel;
+import com.ojimasam.safy.publicdata.application.dto.CongestionObservationView;
 import com.ojimasam.safy.report.application.PublicReportQueryService;
 import com.ojimasam.safy.report.application.ReportFeedQueryService;
 import com.ojimasam.safy.report.application.dto.PublicReportCursorResponse;
@@ -32,6 +33,7 @@ class AreaSituationQueryServiceTest {
 	@Mock AdministrativeAreaRepository administrativeAreaRepository;
 	@Mock ReportFeedQueryService reportFeedQueryService;
 	@Mock PublicReportQueryService publicReportQueryService;
+	@Mock AreaCongestionReader areaCongestionReader;
 
 	/** 지도에 실리는 제보 목록은 시민 화면용이므로 공개된 건만 담는 경로에서 와야 한다. */
 	@Test
@@ -46,29 +48,51 @@ class AreaSituationQueryServiceTest {
 		verify(publicReportQueryService).reportsByArea(7L, NOW, 20);
 	}
 
-	/** 위험도 집계는 공개 여부와 무관하게 진행 중인 제보 수를 센다. */
+	/** 혼잡도는 자치구 코드로 서울시 실시간 도시데이터를 읽어 온다. */
 	@Test
-	void statusCountsUnpublishedReportsToo() {
+	void statusTakesCongestionFromPublicCityData() {
+		CongestionObservationView congestion = new CongestionObservationView(
+				3L, "강남역", CongestionLevel.CROWDED, "사람이 많습니다.", 42000, 50000, NOW);
 		givenActiveArea();
-		when(reportFeedQueryService.countActiveReports(7L)).thenReturn(4L);
-		when(reportFeedQueryService.countActiveLiveReports(7L)).thenReturn(3L);
+		when(areaCongestionReader.peakOf("1168000000")).thenReturn(Optional.of(congestion));
 
 		var result = service().status(7L);
 
-		assertThat(result.activeReportCount()).isEqualTo(4L);
-		assertThat(result.liveReportCount()).isEqualTo(3L);
-		assertThat(result.riskLevel()).isEqualTo("HIGH");
-		verifyNoInteractions(publicReportQueryService);
+		assertThat(result.congestion()).isSameAs(congestion);
+	}
+
+	/** 121장소가 없는 자치구도 상황 요약은 열려야 하므로 혼잡도만 비워 응답한다. */
+	@Test
+	void statusLeavesCongestionEmptyWhenNoObservationExists() {
+		givenActiveArea();
+		when(areaCongestionReader.peakOf("1168000000")).thenReturn(Optional.empty());
+
+		var result = service().status(7L);
+
+		assertThat(result.congestion()).isNull();
+		assertThat(result.updatedAt()).isEqualTo(NOW);
+	}
+
+	/** 화면의 '최근 제보'는 지도 마커와 같아야 하므로 공개 피드 집계에서 온다. */
+	@Test
+	void statusTakesRecentReportCountFromPublicFeed() {
+		givenActiveArea();
+		when(publicReportQueryService.countRecentByArea(7L)).thenReturn(2L);
+
+		var result = service().status(7L);
+
+		assertThat(result.recentReportCount()).isEqualTo(2L);
 	}
 
 	private void givenActiveArea() {
 		AdministrativeArea area = mock(AdministrativeArea.class);
+		when(area.getCode()).thenReturn("1168000000");
 		when(administrativeAreaRepository.findByIdAndStatus(7L, AdministrativeAreaStatus.ACTIVE))
 				.thenReturn(Optional.of(area));
 	}
 
 	private AreaSituationQueryService service() {
 		return new AreaSituationQueryService(administrativeAreaRepository, reportFeedQueryService,
-				publicReportQueryService, Clock.fixed(NOW, ZoneOffset.UTC));
+				publicReportQueryService, areaCongestionReader, Clock.fixed(NOW, ZoneOffset.UTC));
 	}
 }

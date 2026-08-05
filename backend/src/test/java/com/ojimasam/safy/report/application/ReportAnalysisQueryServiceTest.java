@@ -69,6 +69,8 @@ class ReportAnalysisQueryServiceTest {
 		assertThat(response.riskLevel()).isEqualTo(RiskLevel.HIGH.jsonValue());
 		assertThat(response.riskScore()).isEqualTo(76.4);
 		assertThat(response.crowdCount()).isEqualTo(12);
+		// 화면의 혼잡도가 읽는 값이다. 빠지면 혼잡도가 '정보 없음'으로 떨어진다.
+		assertThat(response.peakLocalCongestionScore()).isEqualTo(82.0);
 		assertThat(response.completedFrameCount()).isEqualTo(2);
 		assertThat(response.invalidFrameCount()).isEqualTo(1);
 		assertThat(response.failedFrameCount()).isEqualTo(1);

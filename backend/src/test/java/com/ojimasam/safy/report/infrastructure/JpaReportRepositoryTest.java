@@ -3,6 +3,7 @@ package com.ojimasam.safy.report.infrastructure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -72,6 +73,7 @@ class JpaReportRepositoryTest {
 	@Test
 	void publicFeedReturnsOnlyPublishedReportsNewestFirst() {
 		Instant now = Instant.parse("2026-07-30T00:00:00Z");
+		Instant windowStart = now.minus(Duration.ofMinutes(30));
 		visibleReport("공개 오래된", ReportPublicVisibility.PUBLISHED, now.minusSeconds(600));
 		visibleReport("공개 최신", ReportPublicVisibility.PUBLISHED, now.minusSeconds(60));
 		visibleReport("미검수", ReportPublicVisibility.PENDING, now.minusSeconds(30));
@@ -79,28 +81,45 @@ class JpaReportRepositoryTest {
 		entityManager.flush();
 
 		List<Report> result = reportRepository
-				.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-						ReportPublicVisibility.PUBLISHED, now, PageRequest.of(0, 10));
+				.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						ReportPublicVisibility.PUBLISHED, windowStart, now, PageRequest.of(0, 10));
 
 		assertThat(result)
 				.extracting(Report::getDescription)
 				.containsExactly("공개 최신", "공개 오래된");
 	}
 
+	/** 창 밖 제보는 공개되어 있어도 시민 지도에 남지 않아야 한다. */
+	@Test
+	void publicFeedDropsPublishedReportsOlderThanTheWindow() {
+		Instant now = Instant.parse("2026-07-30T00:00:00Z");
+		Instant windowStart = now.minus(Duration.ofMinutes(30));
+		visibleReport("창 안", ReportPublicVisibility.PUBLISHED, now.minus(Duration.ofMinutes(29)));
+		visibleReport("창 밖", ReportPublicVisibility.PUBLISHED, now.minus(Duration.ofMinutes(31)));
+		entityManager.flush();
+
+		List<Report> result = reportRepository
+				.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						ReportPublicVisibility.PUBLISHED, windowStart, now, PageRequest.of(0, 10));
+
+		assertThat(result).extracting(Report::getDescription).containsExactly("창 안");
+	}
+
 	@Test
 	void publicFeedHonoursCursorAndPageSize() {
 		Instant now = Instant.parse("2026-07-30T00:00:00Z");
+		Instant windowStart = now.minus(Duration.ofMinutes(30));
 		visibleReport("첫째", ReportPublicVisibility.PUBLISHED, now.minusSeconds(300));
 		visibleReport("둘째", ReportPublicVisibility.PUBLISHED, now.minusSeconds(200));
 		visibleReport("셋째", ReportPublicVisibility.PUBLISHED, now.minusSeconds(100));
 		entityManager.flush();
 
 		List<Report> firstPage = reportRepository
-				.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-						ReportPublicVisibility.PUBLISHED, now, PageRequest.of(0, 2));
+				.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						ReportPublicVisibility.PUBLISHED, windowStart, now, PageRequest.of(0, 2));
 		List<Report> afterCursor = reportRepository
-				.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-						ReportPublicVisibility.PUBLISHED, now.minusSeconds(200), PageRequest.of(0, 2));
+				.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						ReportPublicVisibility.PUBLISHED, windowStart, now.minusSeconds(200), PageRequest.of(0, 2));
 
 		assertThat(firstPage).extracting(Report::getDescription).containsExactly("셋째", "둘째");
 		assertThat(afterCursor).extracting(Report::getDescription).containsExactly("첫째");

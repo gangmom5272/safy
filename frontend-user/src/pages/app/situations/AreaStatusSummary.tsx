@@ -1,7 +1,30 @@
 import { useState } from 'react'
 import { formatRelativeTime } from '../../../utils/dateTime'
 import { ErrorState, LoadingSkeleton } from './SituationStates'
-import { congestionLevelLabels, shortRiskLevelLabels, type AreaStatus } from './types'
+import { congestionLevelLabels, congestionLevelTones, type CongestionInfo, type AreaStatus } from './types'
+
+/**
+ * 서울시 실시간 도시데이터의 추정 인원 범위. 만 단위가 넘으면 자릿수를 세지 않아도
+ * 규모를 알 수 있게 '4.2만~5.0만'으로 줄인다.
+ */
+function formatPopulationRange(congestion: CongestionInfo) {
+  const { populationMin, populationMax } = congestion
+
+  if (populationMin === undefined && populationMax === undefined) {
+    return '정보 없음'
+  }
+
+  const format = (value: number) =>
+    value >= 10000 ? `${(value / 10000).toFixed(1)}만` : value.toLocaleString('ko-KR')
+
+  if (populationMin === undefined || populationMax === undefined) {
+    return `${format(populationMin ?? populationMax!)}명`
+  }
+
+  return populationMin === populationMax
+    ? `${format(populationMin)}명`
+    : `${format(populationMin)}~${format(populationMax)}명`
+}
 
 type AreaStatusSummaryProps = {
   status?: AreaStatus
@@ -56,12 +79,36 @@ export function AreaStatusSummary({ status, isLoading, error, onRefresh }: AreaS
       <div className="area-status-content">
         {isLoading && !status ? <LoadingSkeleton /> : null}
         {!isLoading && error && !status ? <ErrorState message="지역 상황 요약을 불러오지 못했습니다." actionLabel="새로고침" onAction={() => void refreshStatus()} /> : null}
-        {status ? <div className="status-grid">
-          {/* 라벨이 '현재 위험도'이므로 값에는 단계만 남긴다('위험도 높음' → '높음'). */}
-          <StatusItem label="현재 위험도" value={shortRiskLevelLabels[status.riskLevel]} tone={status.riskLevel} />
-          <StatusItem label="혼잡 단계" value={congestionLevelLabels[status.congestionLevel]} />
-          <StatusItem label="최근 제보" value={`${status.recentReportCount}건`} />
-        </div> : null}
+        {status ? <>
+          <div className="status-grid">
+            <StatusItem
+              label="실시간 인구"
+              value={status.congestion ? formatPopulationRange(status.congestion) : '정보 없음'}
+            />
+            <StatusItem
+              label="혼잡 단계"
+              value={status.congestion ? congestionLevelLabels[status.congestion.level] : '정보 없음'}
+              tone={status.congestion ? congestionLevelTones[status.congestion.level] : undefined}
+            />
+            <StatusItem label="최근 제보" value={`${status.recentReportCount}건`} />
+          </div>
+          {/* 어느 장소 기준인지, 언제 관측된 값인지 밝혀야 한다. 자치구 전체 인구가 아니라
+              그 구에서 가장 혼잡한 장소 하나의 값이고, 위의 '마지막 갱신'은 조회 시각이라
+              관측 시각과 다르다. */}
+          <p className="area-status-source">
+            {status.congestion
+              ? [
+                  `${status.congestion.placeName} 기준`,
+                  '서울시 실시간 도시데이터',
+                  status.congestion.observedAt
+                    ? `${formatRelativeTime(status.congestion.observedAt)} 관측`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : '이 지역에는 서울시 실시간 도시데이터 관측 지점이 없습니다.'}
+          </p>
+        </> : null}
       </div>
     </section>
   )

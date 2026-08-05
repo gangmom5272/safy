@@ -28,10 +28,20 @@ import com.ojimasam.safy.report.domain.type.ReportPublicVisibility;
  * <p>라이브 세션 저장소를 일부러 주입받지 않는다. 시민 응답에 스트림 정보가 섞이는 것을 DTO 필드
  * 관리가 아니라 의존성 부재로 막기 위해서다. 같은 이유로 원본 이미지가 아닌
  * {@code representativeBlurAsset}(블러 파생본)만 presign 한다.
+ *
+ * <p>목록은 {@link #RECENT_WINDOW} 안에 접수된 제보만 담는다. 지도 마커와 상황 요약의
+ * '최근 제보' 수가 같은 조건을 쓰도록 창을 여기 한 곳에 둔다. 상세({@link #report})는
+ * 창을 적용하지 않는다 — 마커를 누른 뒤 30분이 지나도 열려 있어야 한다.
  */
 @Service
 @Transactional(readOnly = true)
 public class PublicReportQueryService {
+	/**
+	 * 시민에게 '지금 상황'으로 보여줄 최근 창. 자르는 기준은 {@code reportedAt} 이다.
+	 * 담당자 종료 시각으로 자르면 두 시간 전 제보가 방금 종료됐다는 이유로 최근 제보가 된다.
+	 */
+	public static final Duration RECENT_WINDOW = Duration.ofMinutes(30);
+
 	private static final Duration IMAGE_URL_EXPIRY = Duration.ofMinutes(10);
 	private static final Instant MAX_CURSOR = Instant.parse("9999-12-31T23:59:59.999999Z");
 
@@ -55,23 +65,35 @@ public class PublicReportQueryService {
 	}
 
 	public PublicReportCursorResponse reports(Instant cursor, int size) {
-		List<Report> reports = reportRepository.findByPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
-				ReportPublicVisibility.PUBLISHED,
-				cursorOrMax(cursor),
-				PageRequest.of(0, checkedPageSize(size) + 1)
-		);
+		List<Report> reports = reportRepository
+				.findByPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+						ReportPublicVisibility.PUBLISHED,
+						recentWindowStart(),
+						cursorOrMax(cursor),
+						PageRequest.of(0, checkedPageSize(size) + 1)
+				);
 		return cursorResponse(reports, size);
 	}
 
 	public PublicReportCursorResponse reportsByArea(Long areaId, Instant cursor, int size) {
 		List<Report> reports = reportRepository
-				.findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtBeforeOrderByReportedAtDescIdDesc(
+				.findByAdministrativeArea_IdAndPublicVisibilityAndReportedAtAfterAndReportedAtBeforeOrderByReportedAtDescIdDesc(
 						areaId,
 						ReportPublicVisibility.PUBLISHED,
+						recentWindowStart(),
 						cursorOrMax(cursor),
 						PageRequest.of(0, checkedPageSize(size) + 1)
 				);
 		return cursorResponse(reports, size);
+	}
+
+	/** 지도 마커로 보이는 제보 수. {@link #reportsByArea} 와 같은 조건을 센다. */
+	public long countRecentByArea(Long areaId) {
+		return reportRepository.countByAdministrativeArea_IdAndPublicVisibilityAndReportedAtAfter(
+				areaId,
+				ReportPublicVisibility.PUBLISHED,
+				recentWindowStart()
+		);
 	}
 
 	/** 미공개 제보는 404 로 감춘다. 403 이면 "존재하지만 내려갔다"를 알려주는 셈이 된다. */
@@ -104,6 +126,10 @@ public class PublicReportQueryService {
 				? mediaObjectStorage.createPresignedGetUrl(asset.getBucketName(), asset.getObjectKey(), IMAGE_URL_EXPIRY)
 				: null;
 		return PublicReportView.of(report, imageUrl, imageUrl == null ? null : expiresAt);
+	}
+
+	private Instant recentWindowStart() {
+		return clock.instant().minus(RECENT_WINDOW);
 	}
 
 	private Instant cursorOrMax(Instant cursor) {
