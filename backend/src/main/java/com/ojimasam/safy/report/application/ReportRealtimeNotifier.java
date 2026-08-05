@@ -23,6 +23,14 @@ public class ReportRealtimeNotifier {
 				assignment.getReport().getId(), null, null);
 	}
 
+	public void reportReceived(Long reportId, Long reporterId) {
+		eventService.record(reporterId, RealtimeEventType.REPORT_RECEIVED, reportId, null, null);
+	}
+
+	public void reportInProgress(Long reportId, Long reporterId) {
+		eventService.recordOncePerReport(reporterId, RealtimeEventType.REPORT_IN_PROGRESS, reportId);
+	}
+
 	public void imageReady(Long reportId, Long mediaAssetId) {
 		notifyAssignedOperator(RealtimeEventType.IMAGE_READY, reportId, mediaAssetId.toString());
 	}

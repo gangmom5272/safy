@@ -1,0 +1,47 @@
+.area-request-page__description {
+  margin: 0 0 20px;
+  color: var(--text-muted);
+}
+
+.area-request-form {
+  display: grid;
+  gap: 18px;
+  max-width: 680px;
+}
+
+.area-request-form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.area-request-form input,
+.area-request-form select,
+.area-request-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.area-request-form textarea {
+  resize: vertical;
+}
+
+.area-request-message {
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.area-request-message--error {
+  background: #fff0f0;
+  color: #a12626;
+}
+
+.area-request-message--success {
+  background: #ecf8f0;
+  color: #176b3a;
+}

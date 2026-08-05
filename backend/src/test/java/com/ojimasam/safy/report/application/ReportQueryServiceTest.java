@@ -33,6 +33,8 @@ import com.ojimasam.safy.report.domain.ReportRepository;
 import com.ojimasam.safy.report.domain.ReportCenterRouteRepository;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
+import com.ojimasam.safy.report.domain.ReportStatusHistory;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.report.domain.type.ReportType;
 import com.ojimasam.safy.report.domain.type.ReportCategory;
 import com.ojimasam.safy.report.domain.type.ReportSubcategory;
@@ -177,6 +179,45 @@ class ReportQueryServiceTest {
 		assertThat(result.getContent().getFirst().imageCount()).isZero();
 	}
 
+	@Test
+	void exposesOnlyCitizenVisibleStatusProgress() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = imageReport(42L);
+		List<ReportStatusHistory> histories = List.of(
+				history(1L, ReportStatus.ASSIGNED, now),
+				history(2L, ReportStatus.IN_PROGRESS, now.plusSeconds(60)),
+				history(3L, ReportStatus.RECEIVED, now.plusSeconds(120)),
+				history(4L, ReportStatus.ASSIGNED, now.plusSeconds(180)),
+				history(5L, ReportStatus.IN_PROGRESS, now.plusSeconds(240)),
+				history(6L, ReportStatus.CLOSED, now.plusSeconds(300)));
+		when(reportRepository.findByIdAndReporterId(42L, 1L)).thenReturn(Optional.of(report));
+		when(historyRepository.findAllByReport_IdOrderByChangedAtAscIdAsc(42L)).thenReturn(histories);
+
+		var result = service(now).getMyStatusHistory(1L, 42L);
+
+		assertThat(result).extracting(item -> item.toStatus())
+				.containsExactly(ReportStatus.RECEIVED, ReportStatus.IN_PROGRESS, ReportStatus.CLOSED);
+		assertThat(result).extracting(item -> item.reason())
+				.containsExactly("제보가 접수되었습니다.", "제보 내용을 확인하고 있습니다.", "제보 처리가 완료되었습니다.");
+	}
+
+	@Test
+	void keepsCitizenStatusInProgressDuringInternalReassignment() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = imageReport(42L);
+		report.assign();
+		report.beginHandling();
+		report.releaseForReassignment();
+		when(reportRepository.findByIdAndReporterId(42L, 1L)).thenReturn(Optional.of(report));
+		when(reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(42L)).thenReturn(List.of());
+		when(historyRepository.existsByReport_IdAndToStatus(42L, ReportStatus.IN_PROGRESS)).thenReturn(true);
+
+		ReportDetailView result = service(now).getMine(1L, 42L);
+
+		assertThat(result.status()).isEqualTo(ReportStatus.IN_PROGRESS);
+		assertThat(result.cancellable()).isFalse();
+	}
+
 	private ReportQueryService service(Instant now) {
 		return new ReportQueryService(reportRepository, reportImageRepository, mediaObjectStorage,
 				routeRepository, historyRepository, operatorAccessService, assignmentRepository,
@@ -198,5 +239,13 @@ class ReportQueryServiceTest {
 		ReflectionTestUtils.setField(asset, "id", assetId);
 		asset.markAvailable(1024L);
 		return asset;
+	}
+
+	private ReportStatusHistory history(Long id, ReportStatus status, Instant changedAt) {
+		ReportStatusHistory history = org.mockito.Mockito.mock(ReportStatusHistory.class);
+		org.mockito.Mockito.lenient().when(history.getId()).thenReturn(id);
+		when(history.getToStatus()).thenReturn(status);
+		org.mockito.Mockito.lenient().when(history.getChangedAt()).thenReturn(changedAt);
+		return history;
 	}
 }

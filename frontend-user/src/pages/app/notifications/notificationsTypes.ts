@@ -1,6 +1,6 @@
 export type NotificationType = 'REPORT' | 'SAFETY' | 'SYSTEM'
 export type NotificationFilter = 'ALL' | NotificationType
-export type NotificationTargetType = 'REPORT' | 'AREA' | 'NOTICE' | 'NONE'
+export type NotificationTargetType = 'REPORT' | 'AREA_REPORT_REQUEST' | 'AREA' | 'NOTICE' | 'NONE'
 
 export interface AppNotification {
   id: number
@@ -15,6 +15,7 @@ export interface AppNotification {
   areaId?: number | string | null
   locationId?: number | string | null
   reportId?: number | string | null
+  areaReportRequestId?: number | string | null
   areaName?: string | null
   locationName?: string | null
   regionName?: string | null
@@ -26,6 +27,7 @@ export interface NotificationSettingsData {
   safetyEnabled: boolean
   systemEnabled: boolean
   savedLocationEnabled: boolean
+  locationRequestEnabled: boolean
 }
 
 export interface NotificationPageResponse {

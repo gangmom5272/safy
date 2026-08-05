@@ -1,10 +1,12 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { DEFAULT_REPORT_METHOD } from './reportConstants'
 import { LiveReportPage } from './LiveReportPage'
 import { MediaReportPage } from './MediaReportPage'
 import { ReportCompletePage } from './ReportCompletePage'
 import { ReportTypePage } from './ReportTypePage'
 import type { ReportFormData, ReportStep } from './reportTypes'
+import { getAreaReportRequest, type AreaReportRequest } from './areaReportRequestApi'
 import './report-create.css'
 
 function createInitialFormData(): ReportFormData {
@@ -18,8 +20,28 @@ function createInitialFormData(): ReportFormData {
 }
 
 export function ReportCreatePage() {
+  const [searchParams] = useSearchParams()
+  const requestId = searchParams.get('requestId')
+  const [areaRequest, setAreaRequest] = useState<AreaReportRequest | null>(null)
   const [step, setStep] = useState<ReportStep>('select')
   const [formData, setFormData] = useState<ReportFormData>(() => createInitialFormData())
+
+  useEffect(() => {
+    if (!requestId) return
+    let current = true
+    void getAreaReportRequest(requestId)
+      .then((request) => { if (current) setAreaRequest(request) })
+      .catch(() => undefined)
+    return () => { current = false }
+  }, [requestId])
+
+  const requestBanner = areaRequest && (
+    <aside className="area-report-request-banner">
+      <strong>{areaRequest.title}</strong>
+      <p>{areaRequest.content}</p>
+      <small>{areaRequest.placeName} · {new Date(areaRequest.expiresAt) < new Date() ? '요청 시간 종료' : '요청 진행 중'}</small>
+    </aside>
+  )
 
   const handleStart = useCallback((nextFormData: ReportFormData) => {
     setFormData(nextFormData)
@@ -41,16 +63,16 @@ export function ReportCreatePage() {
   }, [])
 
   if (step === 'live') {
-    return <LiveReportPage formData={formData} onBack={handleBackToSelect} onComplete={handleComplete} />
+    return <>{requestBanner}<LiveReportPage formData={formData} onBack={handleBackToSelect} onComplete={handleComplete} /></>
   }
 
   if (step === 'media') {
-    return <MediaReportPage formData={formData} onBack={handleBackToSelect} onComplete={handleComplete} />
+    return <>{requestBanner}<MediaReportPage formData={formData} onBack={handleBackToSelect} onComplete={handleComplete} /></>
   }
 
   if (step === 'complete') {
     return <ReportCompletePage formData={formData} onRestart={handleReset} />
   }
 
-  return <ReportTypePage initialFormData={formData} onStart={handleStart} />
+  return <>{requestBanner}<ReportTypePage initialFormData={formData} onStart={handleStart} /></>
 }

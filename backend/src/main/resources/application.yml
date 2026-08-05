@@ -76,6 +76,19 @@ app:
     offline-grace: ${PRESENCE_OFFLINE_GRACE:PT90S}
     in-progress-release-grace: ${PRESENCE_IN_PROGRESS_RELEASE_GRACE:PT3M}
     sweep-delay: ${PRESENCE_SWEEP_DELAY:PT30S}
+  web-push:
+    enabled: ${WEB_PUSH_ENABLED:false}
+    subject: ${WEB_PUSH_SUBJECT:mailto:admin@example.com}
+    public-key: ${WEB_PUSH_PUBLIC_KEY:}
+    private-key: ${WEB_PUSH_PRIVATE_KEY:}
+    ttl-seconds: ${WEB_PUSH_TTL_SECONDS:86400}
+    connect-timeout: ${WEB_PUSH_CONNECT_TIMEOUT:PT3S}
+    read-timeout: ${WEB_PUSH_READ_TIMEOUT:PT5S}
+    scheduler-delay: ${WEB_PUSH_SCHEDULER_DELAY:PT1S}
+    retry-delay: ${WEB_PUSH_RETRY_DELAY:PT1M}
+    processing-timeout: ${WEB_PUSH_PROCESSING_TIMEOUT:PT1M}
+    max-attempts: ${WEB_PUSH_MAX_ATTEMPTS:5}
+    allowed-endpoint-hosts: ${WEB_PUSH_ALLOWED_ENDPOINT_HOSTS:fcm.googleapis.com,updates.push.services.mozilla.com,web.push.apple.com,.notify.windows.com}
   public-data:
     base-url: ${PUBLIC_DATA_BASE_URL:http://localhost:8000}
     connect-timeout: ${PUBLIC_DATA_CONNECT_TIMEOUT:PT2S}

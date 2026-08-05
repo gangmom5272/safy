@@ -4,6 +4,7 @@ import { refreshSession } from '../../api/client'
 import { USE_MOCK_API } from '../../api/mockMode'
 import { subscribeToSessionExpired } from '../../api/sessionEvents'
 import { useAuthStore } from '../../stores/authStore'
+import { synchronizeWebPushSubscription } from '../app/notifications/webPush'
 import { getCurrentUser } from './authApi'
 import { mockCitizen } from './authMock'
 import { canUseCitizenApp } from './authSession'
@@ -12,6 +13,7 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
   const authenticate = useAuthStore((state) => state.authenticate)
   const clearAuthentication = useAuthStore((state) => state.clearAuthentication)
   const finishInitialization = useAuthStore((state) => state.finishInitialization)
+  const status = useAuthStore((state) => state.status)
 
   useEffect(() => subscribeToSessionExpired(() => {
     clearAuthentication('세션이 만료되었습니다. 다시 로그인해 주세요.')
@@ -41,6 +43,13 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
     void restoreSession()
     return () => { active = false }
   }, [authenticate, finishInitialization])
+
+  useEffect(() => {
+    if (status !== 'authenticated' || USE_MOCK_API) return
+    void synchronizeWebPushSubscription().catch((error: unknown) => {
+      console.warn('Web Push subscription synchronization failed', error)
+    })
+  }, [status])
 
   return children
 }

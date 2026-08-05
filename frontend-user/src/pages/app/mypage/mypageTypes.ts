@@ -28,4 +28,4 @@ export type RiskLevel = 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER'
 export interface Faq { id: number; category: string; question: string; answer: string }
 export interface Notice { id: number; title: string; content: string; createdAt: string; isImportant: boolean }
 export interface Inquiry { id: number; type: string; title: string; content: string; createdAt: string; status: 'WAITING' | 'ANSWERED'; attachmentName?: string; answer?: string; answeredAt?: string }
-export interface NotificationSettingsData { enabled: boolean; reportEnabled: boolean; safetyEnabled: boolean; systemEnabled: boolean; savedLocationEnabled: boolean }
+export interface NotificationSettingsData { enabled: boolean; reportEnabled: boolean; safetyEnabled: boolean; systemEnabled: boolean; savedLocationEnabled: boolean; locationRequestEnabled: boolean }

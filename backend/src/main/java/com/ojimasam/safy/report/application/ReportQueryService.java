@@ -35,6 +35,7 @@ import com.ojimasam.safy.report.domain.ReportOperatorAssignment;
 import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
+import com.ojimasam.safy.report.domain.type.ReportStatus;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.report.application.dto.AssignedControlCenterView;
 import com.ojimasam.safy.report.application.dto.ReportDetailView;
@@ -131,10 +132,12 @@ public class ReportQueryService {
 						area == null ? null : area.getName()
 				))
 				.orElse(null);
+		ReportStatus visibleStatus = exposeOriginal ? report.getStatus() : citizenCurrentStatus(report);
+		boolean cancellable = visibleStatus == ReportStatus.IN_PROGRESS ? false : report.isCancellable();
 		return new ReportDetailView(
 				report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
 				report.getDescription(), report.getLatitude(), report.getLongitude(),
-				report.getAddress(), report.getStatus(), report.isCancellable(), report.getRoutingStatus(),
+				report.getAddress(), visibleStatus, cancellable, report.getRoutingStatus(),
 				area == null ? null : area.getId(), area == null ? null : area.getCode(), area == null ? null : area.getName(),
 				assignedCenter,
 				report.getReportedAt(), report.getCreatedAt(), report.getUpdatedAt(), images,
@@ -146,10 +149,36 @@ public class ReportQueryService {
 	public List<ReportStatusHistoryResponse> getMyStatusHistory(Long reporterId, Long reportId) {
 		reportRepository.findByIdAndReporterId(reportId, reporterId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
-		return historyRepository.findAllByReport_IdOrderByChangedAtAscIdAsc(reportId)
-				.stream()
-				.map(ReportStatusHistoryResponse::from)
-				.toList();
+		List<ReportStatusHistoryResponse> visibleHistory = new ArrayList<>();
+		ReportStatus lastVisibleStatus = null;
+		for (var history : historyRepository.findAllByReport_IdOrderByChangedAtAscIdAsc(reportId)) {
+			ReportStatus visibleStatus = citizenStatus(history.getToStatus());
+			if (visibleStatus == lastVisibleStatus) continue;
+			if (lastVisibleStatus == ReportStatus.IN_PROGRESS && visibleStatus == ReportStatus.RECEIVED) continue;
+			visibleHistory.add(new ReportStatusHistoryResponse(
+					history.getId(), lastVisibleStatus, visibleStatus,
+					citizenStatusDescription(visibleStatus), history.getChangedAt()));
+			lastVisibleStatus = visibleStatus;
+		}
+		return visibleHistory;
+	}
+
+	private ReportStatus citizenStatus(ReportStatus status) {
+		return switch (status) {
+			case RECEIVED, ASSIGNED -> ReportStatus.RECEIVED;
+			case IN_PROGRESS -> ReportStatus.IN_PROGRESS;
+			case CLOSED, REJECTED, CANCELLED -> status;
+		};
+	}
+
+	private String citizenStatusDescription(ReportStatus status) {
+		return switch (status) {
+			case RECEIVED, ASSIGNED -> "제보가 접수되었습니다.";
+			case IN_PROGRESS -> "제보 내용을 확인하고 있습니다.";
+			case CLOSED -> "제보 처리가 완료되었습니다.";
+			case REJECTED -> "제보가 반려되었습니다.";
+			case CANCELLED -> "제보가 취소되었습니다.";
+		};
 	}
 
 	@Transactional(readOnly = true)
@@ -173,14 +202,25 @@ public class ReportQueryService {
 			ReportImageView representative = images.isEmpty() || blurred == null ? null
 					: toImageView(images.getFirst(), blurred, expiresAt);
 			AdministrativeArea area = report.getAdministrativeArea();
+			ReportStatus visibleStatus = citizenCurrentStatus(report);
 			return new ReportListItemView(
 					report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
-					report.getDescription(), report.getAddress(), report.getStatus(), report.isCancellable(),
+					report.getDescription(), report.getAddress(), visibleStatus,
+					visibleStatus == ReportStatus.IN_PROGRESS ? false : report.isCancellable(),
 					report.getRoutingStatus(), area == null ? null : area.getName(), report.getReportedAt(),
 					images.size(), representative
 			);
 		}).toList();
 		return new PageImpl<>(content, pageable, reports.getTotalElements());
+	}
+
+	private ReportStatus citizenCurrentStatus(Report report) {
+		ReportStatus status = citizenStatus(report.getStatus());
+		if (status == ReportStatus.RECEIVED
+				&& historyRepository.existsByReport_IdAndToStatus(report.getId(), ReportStatus.IN_PROGRESS)) {
+			return ReportStatus.IN_PROGRESS;
+		}
+		return status;
 	}
 
 	private List<ReportImageView> blurredImageViews(List<ReportImage> reportImages, Instant expiresAt) {

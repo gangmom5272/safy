@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
+import { subscribeToRealtimeSignals } from '../../../api/realtime'
 import { formatDateGroupLabel, formatRelativeTime } from '../../../utils/dateTime'
 import { getNotifications, getNotificationSettings, readAllNotifications, readNotification, updateNotificationSettings } from './notificationsApi'
 import { mockNotifications, mockNotificationSettings, USE_NOTIFICATIONS_MOCK_FALLBACK } from './notificationsMock'
 import type { AppNotification, NotificationFilter, NotificationSettingsData } from './notificationsTypes'
 import { getNotificationTargetUrl } from './notificationsUtils'
+import { notifyUnreadCountChanged } from './notificationUnread'
 import './notifications.css'
 
 const tabs: { value: NotificationFilter; label: string }[] = [
@@ -39,6 +41,13 @@ export function NotificationsPage() {
     return () => { mounted.current = false; window.clearTimeout(initialLoad) }
   }, [])
 
+  useEffect(() => subscribeToRealtimeSignals((signal) => {
+    if (signal.kind !== 'event' || signal.event.eventType === 'REPORT_MESSAGE') return
+    void getNotifications().then((items) => {
+      if (mounted.current) setNotifications(items)
+    }).catch((error: unknown) => console.error('Notifications refresh failed', error))
+  }), [])
+
   const counts = useMemo(() => ({ ALL: notifications.length, REPORT: notifications.filter((item) => item.type === 'REPORT').length, SAFETY: notifications.filter((item) => item.type === 'SAFETY').length, SYSTEM: notifications.filter((item) => item.type === 'SYSTEM').length }), [notifications])
   const visibleNotifications = useMemo(() => filter === 'ALL' ? notifications : notifications.filter((item) => item.type === filter), [filter, notifications])
   const groups = useMemo(() => groupNotifications(visibleNotifications), [visibleNotifications])
@@ -47,7 +56,9 @@ export function NotificationsPage() {
   const handleNotification = (notification: AppNotification) => {
     if (!notification.isRead) {
       setNotifications((items) => items.map((item) => item.id === notification.id ? { ...item, isRead: true } : item))
-      if (!usingMock) void readNotification(notification.id).catch((error: unknown) => console.error('Notification read update failed', error))
+      if (!usingMock) void readNotification(notification.id)
+        .then(notifyUnreadCountChanged)
+        .catch((error: unknown) => console.error('Notification read update failed', error))
     }
     const targetUrl = getNotificationTargetUrl(notification)
     if (targetUrl) {
@@ -64,7 +75,9 @@ export function NotificationsPage() {
 
   const handleReadAll = () => {
     setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))
-    if (!usingMock) void readAllNotifications().catch((error: unknown) => console.error('Read-all update failed', error))
+    if (!usingMock) void readAllNotifications()
+      .then(notifyUnreadCountChanged)
+      .catch((error: unknown) => console.error('Read-all update failed', error))
   }
 
   const handleSetting = (key: keyof NotificationSettingsData) => {
@@ -107,7 +120,7 @@ function UiIcon({ name }: { name: 'check' | 'report' | 'safety' | 'system' }) {
 
 function NotificationSettings({ settings, onToggle, onClose }: { settings: NotificationSettingsData; onToggle: (key: keyof NotificationSettingsData) => void; onClose: () => void }) {
   const options: { key: keyof NotificationSettingsData; label: string; description: string }[] = [
-    { key: 'enabled', label: '전체 알림', description: '모든 앱 알림을 허용합니다.' }, { key: 'reportEnabled', label: '제보 관련 알림', description: '접수 및 처리 상태를 알려드려요.' }, { key: 'safetyEnabled', label: '안전 정보 알림', description: '주변 위험과 혼잡 정보를 알려드려요.' }, { key: 'systemEnabled', label: '시스템 알림', description: '공지와 점검 소식을 알려드려요.' },
+    { key: 'enabled', label: '전체 알림', description: '모든 앱 알림을 허용합니다.' }, { key: 'reportEnabled', label: '제보 관련 알림', description: '접수 및 처리 상태를 알려드려요.' }, { key: 'safetyEnabled', label: '안전 정보 알림', description: '주변 위험과 혼잡 정보를 알려드려요.' }, { key: 'locationRequestEnabled', label: '주변 현장 제보 요청', description: '최근 위치 주변의 현장 제보 요청을 받아요.' }, { key: 'systemEnabled', label: '시스템 알림', description: '공지와 점검 소식을 알려드려요.' },
   ]
   return <div className="settings-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><section className="notification-settings" role="dialog" aria-modal="true" aria-labelledby="notification-settings-title"><header><div><p>SETTINGS</p><h2 id="notification-settings-title">알림 설정</h2></div><button type="button" aria-label="알림 설정 닫기" onClick={onClose}>×</button></header><div className="settings-list">{options.map((option) => <div className="setting-row" key={option.key}><label htmlFor={`setting-${option.key}`}><strong>{option.label}</strong><span>{option.description}</span></label><button id={`setting-${option.key}`} type="button" role="switch" aria-checked={settings[option.key]} className={settings[option.key] ? 'toggle on' : 'toggle'} onClick={() => onToggle(option.key)} disabled={option.key !== 'enabled' && !settings.enabled}><span /></button></div>)}</div><button type="button" className="settings-done" onClick={onClose}>완료</button></section></div>
 }

@@ -30,7 +30,7 @@ public class RealtimeEvent extends BaseEntity {
 	@Column(name = "event_type", nullable = false, length = 30)
 	private RealtimeEventType eventType;
 
-	@Column(name = "report_id", nullable = false)
+	@Column(name = "report_id")
 	private Long reportId;
 
 	@Column(name = "resource_id", length = 100)
@@ -53,8 +53,15 @@ public class RealtimeEvent extends BaseEntity {
 
 	public static RealtimeEvent create(Long recipientUserId, RealtimeEventType eventType, Long reportId,
 			String resourceId, Long messageId) {
-		if (recipientUserId == null || eventType == null || reportId == null) {
-			throw new IllegalArgumentException("실시간 이벤트의 수신자, 유형, 제보 ID는 필수입니다.");
+		if (recipientUserId == null || eventType == null) {
+			throw new IllegalArgumentException("실시간 이벤트의 수신자와 유형은 필수입니다.");
+		}
+		if (eventType == RealtimeEventType.AREA_REPORT_REQUEST) {
+			if (resourceId == null || resourceId.isBlank()) {
+				throw new IllegalArgumentException("구역 제보 요청 ID는 필수입니다.");
+			}
+		} else if (reportId == null) {
+			throw new IllegalArgumentException("제보 이벤트의 제보 ID는 필수입니다.");
 		}
 		return new RealtimeEvent(recipientUserId, eventType, reportId, resourceId, messageId);
 	}

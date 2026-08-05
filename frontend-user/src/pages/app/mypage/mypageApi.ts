@@ -10,6 +10,7 @@ import {
   mockUser,
 } from './mypageMock'
 import type { ApiResponse, PageResponse } from '../../../api/types'
+import { disableWebPush } from '../notifications/webPush'
 import type { Faq, Inquiry, MyReport, Notice, NotificationSettingsData, ReportCategoryCode, ReportStatus, ReportSummary, ReportTypeCode, UserProfile } from './mypageTypes'
 import { normalizeAttachments } from './mypageUtils'
 
@@ -167,6 +168,7 @@ export async function cancelMyReport(reportId: number) {
 export async function logout() {
   if (USE_MOCK_API) return mockResponse(undefined)
 
+  await disableWebPush().catch((error: unknown) => console.warn('Web Push unsubscribe failed', error))
   await apiClient.post('/auth/logout')
 }
 
@@ -176,5 +178,5 @@ export async function getNotice(id: number) { if (USE_MOCK_API) return mockRespo
 export async function getInquiries() { if (USE_MOCK_API) return mockResponse(mockInquiries); return (await apiClient.get<ApiResponse<PageResponse<Inquiry>>>('/users/me/inquiries', { params: { page: 0, size: 30 } })).data.data.content }
 export async function createInquiry(data: Pick<Inquiry, 'type' | 'title' | 'content' | 'attachmentName'>) { if (USE_MOCK_API) return mockResponse({ ...data, id: Date.now(), createdAt: new Date().toISOString(), status: 'PENDING', answer: null, answeredAt: null } as unknown as Inquiry); return (await apiClient.post<Inquiry>('/inquiries', data)).data }
 export async function getInquiry(id: number) { if (USE_MOCK_API) return mockResponse(mockInquiries.find((inquiry) => inquiry.id === id) ?? mockInquiries[0]); return (await apiClient.get<ApiResponse<Inquiry>>(`/users/me/inquiries/${id}`)).data.data }
-export async function getNotificationSettings() { if (USE_MOCK_API) return mockResponse(mockNotificationSettings); return (await apiClient.get<NotificationSettingsData>('/users/me/notification-settings')).data }
-export async function updateNotificationSettings(settings: NotificationSettingsData) { if (USE_MOCK_API) return mockResponse(settings); return (await apiClient.patch<NotificationSettingsData>('/users/me/notification-settings', settings)).data }
+export async function getNotificationSettings() { if (USE_MOCK_API) return mockResponse(mockNotificationSettings); return (await apiClient.get<ApiResponse<NotificationSettingsData>>('/users/me/notification-settings')).data.data }
+export { updateNotificationSettings } from '../notifications/notificationsApi'
