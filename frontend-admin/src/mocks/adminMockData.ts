@@ -56,9 +56,6 @@ export const connectionQualityLabels: Record<ConnectionQuality, string> = {
   poor: '불안정',
 }
 
-export const emergencyBanner =
-  '긴급재난명령 수신 · 서울 마포구 홍대입구역 인근 집회 발생 중'
-
 export const systemStatus: SystemStatus = {
   serverStatus: '정상 운영',
   webrtcConnections: 2,

@@ -31,6 +31,7 @@ import {
   type PlaceCongestion,
 } from './publicDataApi'
 import { GridTrendChart } from './GridTrendChart'
+import { isNewReport } from '../../utils/adminVerification'
 
 const allValue = 'all'
 const unsetValue = ''
@@ -336,14 +337,15 @@ export function RiskMapPage() {
       appliedFilters.riskLevel === allValue ||
       matchesRiskLevel(report.riskLevel, appliedFilters.riskLevel, report.riskScore))
   ))
-  const plottableCount = filteredReports.filter(hasCoordinates).length
+  const plottableReports = filteredReports.filter(hasCoordinates)
+  const uncheckedReportCount = plottableReports.filter(isNewReport).length
+  const checkedReportCount = plottableReports.length - uncheckedReportCount
 
   const gridStats = useMemo(() => {
     if (gridRisks.length === 0) return null
     const peak = gridRisks.reduce((highest, risk) => (risk.score > highest.score ? risk : highest))
     return {
       cellCount: gridRisks.length,
-      reportedCount: gridRisks.filter((risk) => risk.observationStatus === 'REPORTED').length,
       averageScore: Math.round(gridRisks.reduce((sum, risk) => sum + risk.score, 0) / gridRisks.length),
       peakScore: Math.round(peak.score),
       peakLabel: getRiskConfig(peak.congestionLevel, peak.score)?.label ?? '미분류',
@@ -463,7 +465,7 @@ export function RiskMapPage() {
             </div>
           </div>
           {gridError && <p className="empty-state" role="alert">{gridError}</p>}
-          {!isLoading && showReportLayer && plottableCount === 0 && (
+          {!isLoading && showReportLayer && plottableReports.length === 0 && (
             <p className="empty-state" role="status">지도에 표시할 좌표가 있는 제보가 없습니다.</p>
           )}
         </article>
@@ -562,10 +564,6 @@ export function RiskMapPage() {
                 <strong>{gridStats ? `${gridStats.cellCount}칸` : '없음'}</strong>
               </article>
               <article className="admin-card">
-                <span>제보 기반 격자</span>
-                <strong>{gridStats ? `${gridStats.reportedCount}칸` : '-'}</strong>
-              </article>
-              <article className="admin-card">
                 <span>최고 위험도</span>
                 <strong>{gridStats ? `${gridStats.peakScore}점 · ${gridStats.peakLabel}` : '-'}</strong>
               </article>
@@ -574,8 +572,12 @@ export function RiskMapPage() {
                 <strong>{gridStats ? `${gridStats.averageScore}점` : '-'}</strong>
               </article>
               <article className="admin-card">
-                <span>지도 위 제보 수</span>
-                <strong>{plottableCount}건</strong>
+                <span>미확인 제보</span>
+                <strong>{uncheckedReportCount}건</strong>
+              </article>
+              <article className="admin-card">
+                <span>확인 제보</span>
+                <strong>{checkedReportCount}건</strong>
               </article>
               <p className="map-stats__hint">격자를 클릭하면 위험도 추이, 장소·행사 마커를 클릭하면 상세 정보를 볼 수 있습니다.</p>
             </>

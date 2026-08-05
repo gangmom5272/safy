@@ -127,7 +127,6 @@ export function AdminSidebar() {
         </span>
         <span className="admin-sidebar__brand-copy">
           <strong>SAFY</strong>
-          <span>{isSuperAdmin ? '통합 관리 콘솔' : '관제 콘솔 · 성동구'}</span>
         </span>
       </div>
 

@@ -195,14 +195,6 @@ button:disabled {
   letter-spacing: -0.02em;
 }
 
-.admin-sidebar__brand-copy span {
-  overflow: hidden;
-  color: #b7c2d0;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .admin-sidebar__nav {
   display: grid;
   gap: 6px;
@@ -404,76 +396,6 @@ button:disabled {
   justify-content: flex-end;
   min-width: 0;
   gap: 10px;
-}
-
-.admin-header__search {
-  display: flex;
-  flex: 1 1 320px;
-  align-items: center;
-  width: clamp(280px, 24vw, 340px);
-  min-width: 0;
-  max-width: 340px;
-  height: 38px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #f2f4f7;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.admin-header__search:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(0, 74, 173, 0.12);
-}
-
-.admin-header__search button {
-  display: grid;
-  flex: 0 0 38px;
-  width: 38px;
-  height: 100%;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-}
-
-.admin-header__search button:hover {
-  color: var(--accent);
-}
-
-.admin-header__search button:focus-visible {
-  color: var(--accent);
-  outline: 2px solid var(--accent);
-  outline-offset: -4px;
-}
-
-.admin-header__search-icon {
-  width: 18px;
-  height: 18px;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.admin-header__search input {
-  flex: 1 1 auto;
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  padding: 0 12px 0 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-}
-
-.admin-header__search input::placeholder {
-  color: var(--text-muted);
-  opacity: 1;
 }
 
 .emergency-alert-button {
@@ -2394,15 +2316,10 @@ button:disabled {
     flex-direction: column;
   }
 
-  .admin-search,
-  .admin-header__search {
+  .admin-search {
     width: 100%;
     min-width: 0;
     max-width: none;
-  }
-
-  .admin-header__search {
-    flex: 0 0 38px;
   }
 
   .admin-main {

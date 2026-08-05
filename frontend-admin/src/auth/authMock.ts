@@ -6,4 +6,6 @@ export const mockOperator: AdminUser = {
   displayName: '관제 담당자',
   role: 'OPERATOR',
   status: 'ACTIVE',
+  controlCenterId: 23,
+  controlCenterName: '강남구 재난안전상황실',
 }

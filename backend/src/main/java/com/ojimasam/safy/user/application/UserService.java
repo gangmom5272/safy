@@ -11,24 +11,29 @@ import com.ojimasam.safy.user.domain.type.UserStatus;
 import com.ojimasam.safy.user.domain.type.UserErrorCode;
 import com.ojimasam.safy.user.domain.UserRepository;
 import com.ojimasam.safy.auth.infrastructure.security.RefreshTokenStore;
+import com.ojimasam.safy.admin.domain.AdminCenterMembership;
+import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
 
 @Service
 public class UserService {
 	private final UserRepository userRepository;
 	private final RefreshTokenStore refreshTokenStore;
-	public UserService(UserRepository userRepository, RefreshTokenStore refreshTokenStore) {
+	private final AdminCenterMembershipRepository membershipRepository;
+	public UserService(UserRepository userRepository, RefreshTokenStore refreshTokenStore,
+			AdminCenterMembershipRepository membershipRepository) {
 		this.userRepository = userRepository;
 		this.refreshTokenStore = refreshTokenStore;
+		this.membershipRepository = membershipRepository;
 	}
 
 	@Transactional(readOnly = true)
-	public UserResponse me(Long userId) { return UserResponse.from(get(userId)); }
+	public UserResponse me(Long userId) { return response(get(userId)); }
 
 	@Transactional
 	public UserResponse updateName(Long userId, String displayName) {
 		User user = get(userId);
 		user.updateDisplayName(displayName);
-		return UserResponse.from(user);
+		return response(user);
 	}
 
 	@Transactional
@@ -42,5 +47,12 @@ public class UserService {
 
 	private User get(Long id) {
 		return userRepository.findById(id).orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+	}
+
+	private UserResponse response(User user) {
+		AdminCenterMembership membership = membershipRepository
+				.findByUserIdAndIsPrimaryTrue(user.getId())
+				.orElse(null);
+		return UserResponse.from(user, membership);
 	}
 }

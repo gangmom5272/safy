@@ -110,12 +110,17 @@ public class ReportRoutingTransactionService {
 				ControlCenterStatus.ACTIVE,
 				CoverageRole.PRIMARY
 		);
-		if (candidates.isEmpty()) {
+		List<ControlCenterArea> primaryCandidates = candidates.stream()
+				.filter(candidate -> candidate.getCoverageRole() == CoverageRole.PRIMARY)
+				.toList();
+		if (primaryCandidates.isEmpty()) {
 			report.requireManualRouting("담당 관제센터가 설정되지 않았습니다: " + area.getCode());
 			return;
 		}
 
-		ControlCenterArea selected = candidates.stream()
+		// 자동 라우팅은 제보 행정구역의 PRIMARY 관제센터에만 맡긴다. BACKUP 센터를
+		// 자동 선택하면 송파구 제보가 강남구 담당자에게 보이는 등 관할이 섞인다.
+		ControlCenterArea selected = primaryCandidates.stream()
 				.filter(this::hasCapacity)
 				.findFirst()
 				.orElse(null);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router'
 import { AdminSection } from '../../components/admin/AdminSection'
 import { RiskLevelIndicator } from '../../components/admin/RiskLevelIndicator'
 import { StatusBadge } from '../../components/admin/StatusBadge'
@@ -21,6 +21,7 @@ import {
 } from './reportApi'
 import { ReportActionPanel } from './ReportActionPanel'
 import { ImageLightbox } from '../../components/admin/ImageLightbox'
+import type { AdminLayoutOutletContext } from '../../layouts/AdminLayout'
 
 function ReportContentIcon() {
   return (
@@ -34,6 +35,7 @@ function ReportContentIcon() {
 export function ReportDetailPage() {
   const { reportId } = useParams()
   const navigate = useNavigate()
+  const { markReportChecked } = useOutletContext<AdminLayoutOutletContext>()
   const numericReportId = Number(reportId)
   const isValidReportId = Number.isInteger(numericReportId) && numericReportId > 0
 
@@ -55,6 +57,7 @@ export function ReportDetailPage() {
       try {
         const detail = await getOperatorReportDetail(numericReportId)
         if (!active) return
+        markReportChecked(numericReportId)
         setReport(detailToAdminReport(detail))
         setImages(detail.images)
         setMyOutcome(toMyOutcome(detail))
@@ -72,7 +75,7 @@ export function ReportDetailPage() {
 
     void load()
     return () => { active = false }
-  }, [isValidReportId, numericReportId])
+  }, [isValidReportId, markReportChecked, numericReportId])
 
   if (isLoading) {
     return <section className="admin-card"><p role="status">제보를 불러오는 중입니다...</p></section>

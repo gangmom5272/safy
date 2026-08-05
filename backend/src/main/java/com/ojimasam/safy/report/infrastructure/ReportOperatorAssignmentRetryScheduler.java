@@ -4,25 +4,21 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
-import com.ojimasam.safy.report.application.ReportTransferService;
 
 @Component
 public class ReportOperatorAssignmentRetryScheduler {
 	private final ReportOperatorAssignmentService assignmentService;
-	private final ReportTransferService transferService;
 
-	public ReportOperatorAssignmentRetryScheduler(ReportOperatorAssignmentService assignmentService,
-			ReportTransferService transferService) {
+	public ReportOperatorAssignmentRetryScheduler(ReportOperatorAssignmentService assignmentService) {
 		this.assignmentService = assignmentService;
-		this.transferService = transferService;
 	}
 
 	@Scheduled(fixedDelayString = "${app.report-assignment.scheduler-delay:PT30S}")
 	public void retryUnassignedReports() {
 		for (Long reportId : assignmentService.findUnassignedReportIds(50)) {
-			boolean assigned = assignmentService.retryAutomaticAssignment(reportId).isPresent();
-			// 센터에 근무중 담당자가 아무도 없으면 백업 센터로 자동 이관을 시도한다.
-			if (!assigned) transferService.failoverIfCenterUnavailable(reportId);
+			// 관할 센터 담당자가 없으면 그 센터의 공용 큐에 유지한다. 다른 자치구의
+			// BACKUP 센터로 자동 이관하면 제보 지역과 담당자 지역이 달라진다.
+			assignmentService.retryAutomaticAssignment(reportId);
 		}
 	}
 }

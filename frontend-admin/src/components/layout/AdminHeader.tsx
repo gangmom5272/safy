@@ -1,12 +1,13 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { AdminModal } from '../admin/AdminModal'
 import { useAuth } from '../../auth/useAuth'
 import { OperatorPresenceToggle } from './OperatorPresenceToggle'
-import { adminReports, emergencyBanner } from '../../mocks/adminMockData'
 import { ROUTE_PATHS } from '../../router/paths'
 import { isEmergencyRisk } from '../../utils/adminRisk'
 import { formatLastUpdated, formatSeoulDateTime } from '../../utils/adminDate'
+import { isNewReport } from '../../utils/adminVerification'
+import type { AdminReport } from '../../types/admin'
 
 const pageTitleByPath: Record<string, string> = {
   [ROUTE_PATHS.DASHBOARD]: '홈',
@@ -41,37 +42,22 @@ function SirenIcon() {
 
 interface AdminHeaderProps {
   lastDashboardUpdatedAt: number | null
+  reports: AdminReport[]
+  onCheckReport: (reportId: number) => void
 }
 
-function SearchIcon() {
-  return (
-    <svg className="admin-header__search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <circle cx="11" cy="11" r="7" />
-      <path d="m16 16 4 4" />
-    </svg>
-  )
-}
-
-export function AdminHeader({ lastDashboardUpdatedAt }: AdminHeaderProps) {
+export function AdminHeader({ lastDashboardUpdatedAt, reports, onCheckReport }: AdminHeaderProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(() => new Date())
-  const [searchQuery, setSearchQuery] = useState('')
-  const dangerReports = adminReports.filter((report) => isEmergencyRisk(report.riskLevel))
+  const dangerReports = reports.filter((report) => (
+    isNewReport(report) && isEmergencyRisk(report.riskLevel)
+  ))
   const isDashboard = pathname === ROUTE_PATHS.DASHBOARD
   // 긴급 위험 알림은 관제(OPERATOR) 업무라 인사 관리만 하는 SUPER_ADMIN 에게는 숨긴다.
   const isOperator = user?.role === 'OPERATOR'
-
-  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const normalizedQuery = searchQuery.trim()
-    if (!normalizedQuery) return
-
-    setSearchQuery(normalizedQuery)
-    // TODO: 관리자 전체 검색 API 또는 검색 결과 페이지와 연결
-  }
 
   useEffect(() => {
     if (!isDashboard) return
@@ -100,20 +86,6 @@ export function AdminHeader({ lastDashboardUpdatedAt }: AdminHeaderProps) {
         )}
       </div>
       <div className="admin-header__actions">
-        {isDashboard && (
-          <form className="admin-header__search" role="search" onSubmit={handleSearch}>
-            <button type="submit" aria-label="전체 검색 실행">
-              <SearchIcon />
-            </button>
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="전체 검색 (지역 · 제보 ID · 담당자)"
-              aria-label="관리자 전체 검색"
-            />
-          </form>
-        )}
         <OperatorPresenceToggle />
         {isOperator && (
           <button
@@ -138,7 +110,9 @@ export function AdminHeader({ lastDashboardUpdatedAt }: AdminHeaderProps) {
           </button>
         }
       >
-        <p className="emergency-alert-message">{emergencyBanner}</p>
+        <p className="emergency-alert-message">
+          AI가 위험 또는 매우 위험으로 판정한 미확인 제보입니다.
+        </p>
         {dangerReports.length > 0 ? (
           <ul className="emergency-report-list">
             {dangerReports.map((report) => (
@@ -146,6 +120,7 @@ export function AdminHeader({ lastDashboardUpdatedAt }: AdminHeaderProps) {
                 <strong>제보 #{report.id}</strong>
                 <span>{report.location}</span>
                 <button type="button" className="text-button" onClick={() => {
+                  onCheckReport(report.id)
                   setIsEmergencyOpen(false)
                   navigate(`/reports/${report.id}`)
                 }}>

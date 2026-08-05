@@ -116,7 +116,8 @@ export function matchesRiskLevel(value: unknown, selected: RiskLevel, score?: un
 
 export function isEmergencyRisk(value: RiskLevelValue | null): boolean {
   const normalized = normalizeRiskLevel(value)
-  return normalized === 'very_high' || value === 'danger'
+  const legacyValue = value as LegacyRiskLevel
+  return normalized === 'very_high' || normalized === 'high' || legacyValue === 'danger' || legacyValue === 'warning'
 }
 
 export function isHighRisk(value: RiskLevelValue | null): boolean {
