@@ -126,7 +126,7 @@ export function mockLiveSessions(): OperatorLiveSession[] {
     }))
 }
 
-// 공용 큐는 평소 비어 있는 게 정상이라, 목 모드에서는 화면 확인을 위해 세 건을 채운다.
+// 미배정 제보는 평소 비어 있는 게 정상이라, 목 모드에서는 화면 확인을 위해 세 건을 채운다.
 // 이미지·라이브·위험도 없음 세 경우를 모두 보여준다.
 export function mockQueueItems(): QueueItem[] {
   const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
@@ -145,7 +145,7 @@ export function mockQueueItems(): QueueItem[] {
       image: {
         imageCount: 2,
         status: 'AVAILABLE',
-        thumbnailUrl: mockPhoto('공용 큐 대기 제보', '#475569'),
+        thumbnailUrl: mockPhoto('미배정 대기 제보', '#475569'),
         thumbnailUrlExpiresAt: null,
       },
       live: null,

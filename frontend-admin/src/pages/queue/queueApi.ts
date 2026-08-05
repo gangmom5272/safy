@@ -54,7 +54,7 @@ export const QUEUE_CATEGORY_LABELS: Record<QueueCategory, string> = {
 }
 
 /**
- * 센터 공용 큐. 정렬은 서버가 오래된 순으로 고정한다(대시보드와 반대).
+ * 미배정 제보 목록. 정렬은 서버가 오래된 순으로 고정한다(대시보드와 반대).
  * 방치가 길수록 위험하다는 판단이 들어간 것이라 클라이언트에서 다시 정렬하지 않는다.
  */
 export async function getQueue(page = 0, size = 25) {

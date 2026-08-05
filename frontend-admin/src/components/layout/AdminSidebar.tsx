@@ -94,10 +94,10 @@ interface SidebarItem {
 // OPERATOR 는 관제 화면, SUPER_ADMIN 은 인사 관리만 쓴다. 좌측 탭도 역할별로 분리한다.
 const operatorItems: SidebarItem[] = [
   { label: '홈', path: ROUTE_PATHS.DASHBOARD, end: true, icon: 'home' },
-  { label: '제보 목록', path: ROUTE_PATHS.REPORTS, end: false, icon: 'reports' },
-  { label: '공용 큐', path: ROUTE_PATHS.QUEUE, end: true, icon: 'queue' },
   { label: '실시간 모니터링', path: ROUTE_PATHS.MONITORING, end: true, icon: 'monitoring' },
   { label: '위험도 지도', path: ROUTE_PATHS.RISK_MAP, end: true, icon: 'map' },
+  { label: '제보 목록', path: ROUTE_PATHS.REPORTS, end: false, icon: 'reports' },
+  { label: '미배정', path: ROUTE_PATHS.QUEUE, end: true, icon: 'queue' },
   { label: '계정 설정', path: ROUTE_PATHS.SETTINGS, end: true, icon: 'settings' },
 ]
 

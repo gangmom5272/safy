@@ -12,7 +12,7 @@ import type { AdminReport } from '../../types/admin'
 const pageTitleByPath: Record<string, string> = {
   [ROUTE_PATHS.DASHBOARD]: '홈',
   [ROUTE_PATHS.REPORTS]: '제보 목록',
-  [ROUTE_PATHS.QUEUE]: '공용 큐',
+  [ROUTE_PATHS.QUEUE]: '미배정',
   [ROUTE_PATHS.MONITORING]: '실시간 모니터링',
   [ROUTE_PATHS.RISK_MAP]: '위험도 지도',
   [ROUTE_PATHS.SETTINGS]: '계정 설정',
