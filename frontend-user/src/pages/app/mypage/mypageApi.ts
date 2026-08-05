@@ -91,18 +91,32 @@ function toMyReport(report: ReportListItemView, history: ReportStatusHistoryResp
   }
 }
 
+// docs/api-contract.md 의 UserResponse 중 이 화면이 쓰는 필드만 읽는다. email 과
+// profileImageUrl 은 social_accounts 에 저장된 소셜 로그인 값이며 로그인마다 갱신된다.
+// 소셜 계정이 없으면 둘 다 null 이다.
+interface MeResponse {
+  id: number
+  displayName: string
+  email: string | null
+  profileImageUrl: string | null
+}
+
+function toUserProfile(response: MeResponse): UserProfile {
+  return { id: response.id, nickname: response.displayName, email: response.email, profileImageUrl: response.profileImageUrl }
+}
+
 export async function getMe() {
   if (USE_MOCK_API) return mockResponse(mockUser)
 
-  const response = await apiClient.get<ApiResponse<{ id: number; displayName: string }>>('/users/me')
-  return { id: response.data.data.id, nickname: response.data.data.displayName, email: '' } satisfies UserProfile
+  const response = await apiClient.get<ApiResponse<MeResponse>>('/users/me')
+  return toUserProfile(response.data.data)
 }
 
 export async function updateMyProfile(nickname: string) {
   if (USE_MOCK_API) return mockResponse({ ...mockUser, nickname })
 
-  const response = await apiClient.patch<ApiResponse<{ id: number; displayName: string }>>('/users/me', { displayName: nickname })
-  return { id: response.data.data.id, nickname: response.data.data.displayName, email: '' } satisfies UserProfile
+  const response = await apiClient.patch<ApiResponse<MeResponse>>('/users/me', { displayName: nickname })
+  return toUserProfile(response.data.data)
 }
 
 export async function getReportSummary(): Promise<ReportSummary> {
