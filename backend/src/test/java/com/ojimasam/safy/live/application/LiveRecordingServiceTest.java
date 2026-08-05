@@ -3,6 +3,7 @@ package com.ojimasam.safy.live.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,8 +54,13 @@ class LiveRecordingServiceTest {
 	}
 
 	private LiveRecordingService newService(boolean enabled) {
+		return newService(enabled, 1);
+	}
+
+	private LiveRecordingService newService(boolean enabled, int maxAttempts) {
 		LiveRecordingProperties properties = new LiveRecordingProperties(
-				enabled, "safy", "http://minio:9000", "key", "secret", null, Duration.ofSeconds(5), 1280, 720);
+				enabled, "safy", "http://minio:9000", "key", "secret", null, Duration.ofSeconds(5), 1280, 720,
+				maxAttempts, Duration.ofMillis(1));
 		return new LiveRecordingService(recordingRepository, sessionRepository, mediaAssetRepository,
 				mediaGateway, properties, Clock.fixed(NOW, ZoneOffset.UTC));
 	}
@@ -100,6 +106,32 @@ class LiveRecordingServiceTest {
 
 		service.startForSession(session(), "reporter-" + REPORTER_ID);
 
+		verify(recordingRepository, never()).save(any());
+	}
+
+	@Test
+	void retriesAndSucceedsAfterTransientFailure() {
+		LiveRecordingService retryingService = newService(true, 3);
+		when(recordingRepository.existsByLiveSessionIdAndStatusIn(any(), any())).thenReturn(false);
+		when(mediaGateway.startRecording(any()))
+				.thenThrow(new LiveMediaException("egress cpu full"))
+				.thenReturn(EGRESS_ID);
+
+		retryingService.startForSession(session(), "reporter-" + REPORTER_ID);
+
+		verify(mediaGateway, times(2)).startRecording(any());
+		verify(recordingRepository).save(any(StreamRecording.class));
+	}
+
+	@Test
+	void givesUpAfterExhaustingRetries() {
+		LiveRecordingService retryingService = newService(true, 3);
+		when(recordingRepository.existsByLiveSessionIdAndStatusIn(any(), any())).thenReturn(false);
+		when(mediaGateway.startRecording(any())).thenThrow(new LiveMediaException("egress down"));
+
+		retryingService.startForSession(session(), "reporter-" + REPORTER_ID);
+
+		verify(mediaGateway, times(3)).startRecording(any());
 		verify(recordingRepository, never()).save(any());
 	}
 

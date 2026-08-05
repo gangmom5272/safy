@@ -25,7 +25,7 @@ class LiveKitMediaGatewayTest {
 						Duration.ofMinutes(10), Duration.ofMinutes(30), Duration.ofMinutes(1),
 						Duration.ofSeconds(60)),
 				new com.ojimasam.safy.live.application.LiveRecordingProperties(
-						false, "safy", "http://localhost:9000", "key", "secret", null, null, 0, 0));
+						false, "safy", "http://localhost:9000", "key", "secret", null, null, 0, 0, 0, null));
 	}
 
 	@Test
