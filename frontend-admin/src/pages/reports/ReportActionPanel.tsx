@@ -13,10 +13,10 @@ import {
 type OperatorAction = 'complete' | 'reject' | 'reassign' | 'transfer'
 
 const ACTION_LABELS: Record<OperatorAction, string> = {
-  complete: '업무 종료',
+  complete: '처리 완료',
   reject: '반려',
-  reassign: '우리 센터 다른 담당자에게',
-  transfer: '다른 관제센터로 이관',
+  reassign: '재배정',
+  transfer: '이관',
 }
 
 const ACTION_TITLES: Record<OperatorAction, string> = {
@@ -145,7 +145,6 @@ export function ReportActionPanel({ reportId, assignmentStatus, onActionComplete
   return (
     <>
       {actionError && <p className="login-error" role="alert">{actionError}</p>}
-      <p>제보를 확인한 담당자가 처리 완료·반려 또는 재배정·이관을 결정할 수 있습니다.</p>
       <div className="button-row report-action-buttons">
         <button type="button" className="primary-button" disabled={isSubmitting} onClick={() => selectAction('complete')}>
           {ACTION_LABELS.complete}
@@ -156,7 +155,7 @@ export function ReportActionPanel({ reportId, assignmentStatus, onActionComplete
         <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => selectAction('transfer')}>
           {ACTION_LABELS.transfer}
         </button>
-        <button type="button" className="danger-outline-button" disabled={isSubmitting} onClick={() => selectAction('reject')}>
+        <button type="button" className="danger-button" disabled={isSubmitting} onClick={() => selectAction('reject')}>
           {ACTION_LABELS.reject}
         </button>
       </div>

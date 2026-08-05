@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import {
-  connectionQualityLabels,
   connectionStatusLabels,
   reportTypeLabels,
 } from '../../mocks/adminMockData'
@@ -599,7 +598,7 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
 
         <div className="monitoring-detail-sidebar">
           <aside className="admin-card monitor-detail">
-            <h2>라이브 제보 상세 정보</h2>
+            <h2>제보 상세 정보</h2>
             {detailError && <p className="login-error" role="alert">{detailError}</p>}
             <dl>
               <div><dt>제보 ID</dt><dd>#{connection.reportId}</dd></div>
@@ -610,7 +609,6 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
               <div><dt>제보 시간</dt><dd>{formatAdminDate(detailReport.reportedAt)}</dd></div>
               <div><dt>관제센터</dt><dd>{detailReport.controlCenterName ?? '정보 없음'}</dd></div>
               <div><dt>연결 상태</dt><dd>{connectionStatusLabels[connection.connectionStatus]}</dd></div>
-              <div><dt>연결 품질</dt><dd>{connection.quality ? connectionQualityLabels[connection.quality] : '정보 없음'}</dd></div>
               <div><dt>위험도</dt><dd>{getRiskLabel(analysis?.riskLevel ?? connection.riskLevel, analysis?.riskScore ?? connection.riskScore)}</dd></div>
               <div><dt>AI 분석 결과</dt><dd className="break-text">{connection.aiAnalysisResult || '정보 없음'}</dd></div>
             </dl>
