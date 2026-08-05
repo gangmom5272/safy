@@ -5,7 +5,9 @@ import type {
   AreaStatus,
   CongestionInfo,
   CongestionLevel,
+  CongestionMatchType,
   LiveReportSummary,
+  LocationResultType,
   LocationSearchResult,
   ReportAnalysis,
   ReportDetail,
@@ -185,11 +187,27 @@ export function createLiveReportParams({ limit }: ReportListParams) {
   return { size: limit ?? DEFAULT_REPORT_LIMIT }
 }
 
+// 백엔드는 대문자("AREA"/"PLACE"/"KEYWORD")로 보낸다. 자치구 상세(/administrative-areas/{id})
+// 처럼 애초에 type 필드가 없는 응답도 이 매퍼를 함께 쓰므로, 없으면 area 로 본다 — 그
+// 경로는 항상 자치구 문맥이라 추측이 아니라 그 응답의 실제 의미다.
+function normalizeLocationResultType(value: unknown): LocationResultType {
+  if (value === 'PLACE' || value === 'place') return 'place'
+  if (value === 'KEYWORD' || value === 'keyword') return 'keyword'
+  return 'area'
+}
+
+function normalizeCongestionMatchType(value: unknown): CongestionMatchType | undefined {
+  if (value === 'GRID' || value === 'grid') return 'grid'
+  if (value === 'NEAREST' || value === 'nearest') return 'nearest'
+  return undefined
+}
+
 export function mapLocationSearchResult(raw: unknown): LocationSearchResult {
   const item = asRecord(raw)
 
   return {
     id: asString(item.id ?? item.areaId ?? item.locationId),
+    type: normalizeLocationResultType(item.type),
     name: asString(item.name ?? item.areaName ?? item.locationName),
     // 지역명 검색 응답은 주소를 displayName 으로 준다.
     address: asString(item.address ?? item.roadAddress ?? item.displayName),
@@ -204,6 +222,7 @@ export function mapAreaDetail(raw: unknown): AreaDetail {
   const center = asRecord(item.center)
 
   return {
+    type: 'area',
     id: location.id,
     name: location.name,
     address: location.address,
@@ -321,12 +340,19 @@ function mapCongestionInfo(raw: unknown): CongestionInfo | undefined {
   }
 }
 
+/**
+ * 자치구·121장소·좌표 세 경로가 같은 모양으로 응답한다. 좌표 조회만 근거의 정확도
+ * (`congestionMatchType`)와 제보 반경(`reportRadiusMeters`)을 추가로 주므로, 없으면
+ * undefined 로 남겨 각주가 문구를 달리 쓰게 한다.
+ */
 export function mapAreaStatus(raw: unknown): AreaStatus {
   const item = asRecord(raw)
 
   return {
     congestion: mapCongestionInfo(item.congestion),
+    congestionMatchType: normalizeCongestionMatchType(item.congestionMatchType),
     recentReportCount: asNumber(item.recentReportCount, 0),
+    reportRadiusMeters: asOptionalNumber(item.reportRadiusMeters),
     updatedAt: asString(item.updatedAt),
   }
 }

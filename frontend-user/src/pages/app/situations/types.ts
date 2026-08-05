@@ -25,15 +25,32 @@ export type Coordinates = {
   longitude: number
 }
 
+/**
+ * 검색 결과의 종류. 상황 요약을 어디에 물을지 결정한다.
+ *
+ * - `area`: 자치구 → `/areas/{id}/status`
+ * - `place`: 서울시 121장소 → `/places/{id}/status`
+ * - `keyword`: 외부 검색으로 찾은 구체적 장소. 우리 식별자가 없어 좌표로 묻는다
+ *   → `/locations/status?latitude=&longitude=`
+ */
+export type LocationResultType = 'area' | 'place' | 'keyword'
+
 export type LocationSearchResult = {
   id: string
+  type: LocationResultType
   name: string
   address: string
   latitude?: number
   longitude?: number
 }
 
+/**
+ * 자치구 상세(주소 보강). {@link LocationSearchResult} 와 필드가 같아 상호 대체해서
+ * 쓸 수 있게 `type: 'area'` 를 그대로 둔다 — 장소는 이 상세 조회 자체가 없다(검색
+ * 결과가 곧 전체 정보다).
+ */
 export type AreaDetail = {
+  type: 'area'
   id: string
   name: string
   address: string
@@ -77,10 +94,26 @@ export type CongestionInfo = {
   observedAt?: string
 }
 
+/**
+ * 혼잡도 근거를 어떻게 찾았는지. 좌표 기준 조회에서만 채워진다 — 정확도가 다른 두 값을
+ * 같은 문구로 보여주면 사용자가 구분할 수 없어 각주 표현을 바꾼다.
+ *
+ * - `grid`: 좌표가 속한 격자를 그 장소가 덮고 있었다
+ * - `nearest`: 덮는 장소가 없어 가장 가까운 장소로 대체했다
+ */
+export type CongestionMatchType = 'grid' | 'nearest'
+
 export type AreaStatus = {
-  /** 근거가 없으면 비어 있다(해당 자치구에 121장소가 없거나 수집이 멈춘 경우). */
+  /** 근거가 없으면 비어 있다(121장소가 근처에 없거나 수집이 멈춘 경우). */
   congestion?: CongestionInfo
+  /** 좌표 기준 조회에서만 온다. 자치구·121장소 조회는 기준 장소가 자명해 없다. */
+  congestionMatchType?: CongestionMatchType
   recentReportCount: number
+  /**
+   * 최근 제보를 센 반경(m). 좌표 기준 조회에서만 온다 — 폴리곤이 없어 반경으로 세므로
+   * 혼잡도와 범위가 달라 각주에 밝혀야 한다.
+   */
+  reportRadiusMeters?: number
   updatedAt: string
 }
 

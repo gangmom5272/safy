@@ -248,3 +248,74 @@ test('지역명 검색 결과가 주소 필드로 변환된다', () => {
   assert.equal(location.name, '강남구')
   assert.equal(location.address, '강남구')
 })
+
+test('type 필드가 없으면 자치구로 본다', () => {
+  // 자치구 상세(/administrative-areas/{id})처럼 애초에 type 이 없는 응답도 이
+  // 매퍼를 함께 쓴다. 그 경로는 항상 자치구 문맥이라 area 가 추측이 아니라 사실이다.
+  const location = mapLocationSearchResult({ id: 24, name: '강남구', displayName: '강남구' })
+
+  assert.equal(location.type, 'area')
+})
+
+test('통합 검색 응답의 121장소 결과를 place 로 인식한다', () => {
+  const location = mapLocationSearchResult({
+    type: 'PLACE',
+    id: 14,
+    name: '역삼역',
+    displayName: '역삼역',
+    latitude: 37.5006,
+    longitude: 127.0364,
+  })
+
+  assert.equal(location.type, 'place')
+  assert.equal(location.id, '14')
+  assert.equal(location.latitude, 37.5006)
+})
+
+test('외부 검색 결과는 식별자 없이 좌표로만 온다', () => {
+  const location = mapLocationSearchResult({
+    type: 'KEYWORD',
+    id: null,
+    name: '멀티캠퍼스 역삼지점',
+    displayName: '서울 강남구 테헤란로 212',
+    latitude: 37.5013,
+    longitude: 127.0396,
+  })
+
+  assert.equal(location.type, 'keyword')
+  // 우리 DB에 없는 장소라 id 가 빈 문자열이다. 좌표로 상황 요약을 조회한다.
+  assert.equal(location.id, '')
+  assert.equal(location.address, '서울 강남구 테헤란로 212')
+  assert.equal(location.latitude, 37.5013)
+})
+
+test('좌표 기준 상황 요약이 근거 정확도와 제보 반경을 읽는다', () => {
+  // 각주가 "가까운 ~ 기준"으로 바뀌는 근거이고, 혼잡도와 제보의 범위가 다름을 밝히는 값이다.
+  const status = mapAreaStatus({
+    congestion: {
+      placeId: 14,
+      placeName: '역삼역',
+      congestionLevel: 'SLIGHTLY_CROWDED',
+      populationMin: 21000,
+      populationMax: 24000,
+      observedAt: '2026-07-29T00:57:00Z',
+    },
+    congestionMatchType: 'NEAREST',
+    recentReportCount: 2,
+    reportRadiusMeters: 1000,
+    updatedAt: '2026-07-29T01:00:00Z',
+  })
+
+  assert.equal(status.congestionMatchType, 'nearest')
+  assert.equal(status.reportRadiusMeters, 1000)
+  assert.equal(status.congestion?.level, 'slightly_crowded')
+})
+
+test('자치구·장소 상황 요약에는 근거 정확도와 반경이 없다', () => {
+  // 그 둘은 기준 장소가 자명해 백엔드가 보내지 않는다. 없음을 값으로 채우면 각주가
+  // 있지도 않은 반경을 표시한다.
+  const status = mapAreaStatus(areaStatusResponse)
+
+  assert.equal(status.congestionMatchType, undefined)
+  assert.equal(status.reportRadiusMeters, undefined)
+})

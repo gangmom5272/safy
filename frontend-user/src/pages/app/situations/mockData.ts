@@ -20,9 +20,12 @@ const riskOrder: Record<RiskLevel, number> = {
   very_low: 1,
 }
 
+// 이름은 역·건물처럼 보이지만 전부 '자치구를 검색했다'는 데모용 대역이다 — 실제
+// 서비스의 자치구/121장소 구분과는 무관하게 이 파일 안에서만 area 로 취급해 왔다.
 export const mockLocations: LocationSearchResult[] = [
   {
     id: 'hongdae-station',
+    type: 'area',
     name: '홍대입구역',
     address: '서울특별시 마포구 양화로 160',
     latitude: 37.5572,
@@ -30,6 +33,7 @@ export const mockLocations: LocationSearchResult[] = [
   },
   {
     id: 'gangnam-station',
+    type: 'area',
     name: '강남역',
     address: '서울특별시 강남구 강남대로 396',
     latitude: 37.4979,
@@ -37,6 +41,7 @@ export const mockLocations: LocationSearchResult[] = [
   },
   {
     id: 'sinnonhyeon-station',
+    type: 'area',
     name: '신논현역',
     address: '서울특별시 강남구 봉은사로 102',
     latitude: 37.5046,
@@ -44,6 +49,7 @@ export const mockLocations: LocationSearchResult[] = [
   },
   {
     id: 'cgv-gangnam',
+    type: 'area',
     name: 'CGV 강남',
     address: '서울특별시 강남구 강남대로 438',
     latitude: 37.5016,
@@ -51,6 +57,7 @@ export const mockLocations: LocationSearchResult[] = [
   },
   {
     id: 'jamsil-station',
+    type: 'area',
     name: '잠실역',
     address: '서울특별시 송파구 올림픽로 265',
     latitude: 37.5133,
@@ -58,10 +65,36 @@ export const mockLocations: LocationSearchResult[] = [
   },
   {
     id: 'seoul-station',
+    type: 'area',
     name: '서울역',
     address: '서울특별시 중구 한강대로 405',
     latitude: 37.5547,
     longitude: 126.9707,
+  },
+]
+
+// 서울시 121장소 직접 검색 데모용. 강남구를 검색하면 그 구에서 가장 혼잡한 장소가
+// 나오지만, 이 장소를 직접 검색하면 항상 이 장소 자신의 값만 나온다.
+export const mockPlaceLocations: LocationSearchResult[] = [
+  {
+    id: 'yeoksam-station-place',
+    type: 'place',
+    name: '역삼역',
+    address: '서울특별시 강남구 역삼역',
+    latitude: 37.5006,
+    longitude: 127.0364,
+  },
+]
+
+// 외부 검색(카카오) 데모용. 우리 DB에 없는 구체적 장소라 식별자가 없고 좌표만 있다.
+export const mockKeywordLocations: LocationSearchResult[] = [
+  {
+    id: '',
+    type: 'keyword',
+    name: '멀티캠퍼스 역삼지점',
+    address: '서울 강남구 테헤란로 212',
+    latitude: 37.5013,
+    longitude: 127.0396,
   },
 ]
 
@@ -255,7 +288,8 @@ function matchesKeyword(target: string, keyword: string) {
 }
 
 export function filterMockLocations(keyword: string): LocationSearchResult[] {
-  return mockLocations.filter((location) =>
+  // 실제 검색 API처럼 자치구 → 121장소 → 외부 검색 순으로 채운다.
+  return [...mockLocations, ...mockPlaceLocations, ...mockKeywordLocations].filter((location) =>
     matchesKeyword(`${location.name} ${location.address}`, keyword),
   )
 }
@@ -277,6 +311,7 @@ export function getBestMockLocation(keyword: string): LocationSearchResult | nul
 
   return {
     id: `search-${compact(keyword)}`,
+    type: 'area',
     name: keyword.trim(),
     address: report.address ?? report.locationName,
     latitude: report.latitude,
@@ -288,6 +323,7 @@ export function getMockArea(areaId: string): AreaDetail {
   const location = mockLocations.find((item) => item.id === areaId) ?? mockLocations[0]
 
   return {
+    type: 'area',
     id: location.id,
     name: location.name,
     address: location.address,
@@ -296,6 +332,7 @@ export function getMockArea(areaId: string): AreaDetail {
   }
 }
 
+/** 지도·제보 목록 데모 생성용 내부 헬퍼. 항상 자치구로 취급한다(장소 데모는 상황 요약만 다르면 된다). */
 export function getMockAreaByQuery(keyword: string): AreaDetail | null {
   const location = getBestMockLocation(keyword)
 
@@ -304,12 +341,54 @@ export function getMockAreaByQuery(keyword: string): AreaDetail | null {
   }
 
   return {
+    type: 'area',
     id: location.id,
     name: location.name,
     address: location.address,
     latitude: location.latitude ?? 37.4979,
     longitude: location.longitude ?? 127.0276,
   }
+}
+
+/** 장소를 직접 검색했을 때의 목업 상황 요약. 자치구 목업(mockAreaStatus)과 값을 다르게
+ * 둬서, 실제로 다른 경로(장소 API)를 탔는지 화면에서 구분할 수 있게 한다. */
+export const mockPlaceStatus: AreaStatus = {
+  congestion: {
+    placeName: '역삼역',
+    level: 'slightly_crowded',
+    populationMin: 21000,
+    populationMax: 24000,
+    observedAt: '2026-07-21T09:40:00+09:00',
+  },
+  recentReportCount: 1,
+  updatedAt: '2026-07-21T09:41:00+09:00',
+}
+
+// 목업 장소가 하나뿐이라 id 로 가릴 것이 없다 — 검색 결과가 이미 그 장소로 확정돼 있다.
+export function getMockPlaceStatus(): AreaStatus {
+  return mockPlaceStatus
+}
+
+/**
+ * 좌표 기준 상황 요약 목업. 격자를 덮는 장소를 못 찾아 최근접으로 대체한 경우를 흉내내
+ * 각주가 "~에서 가까운" 표현으로 바뀌는지 화면에서 확인할 수 있게 한다.
+ */
+export const mockCoordinateStatus: AreaStatus = {
+  congestion: {
+    placeName: '역삼역',
+    level: 'slightly_crowded',
+    populationMin: 21000,
+    populationMax: 24000,
+    observedAt: '2026-07-21T09:40:00+09:00',
+  },
+  congestionMatchType: 'nearest',
+  recentReportCount: 2,
+  reportRadiusMeters: 1000,
+  updatedAt: '2026-07-21T09:41:00+09:00',
+}
+
+export function getMockCoordinateStatus(): AreaStatus {
+  return mockCoordinateStatus
 }
 
 export function getMockAreaMap(areaIdOrQuery: string): AreaMapData {

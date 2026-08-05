@@ -119,6 +119,36 @@ class AreaCongestionReaderTest {
 		assertThat(reader().peakOf(GANGNAM)).isEmpty();
 	}
 
+	/**
+	 * 장소를 직접 검색한 경우: 후보가 그 장소 하나뿐이라, 다른 장소가 더 혼잡해도
+	 * 절대 끼어들지 않는다. 자치구 조회를 그대로 재사용했다면 이 테스트가 실패한다 —
+	 * "역삼역을 검색했는데 더 혼잡한 강남역 값이 나온다" 문제를 고정한다.
+	 */
+	@Test
+	void atPlaceAlwaysReturnsTheSearchedPlaceItself() {
+		when(observationRepository.findLatestPerPlace()).thenReturn(List.of(
+				observation(1L, "역삼역", CongestionLevel.NORMAL, 20000, NOW),
+				observation(2L, "강남역", CongestionLevel.CROWDED, 50000, NOW)
+		));
+
+		var result = reader().atPlace(1L).orElseThrow();
+
+		assertThat(result.placeName()).isEqualTo("역삼역");
+		assertThat(result.congestionLevel()).isEqualTo(CongestionLevel.NORMAL);
+		// areaPlaceIndex 는 자치구 경로 전용이라 장소 직접 조회에서는 호출되지 않는다.
+		org.mockito.Mockito.verifyNoInteractions(areaPlaceIndex);
+	}
+
+	@Test
+	void atPlaceIsEmptyWhenThatPlaceHasNoFreshObservation() {
+		when(observationRepository.findLatestPerPlace()).thenReturn(List.of(
+				observation(1L, "역삼역", CongestionLevel.NORMAL, 20000,
+						NOW.minus(AreaCongestionReader.FRESH_WINDOW).minusSeconds(1))
+		));
+
+		assertThat(reader().atPlace(1L)).isEmpty();
+	}
+
 	private AreaCongestionReader reader() {
 		return new AreaCongestionReader(observationRepository, areaPlaceIndex, Clock.fixed(NOW, ZoneOffset.UTC));
 	}

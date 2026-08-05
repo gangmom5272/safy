@@ -1,5 +1,6 @@
 package com.ojimasam.safy.report.domain;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -68,6 +69,29 @@ public interface ReportRepository {
 			Long administrativeAreaId,
 			ReportPublicVisibility publicVisibility,
 			Instant from
+	);
+
+	/**
+	 * 장소 검색의 '최근 제보' 수를 계산하기 위한 전체 후보. 장소는 자치구보다 훨씬 좁아
+	 * 행정구역으로 미리 거를 수 없으므로, 창 안의 공개 제보를 전부 읽어 애플리케이션에서
+	 * 장소 폴리곤으로 직접 판정한다({@code PlaceRecentReportCounter}). 같은 30분 창을
+	 * 도시 전체에 한 번 읽는 것이라 건수가 많지 않다.
+	 */
+	List<Report> findByPublicVisibilityAndReportedAtAfter(ReportPublicVisibility publicVisibility, Instant from);
+
+	/**
+	 * 좌표 반경 조회의 1차 필터. 반경을 감싸는 사각형으로 좁힌다.
+	 *
+	 * <p>사각형은 원보다 넓으므로 통과한 결과를 실제 거리로 한 번 더 걸러야 한다
+	 * ({@code RadiusRecentReportCounter}). DB 에서 삼각함수를 쓰지 않으려고 이렇게 나눴다.
+	 */
+	List<Report> findByPublicVisibilityAndReportedAtAfterAndLatitudeBetweenAndLongitudeBetween(
+			ReportPublicVisibility publicVisibility,
+			Instant from,
+			BigDecimal minLatitude,
+			BigDecimal maxLatitude,
+			BigDecimal minLongitude,
+			BigDecimal maxLongitude
 	);
 	Optional<Report> findByIdAndPublicVisibility(Long id, ReportPublicVisibility publicVisibility);
 

@@ -26,6 +26,35 @@ function formatPopulationRange(congestion: CongestionInfo) {
     : `${format(populationMin)}~${format(populationMax)}명`
 }
 
+function formatRadius(meters: number) {
+  return meters >= 1000 ? `${(meters / 1000).toFixed(meters % 1000 === 0 ? 0 : 1)}km` : `${meters}m`
+}
+
+/**
+ * 혼잡도·인구수가 어느 장소를 근거로 삼았는지 밝힌다.
+ *
+ * <p>`nearest` 는 검색한 지점을 덮는 관측 지점이 없어 가까운 곳으로 대체한 경우다. 정확히
+ * 그 안에서 관측된 값과 문구가 같으면 사용자가 정확도를 구분할 수 없어 표현을 나눈다.
+ */
+function congestionSourceText(status: AreaStatus) {
+  if (!status.congestion) {
+    return '이 지점 근처에는 서울시 실시간 도시데이터 관측 지점이 없습니다.'
+  }
+
+  const { placeName, observedAt } = status.congestion
+  const basis = status.congestionMatchType === 'nearest'
+    ? `가까운 ${placeName} 기준`
+    : `${placeName} 기준`
+
+  return [
+    basis,
+    '서울시 실시간 도시데이터',
+    observedAt ? `${formatRelativeTime(observedAt)} 관측` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
 type AreaStatusSummaryProps = {
   status?: AreaStatus
   isLoading: boolean
@@ -93,21 +122,14 @@ export function AreaStatusSummary({ status, isLoading, error, onRefresh }: AreaS
             <StatusItem label="최근 제보" value={`${status.recentReportCount}건`} />
           </div>
           {/* 어느 장소 기준인지, 언제 관측된 값인지 밝혀야 한다. 자치구 전체 인구가 아니라
-              그 구에서 가장 혼잡한 장소 하나의 값이고, 위의 '마지막 갱신'은 조회 시각이라
-              관측 시각과 다르다. */}
-          <p className="area-status-source">
-            {status.congestion
-              ? [
-                  `${status.congestion.placeName} 기준`,
-                  '서울시 실시간 도시데이터',
-                  status.congestion.observedAt
-                    ? `${formatRelativeTime(status.congestion.observedAt)} 관측`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
-              : '이 지역에는 서울시 실시간 도시데이터 관측 지점이 없습니다.'}
-          </p>
+              한 장소의 값이고, 위의 '마지막 갱신'은 조회 시각이라 관측 시각과 다르다. */}
+          <p className="area-status-source">{congestionSourceText(status)}</p>
+          {/* 좌표 기준 조회는 혼잡도(한 장소)와 최근 제보(반경)의 범위가 달라 따로 밝힌다. */}
+          {status.reportRadiusMeters ? (
+            <p className="area-status-source">
+              최근 제보는 이 지점 반경 {formatRadius(status.reportRadiusMeters)} 기준입니다.
+            </p>
+          ) : null}
         </> : null}
       </div>
     </section>
