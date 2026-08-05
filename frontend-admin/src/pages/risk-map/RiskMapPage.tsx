@@ -72,7 +72,6 @@ export function RiskMapPage() {
   const [showCongestionLayer, setShowCongestionLayer] = useState(true)
   const [showEventLayer, setShowEventLayer] = useState(false)
   const [reports, setReports] = useState<AdminReport[]>([])
-  const [isLoading, setIsLoading] = useState(true)
 
   const [gridRisks, setGridRisks] = useState<GridRisk[]>([])
   const [gridError, setGridError] = useState('')
@@ -99,7 +98,6 @@ export function RiskMapPage() {
     getDashboardReports(0, 100)
       .then((loaded) => { if (active) setReports(loaded) })
       .catch(() => undefined)
-      .finally(() => { if (active) setIsLoading(false) })
 
     // 121곳 혼잡도와 행사 목록은 뷰포트와 무관하게 한 번만 받는다.
     getPlaceCongestions()
@@ -444,9 +442,6 @@ export function RiskMapPage() {
             </div>
           </div>
           {gridError && <p className="empty-state" role="alert">{gridError}</p>}
-          {!isLoading && showReportLayer && plottableReports.length === 0 && (
-            <p className="empty-state" role="status">지도에 표시할 좌표가 있는 제보가 없습니다.</p>
-          )}
         </article>
 
         <aside className="map-stats">
@@ -558,7 +553,6 @@ export function RiskMapPage() {
                 <span>확인 제보</span>
                 <strong>{checkedReportCount}건</strong>
               </article>
-              <p className="map-stats__hint">격자를 클릭하면 위험도 추이, 장소·행사 마커를 클릭하면 상세 정보를 볼 수 있습니다.</p>
             </>
           )}
         </aside>
