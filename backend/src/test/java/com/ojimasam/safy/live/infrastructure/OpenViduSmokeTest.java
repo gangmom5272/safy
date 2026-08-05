@@ -28,7 +28,7 @@ class OpenViduSmokeTest {
 				Duration.ofSeconds(60));
 		LiveKitMediaGateway gateway = new LiveKitMediaGateway(properties,
 				new com.ojimasam.safy.live.application.LiveRecordingProperties(
-						false, "safy", "http://localhost:9000", "key", "secret", null, null, 0, 0));
+						false, "safy", "http://localhost:9000", "key", "secret", null, null, 0, 0, 0, null));
 		String roomName = "safy-smoke-" + UUID.randomUUID();
 
 		gateway.createRoom(roomName);
