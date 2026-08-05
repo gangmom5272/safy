@@ -125,6 +125,49 @@ class JpaReportRepositoryTest {
 		assertThat(afterCursor).extracting(Report::getDescription).containsExactly("첫째");
 	}
 
+	/**
+	 * 장소 검색의 '최근 제보' 카운터({@code PlaceRecentReportCounter})가 쓰는 조회다.
+	 * 행정구역으로 미리 거르지 않고 창 안 공개 제보를 전부 읽어 애플리케이션에서 폴리곤
+	 * 판정하므로, 여기서는 공개 여부·창 조건만 정확한지 확인한다.
+	 */
+	@Test
+	void findsAllPublicReportsInWindowRegardlessOfArea() {
+		Instant now = Instant.parse("2026-07-30T00:00:00Z");
+		Instant windowStart = now.minus(Duration.ofMinutes(30));
+		visibleReport("창 안 공개", ReportPublicVisibility.PUBLISHED, now.minusSeconds(60));
+		visibleReport("창 밖 공개", ReportPublicVisibility.PUBLISHED, now.minus(Duration.ofMinutes(31)));
+		visibleReport("창 안 미검수", ReportPublicVisibility.PENDING, now.minusSeconds(60));
+		entityManager.flush();
+
+		List<Report> result = reportRepository
+				.findByPublicVisibilityAndReportedAtAfter(ReportPublicVisibility.PUBLISHED, windowStart);
+
+		assertThat(result).extracting(Report::getDescription).containsExactly("창 안 공개");
+	}
+
+	/**
+	 * 좌표 반경 조회의 1차 필터({@code RadiusRecentReportCounter}). 사각형 안이면 잡히고,
+	 * 원 밖인지는 애플리케이션이 실제 거리로 다시 판정한다.
+	 */
+	@Test
+	void findsPublicReportsInsideBoundingBox() {
+		Instant now = Instant.parse("2026-07-30T00:00:00Z");
+		Instant windowStart = now.minus(Duration.ofMinutes(30));
+		reportAt("사각형 안", ReportPublicVisibility.PUBLISHED, now.minusSeconds(60), "37.5010000", "127.0010000");
+		reportAt("사각형 밖", ReportPublicVisibility.PUBLISHED, now.minusSeconds(60), "37.6000000", "127.1000000");
+		reportAt("창 밖", ReportPublicVisibility.PUBLISHED, now.minus(Duration.ofMinutes(31)), "37.5010000", "127.0010000");
+		reportAt("미검수", ReportPublicVisibility.PENDING, now.minusSeconds(60), "37.5010000", "127.0010000");
+		entityManager.flush();
+
+		List<Report> result = reportRepository
+				.findByPublicVisibilityAndReportedAtAfterAndLatitudeBetweenAndLongitudeBetween(
+						ReportPublicVisibility.PUBLISHED, windowStart,
+						new BigDecimal("37.4900000"), new BigDecimal("37.5100000"),
+						new BigDecimal("126.9900000"), new BigDecimal("127.0100000"));
+
+		assertThat(result).extracting(Report::getDescription).containsExactly("사각형 안");
+	}
+
 	@Test
 	void findByIdAndPublicVisibilityHidesUnpublishedReport() {
 		Instant now = Instant.parse("2026-07-30T00:00:00Z");
@@ -136,6 +179,25 @@ class JpaReportRepositoryTest {
 				published.getId(), ReportPublicVisibility.PUBLISHED)).isPresent();
 		assertThat(reportRepository.findByIdAndPublicVisibility(
 				pending.getId(), ReportPublicVisibility.PUBLISHED)).isEmpty();
+	}
+
+	/** 좌표까지 지정하는 변형. bbox 조회 검증에만 쓴다. */
+	private Report reportAt(
+			String description, ReportPublicVisibility visibility, Instant reportedAt,
+			String latitude, String longitude) {
+		Report report = Report.create(
+				1L,
+				com.ojimasam.safy.report.domain.type.ReportType.IMAGE,
+				com.ojimasam.safy.report.domain.type.ReportCategory.CROWD_CONGESTION,
+				com.ojimasam.safy.report.domain.type.ReportSubcategory.EXIT_CONGESTION,
+				description,
+				new BigDecimal(latitude),
+				new BigDecimal(longitude),
+				"서울특별시"
+		);
+		ReflectionTestUtils.setField(report, "publicVisibility", visibility);
+		ReflectionTestUtils.setField(report, "reportedAt", reportedAt);
+		return entityManager.persist(report);
 	}
 
 	private Report visibleReport(String description, ReportPublicVisibility visibility, Instant reportedAt) {

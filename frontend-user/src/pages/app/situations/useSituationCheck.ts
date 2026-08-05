@@ -4,11 +4,13 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { queryKeys } from '../../../api/queryKeys'
 import {
   getArea,
-  getAreaByQuery,
   getAreaLiveReports,
   getAreaMap,
   getAreaStatus,
+  getCoordinateStatus,
   getLiveReports,
+  getLocationByQuery,
+  getPlaceStatus,
   searchLocations,
 } from './situationApi'
 import { DEFAULT_REPORT_SORT, type LocationSearchResult, type ReportSort, type ReportType } from './types'
@@ -48,50 +50,89 @@ export function useSituationCheck() {
     enabled: canSearch,
   })
 
+  // 자치구만 주소를 보강한다(검색 결과의 address 는 이름을 그대로 반복한 값이라
+  // /administrative-areas/{id} 로 실제 주소를 다시 받는다). 장소는 이 상세 조회 자체가
+  // 없다 — 검색 결과가 이미 갖고 있는 정보가 전부다.
   const areaQuery = useQuery({
     queryKey: queryKeys.areas.detail(selectedArea?.id ?? submittedQuery),
     queryFn: () => getArea(selectedArea!.id),
-    enabled: Boolean(selectedArea) && !hasSubmittedQuery,
+    enabled: Boolean(selectedArea) && selectedArea?.type === 'area' && !hasSubmittedQuery,
   })
 
-  const submittedAreaQuery = useQuery({
-    queryKey: queryKeys.areas.detail(submittedQuery),
-    queryFn: () => getAreaByQuery(submittedQuery),
+  // 종류를 가리지 않고 "이 검색어가 가리키는 대상"을 찾는다. 무엇이 나왔는지는
+  // activeArea.type 으로 판단해 아래에서 지역/장소/좌표 API 를 갈라 부른다.
+  const submittedLocationQuery = useQuery({
+    queryKey: queryKeys.locations.detail(submittedQuery),
+    queryFn: () => getLocationByQuery(submittedQuery),
     enabled: hasSubmittedQuery,
   })
 
-  const activeArea = submittedAreaQuery.data ?? areaQuery.data ?? selectedArea
+  const activeArea = submittedLocationQuery.data ?? areaQuery.data ?? selectedArea
+  const isAreaSelected = activeArea?.type === 'area'
+  const isPlaceSelected = activeArea?.type === 'place'
+  // 외부 검색 결과는 우리 식별자가 없어 좌표로만 조회할 수 있다.
+  const keywordCoordinate = activeArea?.type === 'keyword'
+    && activeArea.latitude !== undefined && activeArea.longitude !== undefined
+    ? { latitude: activeArea.latitude, longitude: activeArea.longitude }
+    : null
   const areaKey = activeArea?.id ?? submittedQuery
   const displayedSearchKeyword = activeArea && searchKeyword.trim() === submittedQuery
     ? activeArea.name
     : searchKeyword
 
+  // 장소는 지도 응답(zones·경계)이 필요 없다 — 중심 좌표는 검색 결과에 이미 있고,
+  // 마커는 지역 제한 없는 전체 피드를 그대로 쓴다(아래 globalReportsQuery).
   const areaMapQuery = useQuery({
     queryKey: queryKeys.areas.map(areaKey),
     queryFn: () => getAreaMap(areaKey),
-    enabled: Boolean(activeArea),
+    enabled: isAreaSelected,
   })
 
   const areaStatusQuery = useQuery({
     queryKey: queryKeys.areas.status(areaKey),
     queryFn: () => getAreaStatus(areaKey),
-    enabled: Boolean(activeArea),
+    enabled: isAreaSelected,
   })
 
+  // 121장소를 직접 검색했을 때의 상황 요약. 그 구의 최고 혼잡 장소가 아니라 이 장소
+  // 자신의 값이다 — 강남구를 검색했을 때와 역삼역을 검색했을 때가 같은 값이면 안 된다.
+  const placeStatusQuery = useQuery({
+    queryKey: queryKeys.places.status(areaKey),
+    queryFn: () => getPlaceStatus(areaKey),
+    enabled: isPlaceSelected,
+  })
+
+  // 외부 검색으로 찾은 구체적 장소. 혼잡도는 그 좌표의 격자를 덮는 121장소(없으면 최근접),
+  // 최근 제보는 반경 1km 다. 두 범위가 달라 응답이 각각의 근거를 함께 준다.
+  const coordinateStatusQuery = useQuery({
+    queryKey: queryKeys.locations.status(
+      keywordCoordinate?.latitude ?? 0,
+      keywordCoordinate?.longitude ?? 0,
+    ),
+    queryFn: () => getCoordinateStatus(keywordCoordinate!.latitude, keywordCoordinate!.longitude),
+    enabled: keywordCoordinate !== null,
+  })
+
+  const activeStatusQuery = keywordCoordinate
+    ? coordinateStatusQuery
+    : isPlaceSelected ? placeStatusQuery : areaStatusQuery
+
+  // 마커는 항상 지역 제한 없는 전체 피드(30분 이내 공개 제보)다. 자치구를 선택했을 때만
+  // 그 구로 좁힌 별도 피드(areaReportsQuery)를 쓴다.
   const globalReportsQuery = useQuery({
     queryKey: queryKeys.reports.live({ sort, type: typeParam, limit: 20 }),
     queryFn: () => getLiveReports({ sort, types: selectedTypes, limit: 20 }),
-    enabled: !activeArea && !hasSubmittedQuery,
+    enabled: !isAreaSelected,
   })
 
   const areaReportsQuery = useQuery({
     queryKey: queryKeys.areas.liveReports(areaKey, { sort, type: typeParam }),
     queryFn: () => getAreaLiveReports(areaKey, { sort, types: selectedTypes }),
-    enabled: Boolean(activeArea),
+    enabled: isAreaSelected,
   })
 
-  const reportsQuery = activeArea ? areaReportsQuery : globalReportsQuery
-  const isSubmittedEmpty = hasSubmittedQuery && !activeArea && !submittedAreaQuery.isFetching
+  const reportsQuery = isAreaSelected ? areaReportsQuery : globalReportsQuery
+  const isSubmittedEmpty = hasSubmittedQuery && !activeArea && !submittedLocationQuery.isFetching
 
   useEffect(() => {
     reportListRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
@@ -125,10 +166,16 @@ export function useSituationCheck() {
   }
 
   const refreshAreaStatus = async () => {
-    await Promise.allSettled([
-      areaStatusQuery.refetch(),
-      areaMapQuery.refetch(),
-    ])
+    // 자치구만 지도 응답(경계·중심)을 함께 쓰므로 둘을 같이 갱신한다.
+    if (isAreaSelected) {
+      await Promise.allSettled([
+        areaStatusQuery.refetch(),
+        areaMapQuery.refetch(),
+      ])
+      return
+    }
+
+    await activeStatusQuery.refetch()
   }
 
   const searchSuggestions = useMemo(() => {
@@ -152,11 +199,11 @@ export function useSituationCheck() {
     sort,
     setSort,
     reports: isSubmittedEmpty ? [] : (reportsQuery.data ?? []),
-    isReportsLoading: submittedAreaQuery.isFetching || reportsQuery.isFetching,
+    isReportsLoading: submittedLocationQuery.isFetching || reportsQuery.isFetching,
     reportsError: reportsQuery.error,
-    areaStatus: areaStatusQuery.data,
-    isAreaStatusLoading: areaStatusQuery.isFetching,
-    areaStatusError: areaStatusQuery.error,
+    areaStatus: activeStatusQuery.data,
+    isAreaStatusLoading: activeStatusQuery.isFetching,
+    areaStatusError: activeStatusQuery.error,
     mapData: areaMapQuery.data,
     isMapLoading: areaMapQuery.isFetching,
     mapError: areaMapQuery.error,

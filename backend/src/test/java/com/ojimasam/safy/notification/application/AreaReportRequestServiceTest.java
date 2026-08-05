@@ -49,7 +49,7 @@ class AreaReportRequestServiceTest {
 		User optedOutUser = User.citizen("opted-out");
 		ReflectionTestUtils.setField(optedOutUser, "id", 11L);
 
-		when(placeRepository.findById(1L)).thenReturn(Optional.of(place));
+		when(placeRepository.findOneById(1L)).thenReturn(Optional.of(place));
 		when(requestRepository.save(org.mockito.ArgumentMatchers.any(AreaReportRequest.class)))
 				.thenAnswer(invocation -> {
 					AreaReportRequest request = invocation.getArgument(0);

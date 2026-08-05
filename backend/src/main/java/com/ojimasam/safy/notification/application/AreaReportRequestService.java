@@ -73,7 +73,7 @@ public class AreaReportRequestService {
 		if (expiresInMinutes < 5 || expiresInMinutes > 120) {
 			throw new BusinessException(CommonErrorCode.INVALID_INPUT_VALUE, "요청 유효시간은 5~120분이어야 합니다.");
 		}
-		Place place = placeRepository.findById(placeId)
+		Place place = placeRepository.findOneById(placeId)
 				.filter(Place::isActive)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
 		Instant now = clock.instant();
@@ -101,7 +101,7 @@ public class AreaReportRequestService {
 	public AreaReportRequestView get(Long requestId) {
 		AreaReportRequest request = requestRepository.findById(requestId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
-		Place place = placeRepository.findById(request.getPlaceId())
+		Place place = placeRepository.findOneById(request.getPlaceId())
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
 		return AreaReportRequestView.from(request, place);
 	}
