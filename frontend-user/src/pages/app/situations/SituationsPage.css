@@ -12,7 +12,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 4px 2px 2px;
+  padding: 4px 4px 4px;
 }
 
 .situation-header p,
@@ -65,7 +65,7 @@
   width: 100%;
   min-width: 0;
   min-height: 50px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-badge);
   background: #ffffff;
@@ -154,7 +154,7 @@
 
 .location-suggestions button {
   display: grid;
-  gap: 2px;
+  gap: 4px;
   width: 100%;
   padding: 12px;
   border: 0;
@@ -178,7 +178,7 @@
 
 .suggestion-message {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   margin: 0;
   padding: 12px;
 }
@@ -201,7 +201,7 @@
 .area-map,
 .area-status-content {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
@@ -212,8 +212,8 @@
 .selected-area-header {
   grid-template-columns: 1fr auto;
   align-items: start;
-  gap: 6px 10px;
-  padding: 13px 14px;
+  gap: 8px 8px;
+  padding: 12px 16px;
 }
 
 .selected-area-header > div:first-child {
@@ -254,7 +254,7 @@
 .selected-area-header button,
 .section-title-row button,
 .filter-sheet .primary {
-  padding: 0 14px;
+  padding: 0 16px;
   color: #ffffff;
   background: var(--color-success);
 }
@@ -291,7 +291,7 @@
 .favorite-feedback {
   grid-column: 1 / -1;
   margin: 0;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 12px;
   color: var(--color-success);
   background: var(--color-success-light);
@@ -312,7 +312,7 @@
 
 .situation-content-section {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -327,7 +327,7 @@
 }
 
 .area-status-content {
-  padding: 14px;
+  padding: 16px;
 }
 
 .situation-toolbar {
@@ -385,7 +385,7 @@
   gap: 8px;
   width: 100%;
   min-height: 40px;
-  padding: 0 10px;
+  padding: 0 8px;
   border: 0;
   border-radius: 10px;
   color: var(--color-text-primary);
@@ -407,7 +407,7 @@
 }
 
 .selected-filter-chips span {
-  padding: 6px 10px;
+  padding: 8px 8px;
   border-radius: var(--radius-badge);
   color: var(--color-success);
   background: var(--color-success-light);
@@ -417,13 +417,13 @@
 
 .report-card-list {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .live-report-card {
   display: grid;
   grid-template-columns: 112px 1fr;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--color-border);
@@ -497,7 +497,7 @@
   left: 0;
   display: grid;
   min-height: 30px;
-  padding: 5px 8px;
+  padding: 4px 8px;
   place-items: center;
   color: #ffffff;
   background: rgba(22, 33, 58, .68);
@@ -510,7 +510,7 @@
 .report-card-content {
   position: relative;
   display: grid;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
   padding-right: 58px;
 }
@@ -518,7 +518,7 @@
 .report-card-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .risk-critical,
@@ -565,7 +565,7 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   overflow-wrap: anywhere;
 }
 
@@ -609,7 +609,7 @@
   align-items: center;
   min-width: 30px;
   min-height: 30px;
-  padding: 0 5px;
+  padding: 0 4px;
   color: var(--color-success);
   background: transparent;
   font-size: 11px;
@@ -630,7 +630,7 @@
   display: grid;
   /* 항목 3개를 한 줄에 나란히 둔다. 2열이면 3개가 2+1로 접힌다. */
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .section-title-row .refresh-icon-button {
@@ -720,7 +720,7 @@
   top: 50%;
   z-index: 2;
   transform: translate(-50%, -50%);
-  padding: 7px 10px;
+  padding: 8px 8px;
   border-radius: var(--radius-badge);
   color: #ffffff;
   background: var(--color-text-primary);
@@ -744,7 +744,7 @@
   position: absolute;
   display: grid;
   place-items: center;
-  padding: 10px;
+  padding: 8px;
   border: 2px solid currentColor;
   border-radius: 50%;
   text-align: center;
@@ -787,7 +787,7 @@
 
 .map-controls {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .map-controls button {
@@ -799,7 +799,7 @@
 
 .situation-state {
   margin: 0;
-  padding: 18px;
+  padding: 16px;
   border-radius: 16px;
   text-align: center;
 }
@@ -867,7 +867,7 @@
 
 .filter-sheet {
   display: grid;
-  gap: 18px;
+  gap: 16px;
   width: min(100%, 430px);
   margin: 0 auto;
   padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
@@ -885,22 +885,22 @@
 
 .filter-sheet-header button,
 .filter-sheet .secondary {
-  padding: 0 14px;
+  padding: 0 16px;
   color: var(--color-text-secondary);
   background: var(--color-surface-soft);
 }
 
 .filter-options {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .filter-options label {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 48px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: 1px solid var(--color-border);
   border-radius: 14px;
   color: var(--color-text-primary);
@@ -923,7 +923,7 @@
 .filter-sheet-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .sr-only {
@@ -945,7 +945,7 @@
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .report-detail-header h1 {
@@ -958,7 +958,7 @@
 .report-detail-header button,
 .inline-action-button {
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: 0;
   border-radius: var(--radius-badge);
   color: var(--color-success);
@@ -980,7 +980,7 @@
 
 .report-detail-card {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
@@ -1012,7 +1012,7 @@
 
 .report-detail-body {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .report-detail-body h2 {
@@ -1024,13 +1024,13 @@
 
 .report-detail-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
 }
 
 .report-detail-list div {
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .report-detail-list dt {
@@ -1083,11 +1083,11 @@
 
   /* 좁은 화면에서도 한 줄을 유지한다. 열을 쌓지 않고 여백과 글자만 줄인다. */
   .status-grid {
-    gap: 6px;
+    gap: 8px;
   }
 
   .status-item {
-    padding: 10px 8px;
+    padding: 8px 8px;
   }
 
   .status-item span {
@@ -1143,7 +1143,7 @@
 .situation-intro {
   display: grid;
   gap: 4px;
-  padding: 2px 2px 0;
+  padding: 4px 4px 0;
 }
 
 .situation-intro p {
@@ -1262,14 +1262,14 @@
 }
 
 .situation-page:not(.report-detail-page) .area-map {
-  gap: 11px;
-  padding: 14px;
+  gap: 12px;
+  padding: 16px;
 }
 
 .situation-page:not(.report-detail-page) .map-data-summary {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
-  gap: 6px;
+  gap: 8px;
 }
 
 .situation-page:not(.report-detail-page) .map-data-summary > span {
@@ -1277,8 +1277,8 @@
   min-width: 0;
   min-height: 52px;
   align-content: center;
-  gap: 3px;
-  padding: 7px 8px;
+  gap: 4px;
+  padding: 8px 8px;
   border-radius: 11px;
   background: rgba(46, 111, 224, .06);
 }
@@ -1307,7 +1307,7 @@
 }
 
 .situation-page:not(.report-detail-page) .map-zone {
-  padding: 7px;
+  padding: 8px;
   line-height: 1.2;
   word-break: keep-all;
 }
@@ -1318,7 +1318,7 @@
 }
 
 .situation-page:not(.report-detail-page) .live-report-section {
-  gap: 10px;
+  gap: 8px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -1349,7 +1349,7 @@
 
 .situation-page:not(.report-detail-page) .live-report-card {
   gap: 12px;
-  padding: 10px;
+  padding: 8px;
   border-color: var(--color-border);
   background: var(--color-surface-secondary);
   box-shadow: none;
@@ -1362,7 +1362,7 @@
 }
 
 .situation-page:not(.report-detail-page) .report-card-content {
-  gap: 2px;
+  gap: 4px;
   padding-right: 0;
 }
 
@@ -1428,7 +1428,7 @@
   left: 8px;
   z-index: 2;
   min-height: 0;
-  padding: 4px 7px;
+  padding: 4px 8px;
   font-size: 10px;
   line-height: 1;
   white-space: nowrap;
@@ -1440,7 +1440,7 @@
   left: auto;
   display: block;
   min-height: 0;
-  padding: 4px 7px;
+  padding: 4px 8px;
   border-radius: var(--radius-badge);
   color: var(--color-text-secondary);
   background: rgba(255, 255, 255, .92);
@@ -1452,8 +1452,8 @@
 
 .situation-page:not(.report-detail-page) .report-card-content {
   align-content: center;
-  gap: 6px;
-  padding: 14px 16px;
+  gap: 8px;
+  padding: 16px 16px;
 }
 
 .situation-page:not(.report-detail-page) .report-list-meta,

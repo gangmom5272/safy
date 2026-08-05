@@ -24,9 +24,9 @@
   display: flex;
   flex: none;
   min-height: 40px;
-  padding: 0 13px;
+  padding: 0 12px;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   color: var(--color-text-secondary);
@@ -40,7 +40,7 @@
   display: grid;
   min-width: 20px;
   height: 20px;
-  padding: 0 5px;
+  padding: 0 4px;
   place-items: center;
   border-radius: 999px;
   color: var(--color-text-secondary);
@@ -61,7 +61,7 @@
 
 .settings-done {
   min-height: 34px;
-  padding: 0 13px;
+  padding: 0 12px;
   border: 0;
   border-radius: 999px;
   color: #fff;
@@ -82,7 +82,7 @@
 }
 
 .notification-list-toolbar button {
-  padding: 5px 0;
+  padding: 4px 0;
   border: 0;
   color: var(--color-primary-hover);
   background: transparent;
@@ -173,7 +173,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .notification-title {
@@ -223,7 +223,7 @@
   min-height: 220px;
   padding: 32px;
   place-items: center;
-  gap: 6px;
+  gap: 8px;
   border: 1px solid var(--color-border);
   border-radius: 24px;
   color: var(--color-text-secondary);
@@ -286,9 +286,9 @@
   width: min(100%, 430px);
   max-height: 88svh;
   margin: 0 auto;
-  padding: 22px 20px calc(20px + env(safe-area-inset-bottom));
+  padding: 24px 20px calc(20px + env(safe-area-inset-bottom));
   overflow-y: auto;
-  gap: 18px;
+  gap: 16px;
   border-radius: 26px 26px 0 0;
   background: #fff;
 }
@@ -332,14 +332,14 @@
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 15px;
-  padding: 14px 0;
+  gap: 16px;
+  padding: 16px 0;
   border-bottom: 1px solid var(--color-border);
 }
 
 .setting-row label {
   display: grid;
-  gap: 2px;
+  gap: 4px;
 }
 
 .setting-row label strong {
@@ -395,6 +395,6 @@
 
 @media (max-width: 370px) {
   .notification-card {
-    padding: 15px 14px;
+    padding: 16px 16px;
   }
 }

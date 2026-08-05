@@ -1,5 +1,5 @@
 .report-detail-page {
-  gap: 18px;
+  gap: 16px;
   padding-top: 0;
   color: var(--color-text-primary);
 }
@@ -71,7 +71,7 @@
 
 .report-detail-page .report-detail-card,
 .report-detail-page .area-map {
-  gap: 18px;
+  gap: 16px;
   padding: 20px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
@@ -81,14 +81,14 @@
 
 .report-detail-content-section {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
 .report-detail-summary {
   display: grid;
   min-width: 0;
-  gap: 18px;
+  gap: 16px;
 }
 
 .report-detail-section-title {
@@ -111,7 +111,7 @@
 }
 
 .report-detail-page .report-detail-body {
-  gap: 14px;
+  gap: 16px;
 }
 
 .report-detail-page .report-category {
@@ -134,7 +134,7 @@
 .report-detail-page .report-detail-list div {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 5px;
+  gap: 4px;
   /* 구분선은 두지 않는다. 제보 요약은 위에서 아래로 읽히는 한 덩어리로 본다. */
   padding: 12px 0;
 }
@@ -193,7 +193,7 @@
 }
 
 .report-detail-page .analysis-status-row {
-  gap: 6px;
+  gap: 8px;
   padding-bottom: 4px;
   border-bottom: 0;
 }
@@ -205,7 +205,7 @@
 }
 
 .report-detail-page .analysis-complete-badge {
-  padding: 5px 9px;
+  padding: 4px 8px;
   border-radius: var(--radius-badge);
   color: var(--color-primary-hover);
   background: rgba(46, 111, 224, .08);
@@ -215,7 +215,7 @@
 
 .report-detail-page .analysis-detail-list div {
   grid-template-columns: minmax(0, 1fr);
-  padding: 9px 0;
+  padding: 8px 0;
   border-bottom: 0;
 }
 
@@ -266,8 +266,8 @@
 .report-detail-page .report-detail-map .map-data-summary span {
   display: grid;
   min-width: 0;
-  gap: 3px;
-  padding: 10px;
+  gap: 4px;
+  padding: 8px;
   border-radius: 12px;
   color: var(--color-text-secondary);
   background: rgba(46, 111, 224, .06);
@@ -390,7 +390,7 @@
 .report-detail-map .current-location-pin b,
 .report-detail-map .map-marker b {
   margin-top: 9px;
-  padding: 4px 7px;
+  padding: 4px 8px;
   border-radius: 7px;
   color: var(--color-text-primary);
   background: rgba(255, 255, 255, .92);
@@ -425,7 +425,7 @@
   right: 10px;
   bottom: 10px;
   width: min(190px, calc(100% - 20px));
-  padding: 9px;
+  padding: 8px;
   border: 1px solid rgba(198, 59, 55, .16);
   box-shadow: 0 6px 16px rgba(22, 33, 58, .12);
 }
@@ -435,7 +435,7 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 4px 12px;
-  padding: 14px;
+  padding: 16px;
   border-radius: 14px;
   background: rgba(46, 111, 224, .08);
 }
@@ -465,22 +465,22 @@
 @media (max-width: 370px) {
   .report-detail-page .report-detail-card,
   .report-detail-page .area-map {
-    padding: 17px;
+    padding: 16px;
   }
 
   .report-detail-page .report-detail-list div,
   .report-detail-page .analysis-detail-list div {
     grid-template-columns: minmax(0, 1fr);
-    gap: 5px;
+    gap: 4px;
   }
 
   .report-detail-page .report-detail-map .map-data-summary {
     grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
-    gap: 5px;
+    gap: 4px;
   }
 
   .report-detail-page .report-detail-map .map-data-summary span {
-    padding: 7px 6px;
+    padding: 8px 8px;
   }
 
   .report-detail-map .map-distance-summary {

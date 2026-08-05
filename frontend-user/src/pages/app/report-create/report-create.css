@@ -9,8 +9,8 @@
 
 .report-create-header {
   display: grid;
-  gap: 6px;
-  padding: 4px 2px 0;
+  gap: 8px;
+  padding: 4px 4px 0;
 }
 
 .report-create-header h1,
@@ -39,7 +39,7 @@
 .report-create-card,
 .report-complete-card {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
@@ -54,7 +54,7 @@
 .report-form-section {
   display: grid;
   min-width: 0;
-  gap: 10px;
+  gap: 8px;
 }
 
 .report-form-section-title {
@@ -67,8 +67,8 @@
 
 .report-safety-box {
   display: grid;
-  gap: 6px;
-  padding: 14px;
+  gap: 8px;
+  padding: 16px;
   border: 1px solid #bcebe2;
   border-radius: 16px;
   background: var(--color-success-light);
@@ -82,7 +82,7 @@
 .report-method-grid,
 .report-category-grid {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .report-classification-group {
@@ -91,7 +91,7 @@
 }
 
 .report-classification-group-separated {
-  padding-top: 14px;
+  padding-top: 16px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -124,7 +124,7 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 12px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid var(--color-border);
   background: #ffffff;
   color: var(--color-text-primary);
@@ -187,7 +187,7 @@
 .report-map-placeholder {
   position: relative;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-height: 176px;
   padding: 16px;
   overflow: hidden;
@@ -203,7 +203,7 @@
   z-index: 1;
   align-self: end;
   display: grid;
-  gap: 6px;
+  gap: 8px;
   padding: 12px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.92);
@@ -234,7 +234,7 @@
 /* 담당자 처리 결과 안내. 송출 중 화면에서 바로 읽히도록 크게 보여준다. */
 .report-live-notice {
   margin: 0;
-  padding: 16px 18px;
+  padding: 16px 16px;
   border: 1px solid rgba(255, 255, 255, 0.32);
   border-radius: 14px;
   background: rgba(10, 24, 36, 0.9);
@@ -248,8 +248,8 @@
 
 .report-live-messages {
   display: grid;
-  gap: 6px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 12px 16px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 14px;
   background: rgba(10, 24, 36, 0.82);
@@ -269,7 +269,7 @@
 
 .report-category-button {
   min-height: 40px;
-  padding: 0 10px;
+  padding: 0 8px;
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
   background: #ffffff;
@@ -359,7 +359,7 @@
 .report-secondary-button,
 .report-ghost-button,
 .report-file-button {
-  padding: 0 14px;
+  padding: 0 16px;
   color: var(--color-success);
   background: var(--color-success-light);
 }
@@ -430,13 +430,13 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
 }
 
 .report-live-overlay .report-live-badge,
 .report-live-overlay .report-info-badge {
   min-height: 20px;
-  padding: 3px 7px;
+  padding: 4px 8px;
   border-radius: var(--radius-badge);
   font-size: 10px;
   line-height: 1.2;
@@ -470,7 +470,7 @@
   display: grid;
   gap: 12px;
   width: min(360px, calc(100% - 32px));
-  padding: 18px;
+  padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius-card);
   background: rgba(0, 0, 0, 0.68);
@@ -498,8 +498,8 @@
 .report-live-safety li {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 7px 10px;
+  gap: 4px;
+  padding: 8px 8px;
   border: 1px solid rgba(46, 111, 224, 0.42);
   border-radius: var(--radius-badge);
   color: #ffffff;
@@ -552,14 +552,14 @@
 
 .report-media-preview {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .report-photo-mode-grid,
 .report-inline-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .report-photo-mode-button {
@@ -627,13 +627,13 @@
 
 .report-summary-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
 }
 
 .report-summary-list div {
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .report-summary-list dt {
@@ -670,13 +670,13 @@
   z-index: 1100;
   display: grid;
   place-items: center;
-  padding: 18px;
+  padding: 16px;
   background: rgba(22, 33, 58, 0.58);
 }
 
 .report-confirm-modal {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   width: min(100%, 380px);
   padding: 20px;
   border: 1px solid var(--color-border);
@@ -731,7 +731,7 @@
 .report-modal-actions {
   display: grid;
   grid-template-columns: 0.9fr 1.1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 button:focus-visible,
@@ -761,7 +761,7 @@ button:focus-visible,
 
   .report-content-meta {
     display: grid;
-    gap: 6px;
+    gap: 8px;
   }
 
   .report-content-count {
@@ -837,7 +837,7 @@ button:focus-visible,
 }
 
 .report-media-page .report-create-card {
-  gap: 10px;
+  gap: 8px;
   padding: 16px;
   border-radius: var(--radius-card);
   box-shadow: 0 10px 26px rgba(22, 33, 58, 0.07);
@@ -846,14 +846,14 @@ button:focus-visible,
 .report-media-summary-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
 }
 
 .report-media-summary-badges span {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border: 1px solid transparent;
   border-radius: var(--radius-badge);
   font-size: 12px;
@@ -882,7 +882,7 @@ button:focus-visible,
 
 .report-media-content {
   margin-top: 6px;
-  padding-top: 14px;
+  padding-top: 16px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -890,7 +890,7 @@ button:focus-visible,
 .report-media-content > span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
@@ -916,7 +916,7 @@ button:focus-visible,
 .report-media-content p {
   display: -webkit-box;
   margin: 0;
-  padding: 10px 12px;
+  padding: 8px 12px;
   overflow: hidden;
   overflow-wrap: anywhere;
   border-radius: 12px;
@@ -941,7 +941,7 @@ button:focus-visible,
   padding: 0 8px;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 8px;
   border: 1px solid rgba(46, 111, 224, 0.25);
   color: var(--color-primary-hover);
   font-size: 14px;
@@ -1042,8 +1042,8 @@ button:focus-visible,
 @media (max-width: 360px) {
   .report-media-page .report-photo-mode-button {
     min-height: 52px;
-    gap: 5px;
-    padding-inline: 5px;
+    gap: 4px;
+    padding-inline: 4px;
     font-size: 13px;
   }
 
@@ -1057,13 +1057,13 @@ button:focus-visible,
 /* Report completion */
 .report-complete-page {
   min-height: calc(100dvh - 40px);
-  padding: 10px 0 24px;
+  padding: 8px 0 24px;
   align-content: center;
 }
 
 .report-complete-page .report-complete-card {
-  gap: 14px;
-  padding: 20px 18px 18px;
+  gap: 16px;
+  padding: 20px 16px 16px;
   border-color: rgba(46, 111, 224, 0.12);
   box-shadow: 0 14px 34px rgba(22, 33, 58, 0.09);
 }
@@ -1083,7 +1083,7 @@ button:focus-visible,
 
 .report-complete-message {
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 
 .report-complete-page .report-complete-message h1 {
@@ -1106,7 +1106,7 @@ button:focus-visible,
 .report-complete-page .report-summary-list {
   grid-template-columns: 1fr 1fr;
   gap: 0;
-  padding: 0 18px;
+  padding: 0 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   background: var(--color-surface-soft);
@@ -1125,7 +1125,7 @@ button:focus-visible,
 
 /* 두 항목의 구분선이 끊기지 않도록 열 간격 대신 안쪽 여백을 준다. */
 .report-complete-page .report-summary-list > .report-summary-half + .report-summary-half {
-  padding-left: 14px;
+  padding-left: 16px;
 }
 
 .report-complete-page .report-summary-list div {
@@ -1144,7 +1144,7 @@ button:focus-visible,
 .report-complete-page .report-summary-list dt {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
@@ -1171,7 +1171,7 @@ button:focus-visible,
 
 .report-complete-actions {
   display: grid;
-  gap: 9px;
+  gap: 8px;
 }
 
 .report-complete-page .report-primary-button,
@@ -1200,7 +1200,7 @@ button:focus-visible,
 
 @media (max-width: 360px) {
   .report-complete-page .report-complete-card {
-    padding-inline: 14px;
+    padding-inline: 16px;
   }
 
   .report-complete-page .report-summary-list {
@@ -1210,7 +1210,7 @@ button:focus-visible,
 
 /* Compact report method selection layout */
 .report-type-page {
-  gap: 10px;
+  gap: 8px;
   padding-bottom: calc(24px + env(safe-area-inset-bottom));
 }
 
@@ -1258,14 +1258,14 @@ button:focus-visible,
   grid-template-columns: auto 1fr;
   align-items: start;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-color: rgba(46, 111, 224, 0.16);
   background: rgba(46, 111, 224, 0.08);
 }
 
 .report-type-page .report-safety-box > div {
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .report-type-page .report-safety-icon {
@@ -1285,8 +1285,8 @@ button:focus-visible,
 }
 
 .report-type-page .report-create-card {
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 16px;
 }
 
 .report-type-page .report-location-card,
@@ -1302,7 +1302,7 @@ button:focus-visible,
 .report-type-page .report-classification-card,
 .report-type-page .report-content-card {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .report-type-page .report-method-grid {
@@ -1314,10 +1314,10 @@ button:focus-visible,
   position: relative;
   grid-template-columns: 1fr;
   justify-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
   min-height: 94px;
-  padding: 10px 8px;
+  padding: 8px 8px;
   text-align: center;
 }
 
@@ -1355,7 +1355,7 @@ button:focus-visible,
 
 .report-method-copy {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -1366,7 +1366,7 @@ button:focus-visible,
 .report-type-page .report-map-placeholder {
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
-  gap: 10px;
+  gap: 8px;
   min-height: 0;
   padding: 8px;
   background: var(--color-surface-soft);
@@ -1417,8 +1417,8 @@ button:focus-visible,
   grid-template-columns: minmax(0, 1fr);
   align-items: center;
   align-content: center;
-  gap: 2px;
-  padding: 3px 2px;
+  gap: 4px;
+  padding: 4px 4px;
   background: transparent;
 }
 
@@ -1431,7 +1431,7 @@ button:focus-visible,
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
 }
 
@@ -1469,7 +1469,7 @@ button:focus-visible,
   grid-row: auto;
   justify-self: end;
   min-height: 28px;
-  padding: 0 7px;
+  padding: 0 8px;
   border: 1px solid var(--color-primary);
   color: var(--color-primary-hover);
   background: #ffffff;
@@ -1477,16 +1477,16 @@ button:focus-visible,
 }
 
 .report-type-page .report-classification-group {
-  gap: 6px;
+  gap: 8px;
 }
 
 .report-type-page .report-classification-group-separated {
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .report-type-page .report-category-grid,
 .report-type-page .report-tag-grid {
-  gap: 6px;
+  gap: 8px;
 }
 
 .report-type-page .report-category-grid {
@@ -1501,7 +1501,7 @@ button:focus-visible,
   padding: 0 12px;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   border-radius: var(--radius-badge);
   color: var(--color-text-secondary);
   line-height: 1.2;
@@ -1573,7 +1573,7 @@ button:focus-visible,
 
   .report-type-page .report-category-button {
     min-height: 40px;
-    padding: 0 10px;
+    padding: 0 8px;
     font-size: 12px;
   }
 
