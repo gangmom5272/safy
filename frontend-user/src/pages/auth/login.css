@@ -8,7 +8,8 @@
 .login-page__inner { width: min(100%, 390px); margin: 0 auto; }
 .login-brand { display: flex; flex-direction: column; align-items: center; padding: clamp(20px, 6vh, 56px) 0 46px; text-align: center; }
 .login-brand__logo { width: 68px; color: var(--color-primary); filter: drop-shadow(0 8px 14px rgba(46, 111, 224, .13)); }
-.safy-logo svg { display: block; width: 100%; height: auto; }
+.safy-logo svg,
+.safy-logo img { display: block; width: 100%; height: auto; }
 .login-brand h1 { margin: 10px 0 6px; color: var(--color-primary); font-size: 40px; line-height: 1; letter-spacing: -.05em; }
 .login-brand strong { color: var(--color-primary-hover); font-size: 14px; letter-spacing: .08em; }
 .login-brand p { margin: 8px 0 0; color: var(--color-text-secondary); font-size: 14px; }
