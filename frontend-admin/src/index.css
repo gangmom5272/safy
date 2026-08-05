@@ -840,9 +840,20 @@ button:disabled {
 }
 
 .live-preview-grid,
+/* grid 모드는 카드 개수만 바꾼다. 카드 내부 구조는 같고, 카드가 좁아지는 만큼
+   글자·여백·줄 수만 변수로 줄인다(DOM 분기 없음). */
 .monitoring-grid {
   display: grid;
   gap: 10px;
+  --tile-pad: 12px;
+  --tile-gap: 7px;
+  --tile-font: 13px;
+  --tile-title: 15px;
+  --tile-badge-font: 11px;
+  --tile-address-clamp: 2;
+  --tile-description-clamp: 2;
+  --tile-action-height: 32px;
+  --tile-action-font: 12px;
 }
 
 .monitoring-grid.columns-2 {
@@ -855,6 +866,14 @@ button:disabled {
 
 .monitoring-grid.columns-5 {
   grid-template-columns: repeat(5, minmax(120px, 1fr));
+  --tile-pad: 9px;
+  --tile-gap: 5px;
+  --tile-font: 11px;
+  --tile-title: 13px;
+  --tile-badge-font: 10px;
+  --tile-description-clamp: 2;
+  --tile-action-height: 28px;
+  --tile-action-font: 11px;
 }
 
 .monitoring-grid-card {
@@ -875,6 +894,52 @@ button:disabled {
   text-align: left;
 }
 
+/* 관제 카드는 [미디어][정보] 두 행 고정이다. 예전에는 align-content:end 로 내용을 카드
+   아래로 몰아 붙여, 글이 짧은 카드는 미디어 프레임이 아래로 밀리고 위에 검은 여백이
+   남았다(카드마다 미디어 위치가 달라 보인 원인). 정보 행이 남는 높이를 흡수하게 해
+   미디어는 항상 카드 맨 위, 하단 액션은 항상 같은 높이에 놓인다. */
+.monitoring-report-card {
+  align-content: stretch;
+  grid-template-rows: auto 1fr;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  /* 위험 카드만 3px 테두리를 쓰면 내부 폭이 2px 좁아지고, 16:9 프레임 높이까지 달라져
+     같은 행 카드들의 미디어 높이가 어긋난다. 두께는 늘 3px 로 두고 색만 바꾼다. */
+  border-width: 3px;
+}
+
+.monitoring-report-card__info {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--tile-gap);
+  padding: var(--tile-pad);
+}
+
+/* 주소·제보 내용은 줄 수를 고정으로 예약한다. 예약하지 않으면 주소가 1줄인 카드와 2줄인
+   카드의 정보 영역 높이가 달라져 하단 액션 위치가 어긋난다. */
+.monitoring-report-card strong {
+  display: -webkit-box;
+  overflow: hidden;
+  min-height: calc(var(--tile-address-clamp) * 1.35em);
+  font-size: var(--tile-title);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--tile-address-clamp);
+}
+
+/* 상태·카테고리 줄은 좁은 카드에서 줄바꿈되며 높이를 밀어 올린다. 한 줄로 묶고 넘치면 줄인다. */
+.monitoring-report-card__info > span:not(.risk-badge):not(.monitoring-report-card__description) {
+  overflow: hidden;
+  max-width: 100%;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .video-card.selected {
   outline: 3px solid var(--accent);
 }
@@ -882,6 +947,10 @@ button:disabled {
 .video-card span:not(.risk-badge):not(.live-badge):not(.status-badge):not(.media-type-badge) {
   color: #d0d5dd;
   font-size: 13px;
+}
+
+.monitoring-report-card__info span:not(.risk-badge):not(.status-badge) {
+  font-size: var(--tile-font);
 }
 
 .monitoring-notice {
@@ -909,8 +978,11 @@ button:disabled {
   color: #166534;
 }
 
+/* 카드가 남는 높이를 가져가고 하단 액션은 항상 타일 맨 아래에 붙는다. 덕분에 같은 행의
+   카드들끼리 액션 버튼 높이가 맞는다. */
 .monitoring-tile {
   display: grid;
+  grid-template-rows: 1fr auto;
   min-width: 0;
   overflow: hidden;
   border-radius: 8px;
@@ -926,30 +998,82 @@ button:disabled {
   border-radius: 8px 8px 0 0;
 }
 
+/* 카드 하단 전체 너비 액션. 높이를 grid 모드별로 고정해 모든 타일의 하단선을 맞춘다. */
 .monitoring-tile__dismiss {
-  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--tile-action-height, 32px);
+  padding: 0 10px;
   border: 0;
   border-top: 1px solid #475467;
   background: #344054;
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--tile-action-font, 12px);
   font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
-.monitoring-tile__dismiss:hover {
+.monitoring-tile__dismiss:hover:not(:disabled) {
   background: #475467;
 }
 
+.monitoring-tile__dismiss:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* 누를 수 없는 카드에서는 자리만 지킨다. 대비를 낮춰 활성 버튼과 확실히 구분한다. */
+.monitoring-tile__dismiss:disabled {
+  border-top-color: #344054;
+  background: #1d2939;
+  color: #667085;
+  cursor: default;
+}
+
+.monitoring-tile__dismiss-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 카드가 좁아지는 5x5 에서만 문구를 줄인다. DOM 은 그대로다. */
+.monitoring-tile__dismiss-short {
+  display: none;
+}
+
+.monitoring-grid.columns-5 .monitoring-tile__dismiss-full {
+  display: none;
+}
+
+.monitoring-grid.columns-5 .monitoring-tile__dismiss-short {
+  display: inline;
+}
+
+.monitoring-grid.columns-5 .monitoring-tile__dismiss-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* 기준 부모는 .video-card__stream 이다. 카드가 아니라 미디어 프레임 우측 상단에
+   고정되므로 이미지 유무·비율·grid 모드와 무관하게 항상 같은 자리에 있다. */
 .media-type-badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
   z-index: 2;
   padding: 3px 7px;
   border-radius: 999px;
   color: #ffffff;
-  font-size: 11px;
+  font-size: var(--tile-badge-font, 11px);
   font-weight: 900;
+  line-height: 1.4;
   letter-spacing: 0.04em;
 }
 
@@ -964,8 +1088,11 @@ button:disabled {
 .monitoring-report-card__description {
   display: -webkit-box;
   overflow: hidden;
+  min-height: calc(var(--tile-description-clamp, 2) * 1.5em);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: var(--tile-description-clamp, 2);
 }
 
 .video-card__stream {
@@ -980,10 +1107,26 @@ button:disabled {
   background: #0b1724;
 }
 
+/* 카드가 padding 0 이 되었으니 예전의 음수 margin 보정이 필요 없다. 프레임은 카드 폭을
+   그대로 채우고 16:9 로 고정되므로, 이미지 원본 비율과 무관하게 모든 카드의 미디어
+   높이가 같다. */
+.monitoring-report-card .video-card__stream {
+  width: 100%;
+  margin: 0;
+}
+
 .video-card__video {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* contain 은 세로 사진을 프레임 가운데 작게 넣고 좌우에 검은 여백을 남긴다. 관제 카드는
+   프레임을 채우는 편이 현장 파악에 유리해 cover 를 쓴다. 대시보드의 라이브 타일은
+   LiveViewer 를 공유하므로 여기서만 좁혀서 적용한다. */
+.monitoring-report-card .video-card__video {
+  object-fit: cover;
+  object-position: center;
 }
 
 .video-card .video-card__status,
@@ -1155,6 +1298,71 @@ button:disabled {
 .admin-modal__body {
   display: grid;
   gap: 12px;
+}
+
+/* 관리자 폼 공통 필드. 예전에는 label 안에 텍스트와 textarea 가 그냥 나란히 놓여
+   '사유 (필수)' 옆에 좁은 입력칸이 붙어 보였다. 라벨을 위, 입력칸을 아래 전체 너비로 둔다. */
+.admin-field {
+  display: grid;
+  /* start 로 고정한다. stretch 면 한 줄에 나란히 둔 필드끼리 높이를 맞추려고
+     입력칸이 늘어나서(안내 문구가 있는 쪽이 더 높음) 같은 select 인데도 높이가 달라진다. */
+  align-content: start;
+  gap: 6px;
+}
+
+.admin-field__label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-field__label em {
+  color: var(--danger);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.admin-field__control {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.55;
+}
+
+textarea.admin-field__control {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.admin-field__control::placeholder {
+  color: var(--text-muted);
+}
+
+.admin-field__control:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid rgba(0, 74, 173, 0.18);
+  outline-offset: 0;
+}
+
+.admin-field__counter {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
+}
+
+.admin-field__hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .emergency-alert-message {
@@ -2653,16 +2861,20 @@ button:disabled {
   gap: 12px 24px;
 }
 
+/* 검색창이 남는 폭을 전부 먹어 필터 비율이 무너지던 문제를 grid 비율로 고정한다.
+   검색창은 전체의 약 1/3, select 2개는 같은 너비, 초기화는 내용 폭이다. */
 .monitoring-filter__controls {
-  min-width: min(100%, 680px);
-  display: flex;
-  flex: 1 1 720px;
+  min-width: min(100%, 620px);
+  display: grid;
+  flex: 1 1 660px;
+  grid-template-columns: minmax(200px, 1.6fr) minmax(120px, 1fr) minmax(120px, 1fr) auto;
   align-items: center;
   gap: 10px;
 }
 
 .monitoring-filter__region {
-  flex: 2.4 1 280px;
+  min-width: 0;
+  max-width: 340px;
 }
 
 .monitoring-filter__region input,
@@ -2716,8 +2928,21 @@ button:disabled {
 }
 
 .monitoring-filter select {
-  min-width: 120px;
-  flex: 1 1 140px;
+  min-width: 0;
+}
+
+/* 검색창·select·초기화 버튼 높이와 테두리·모서리를 한 값으로 맞춘다. */
+.monitoring-filter__region input:focus-visible,
+.monitoring-filter select:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid rgba(0, 74, 173, 0.18);
+  outline-offset: 0;
+}
+
+.monitoring-filter__controls > button {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .monitoring-filter select.select-placeholder,
@@ -2931,26 +3156,34 @@ button:disabled {
   font-weight: 700;
 }
 
+/* 처리 버튼 4개는 좁은 우측 패널에서도 한 줄을 유지한다. 예전에는 .button-row 의
+   flex-wrap 과 button 의 min-width:96px+좌우 padding 20px 이 겹쳐 패널 폭을 넘기면
+   2줄로 접혔다. 같은 너비 4칸 grid 로 두면 폭에 맞춰 칸이 줄어들 뿐 줄바꿈은 없다. */
 .report-action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* '제보 처리' 카드는 옆 카드(위험도 지표) 높이에 맞춰 늘어난다. start 로 고정하지 않으면
+     버튼이 그 높이를 채우며 세로로 길게 늘어난다. */
+  align-items: start;
+  align-self: start;
+  gap: 6px;
   width: 100%;
 }
 
 .report-action-buttons > button {
   display: inline-flex;
   width: auto;
-  min-width: 96px;
-  min-height: 44px;
+  min-width: 0;
+  min-height: 36px;
   align-items: center;
   justify-content: center;
-  padding: 10px 20px;
+  padding: 8px 6px;
   border-radius: 8px;
+  font-size: 13px;
   font-weight: 800;
-  line-height: 1.4;
+  line-height: 1.3;
   text-align: center;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .image-lightbox {
@@ -3206,7 +3439,7 @@ button:disabled {
   .report-summary__identity,
   .report-summary__time,
   .report-summary__group { grid-column: span 1; }
-  .report-action-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 이 폭에서는 상세가 1단이 되어 패널이 넓어지므로 처리 버튼은 계속 한 줄로 둔다. */
 }
 
 @media (max-width: 760px) {
@@ -3236,12 +3469,17 @@ button:disabled {
   .report-summary__time,
   .report-summary__group { grid-column: auto; }
   .report-summary__wide { grid-column: auto; }
-  .report-action-buttons { grid-template-columns: 1fr; }
+  /* 여기서만 2x2 로 접는다. 4칸을 유지하면 글자가 잘린다. */
+  .report-action-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .report-filter__actions { justify-content: stretch; }
   .report-filter__actions button { flex: 1; }
-  .monitoring-filter__controls { min-width: 0; flex-wrap: wrap; }
-  .monitoring-filter__region { flex-basis: 100%; }
-  .monitoring-filter select { min-width: calc(50% - 5px); }
+  /* 한 줄에 다 들어가지 않으면 검색창이 윗줄을 전부 쓰고 select 2개와 초기화가
+     아랫줄로 내려간다. 검색창과 select 가 같이 찌그러지지 않게 하려는 배치다. */
+  .monitoring-filter__controls {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+  .monitoring-filter__region { grid-column: 1 / -1; max-width: none; }
   .monitoring-grid-selector { margin-left: auto; }
   .risk-map-filter__controls > input,
   .risk-map-filter__controls > select { flex: 1 1 calc(50% - 5px); }
