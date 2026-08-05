@@ -121,6 +121,48 @@ export async function updateMyProfile(nickname: string) {
   return toUserProfile(response.data.data)
 }
 
+export const PROFILE_IMAGE_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+// 제보 이미지 업로드와 같은 응답 모양이다. 프로필 사진은 DB 행을 만들지 않아 mediaAssetId 만 없다.
+interface IssuedProfileImageUpload {
+  uploadUrl: string
+  uploadMethod: 'PUT'
+  requiredHeaders: Record<string, string>
+  maxFileSize: number
+  expiresAt: string
+}
+
+// 파일은 백엔드를 거치지 않고 MinIO 로 직접 PUT 한다. 완료 처리를 호출해야 서버가 크기·형식을
+// 검증하고 조회 경로가 보는 위치로 옮기므로, 세 단계를 모두 끝내야 실제로 반영된다.
+export async function uploadProfileImage(file: File) {
+  if (USE_MOCK_API) return mockResponse(undefined, 400)
+
+  const issued = (await apiClient.post<ApiResponse<IssuedProfileImageUpload>>(
+    '/users/me/profile-image/presigned-upload',
+    { contentType: file.type },
+  )).data.data
+
+  if (file.size > issued.maxFileSize) {
+    throw new Error(`프로필 사진은 ${Math.floor(issued.maxFileSize / (1024 * 1024))}MB 이하만 등록할 수 있습니다.`)
+  }
+
+  const uploaded = await fetch(issued.uploadUrl, {
+    method: issued.uploadMethod,
+    headers: issued.requiredHeaders,
+    body: file,
+  })
+  if (!uploaded.ok) throw new Error(`프로필 사진 업로드에 실패했습니다. (${uploaded.status})`)
+
+  await apiClient.post('/users/me/profile-image/complete')
+}
+
+// 직접 올린 사진을 지운다. 이후에는 소셜 로그인 사진이 표시된다.
+export async function resetProfileImage() {
+  if (USE_MOCK_API) return mockResponse(undefined)
+
+  await apiClient.delete('/users/me/profile-image')
+}
+
 export async function getReportSummary(): Promise<ReportSummary> {
   if (USE_MOCK_API) return mockResponse(mockSummary)
 

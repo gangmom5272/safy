@@ -21,13 +21,16 @@ public class UserService {
 	private final RefreshTokenStore refreshTokenStore;
 	private final AdminCenterMembershipRepository membershipRepository;
 	private final SocialAccountRepository socialAccountRepository;
+	private final ProfileImageService profileImageService;
 	public UserService(UserRepository userRepository, RefreshTokenStore refreshTokenStore,
 			AdminCenterMembershipRepository membershipRepository,
-			SocialAccountRepository socialAccountRepository) {
+			SocialAccountRepository socialAccountRepository,
+			ProfileImageService profileImageService) {
 		this.userRepository = userRepository;
 		this.refreshTokenStore = refreshTokenStore;
 		this.membershipRepository = membershipRepository;
 		this.socialAccountRepository = socialAccountRepository;
+		this.profileImageService = profileImageService;
 	}
 
 	@Transactional(readOnly = true)
@@ -47,6 +50,8 @@ public class UserService {
 		user.changeStatus(UserStatus.WITHDRAWN);
 		user.invalidateTokens();
 		refreshTokenStore.revokeAll(userId);
+		// 직접 올린 프로필 사진은 DB 가 아니라 MinIO 에만 있으므로 여기서 함께 지운다.
+		profileImageService.deleteUploadedImage(userId);
 	}
 
 	private User get(Long id) {
@@ -57,9 +62,11 @@ public class UserService {
 		AdminCenterMembership membership = membershipRepository
 				.findByUserIdAndIsPrimaryTrue(user.getId())
 				.orElse(null);
-		// 이메일과 프로필 이미지는 users 가 아니라 social_accounts 에만 있다.
+		// 이메일과 소셜 프로필 사진은 users 가 아니라 social_accounts 에만 있고, 직접 올린
+		// 프로필 사진은 MinIO 에만 있다. 둘을 여기서 합쳐 응답 한 곳에서만 우선순위를 정한다.
 		return UserResponse.from(user, membership, socialAccountRepository
 				.findFirstByUserIdOrderByLastLoginAtDesc(user.getId())
-				.orElse(null));
+				.orElse(null),
+				profileImageService.findUploadedImageUrl(user.getId()));
 	}
 }
