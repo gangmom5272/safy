@@ -163,7 +163,7 @@ public class OperatorDashboardService {
 			Instant thumbnailExpiresAt) {
 		DashboardImageView image = report.getType() == ReportType.IMAGE
 				? image(imagesByReportId.getOrDefault(report.getId(), List.of()), thumbnailExpiresAt)
-				: null;
+				: liveFrameImage(report, thumbnailExpiresAt);
 		LiveSession session = liveByReportId.get(report.getId());
 		DashboardLiveView live = report.getType() == ReportType.LIVE && session != null
 				? new DashboardLiveView(session.getId(), StreamStatus.from(session.getStatus()),
@@ -210,7 +210,7 @@ public class OperatorDashboardService {
 		Report report = assignment.getReport();
 		DashboardImageView image = report.getType() == ReportType.IMAGE
 				? image(imagesByReportId.getOrDefault(report.getId(), List.of()), thumbnailExpiresAt)
-				: null;
+				: liveFrameImage(report, thumbnailExpiresAt);
 		LiveSession session = liveByReportId.get(report.getId());
 		DashboardLiveView live = report.getType() == ReportType.LIVE && session != null
 				? new DashboardLiveView(session.getId(), StreamStatus.from(session.getStatus()),
@@ -229,12 +229,26 @@ public class OperatorDashboardService {
 		if (images.isEmpty()) {
 			return new DashboardImageView(0, MediaStorageStatus.PENDING_UPLOAD, null, null);
 		}
-		MediaAsset asset = images.getFirst().getMediaAsset();
+		return imageView(images.getFirst().getMediaAsset(), images.size(), thumbnailExpiresAt);
+	}
+
+	/**
+	 * LIVE 제보는 report_image 행이 없으므로 대표 블러본이 파생된 원본 프레임을 썸네일로 쓴다.
+	 * 담당자 화면이라 블러본이 아니라 원본을 내보낸다.
+	 * 분석된 프레임이 아직 없으면 기존과 같이 이미지 없이 내보낸다.
+	 */
+	private DashboardImageView liveFrameImage(Report report, Instant thumbnailExpiresAt) {
+		MediaAsset blurred = report.getRepresentativeBlurAsset();
+		MediaAsset frame = blurred == null ? null : blurred.getSourceMediaAsset();
+		return frame == null ? null : imageView(frame, 1, thumbnailExpiresAt);
+	}
+
+	private DashboardImageView imageView(MediaAsset asset, int imageCount, Instant thumbnailExpiresAt) {
 		String thumbnailUrl = asset.getStorageStatus() == MediaStorageStatus.AVAILABLE
 				? mediaObjectStorage.createPresignedGetUrl(
 						asset.getBucketName(), asset.getObjectKey(), THUMBNAIL_URL_EXPIRY)
 				: null;
-		return new DashboardImageView(images.size(), asset.getStorageStatus(), thumbnailUrl,
+		return new DashboardImageView(imageCount, asset.getStorageStatus(), thumbnailUrl,
 				thumbnailUrl == null ? null : thumbnailExpiresAt);
 	}
 }
