@@ -33,7 +33,9 @@ const dismissedEndedReportsKey = 'safy-admin-dismissed-ended-reports'
 type MediaTypeFilter = 'image' | 'live' | typeof allValue
 
 interface MonitoringFilters {
-  mediaType: MediaTypeFilter
+  // 위험도와 같은 방식이다. 빈 값은 '아직 고르지 않음'이라 select 에 '제보 유형'이 보이고,
+  // 필터로는 전체와 똑같이 취급한다. 전체는 드롭다운 안에 그대로 남는다.
+  mediaType: MediaTypeFilter | typeof unsetValue
   riskLevel: RiskLevel | typeof allValue | typeof unsetValue
 }
 
@@ -44,7 +46,7 @@ interface MonitoringNotice {
 }
 
 const initialFilters: MonitoringFilters = {
-  mediaType: allValue,
+  mediaType: unsetValue,
   riskLevel: unsetValue,
 }
 
@@ -61,6 +63,17 @@ function ClearIcon() {
   return (
     <svg className="monitoring-filter__clear-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       <path d="m6 6 12 12M18 6 6 18" />
+    </svg>
+  )
+}
+
+function HideIcon() {
+  return (
+    <svg className="monitoring-tile__dismiss-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 5.2A9 9 0 0 1 12 5c5 0 9 5 9 7a12 12 0 0 1-2.2 2.9" />
+      <path d="M6.3 7.4C3.9 9 2 11.4 2 12c0 2 4 7 10 7a9.7 9.7 0 0 0 4-.8" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
     </svg>
   )
 }
@@ -247,7 +260,7 @@ export function MonitoringPage() {
       const analysis = analyses[report.id]
       const matchesRegion = keywordFromUrl.length === 0
         || report.location.toLowerCase().includes(keywordFromUrl.toLowerCase())
-      const matchesType = filters.mediaType === allValue
+      const matchesType = !filters.mediaType || filters.mediaType === allValue
         || (filters.mediaType === 'live' ? report.isLive : !report.isLive)
       const matchesRisk = !filters.riskLevel || filters.riskLevel === allValue
         || matchesRiskLevel(
@@ -314,13 +327,15 @@ export function MonitoringPage() {
                 )}
               </form>
                 <select
-                  aria-label="제보 방식 선택"
+                  aria-label="제보 유형 선택"
+                  className={!filters.mediaType ? 'select-placeholder' : undefined}
                   value={filters.mediaType}
                   onChange={(event) => setFilters((current) => ({
                     ...current,
-                    mediaType: event.target.value as MediaTypeFilter,
+                    mediaType: event.target.value as MonitoringFilters['mediaType'],
                   }))}
                 >
+                  <option value={unsetValue} disabled>제보 유형</option>
                   <option value={allValue}>전체</option>
                   <option value="image">이미지</option>
                   <option value="live">라이브</option>
@@ -413,6 +428,9 @@ interface MonitoringReportCardProps {
 }
 
 function MonitoringReportCard({ report, analysis, onSelect, onDismissEnded }: MonitoringReportCardProps) {
+  // 이미지 URL 은 presigned 라 만료될 수 있다. 실패하면 깨진 아이콘 대신 안내로 바꿔
+  // 프레임 크기를 그대로 유지한다.
+  const [imageFailed, setImageFailed] = useState(false)
   const connection = toLiveConnection(report)
   const isEnded = connection?.connectionStatus === 'ended'
   // AI 위험도에 따라 카드 테두리 색을 입혀 관제사가 위험 제보를 한눈에 찾게 한다.
@@ -428,11 +446,13 @@ function MonitoringReportCard({ report, analysis, onSelect, onDismissEnded }: Mo
         style={riskConfig ? { borderColor: riskConfig.markerColor } : undefined}
         onClick={onSelect}
       >
-        <span className={`media-type-badge ${report.isLive ? 'media-type-badge--live' : 'media-type-badge--image'}`}>
-          {report.isLive ? 'LIVE' : 'IMAGE'}
-        </span>
-        {connection?.connectionStatus === 'live' && <span className="live-badge">LIVE</span>}
+        {/* 미디어 프레임이 유형 배지의 기준 요소다. 배지를 프레임 밖(카드 직계 자식)에 두면
+            이미지 크기·위치에 따라 배지가 프레임에서 떨어져 보인다. 라이브·이미지·대기 상태가
+            모두 이 프레임 하나를 쓰므로 카드 골격이 유형에 따라 갈라지지 않는다. */}
         <span className="video-card__stream">
+          <span className={`media-type-badge ${report.isLive ? 'media-type-badge--live' : 'media-type-badge--image'}`}>
+            {report.isLive ? 'LIVE' : 'IMAGE'}
+          </span>
           {report.isLive ? (
             !connection ? (
               <span className="video-card__status">라이브 룸 준비 중...</span>
@@ -441,25 +461,49 @@ function MonitoringReportCard({ report, analysis, onSelect, onDismissEnded }: Mo
             ) : (
               <LiveViewer connection={connection} compact />
             )
-          ) : report.imageUrl ? (
-            <img className="video-card__video" src={report.imageUrl} alt={`제보 #${report.id} 대표 이미지`} />
+          ) : report.imageUrl && !imageFailed ? (
+            <img
+              className="video-card__video"
+              src={report.imageUrl}
+              alt={`제보 #${report.id} 대표 이미지`}
+              loading="lazy"
+              decoding="async"
+              onError={() => setImageFailed(true)}
+            />
           ) : (
-            <span className="video-card__status">이미지 업로드 대기 중...</span>
+            <span className="video-card__status">
+              {report.imageUrl ? '이미지를 불러오지 못했습니다.' : '이미지 업로드 대기 중...'}
+            </span>
           )}
         </span>
-        <strong>{report.location || '위치 정보 없음'}</strong>
-        <RiskBadge value={riskLevel} score={riskScore} />
-        <span>{report.isLive
-          ? `상태 ${connection ? connectionStatusLabels[connection.connectionStatus] : '준비 중'}`
-          : `첨부 이미지 ${report.imageCount ?? 0}장`}</span>
-        <span>{reportTypeLabels[report.type]} · 제보 #{report.id}</span>
-        <span className="monitoring-report-card__description">{report.aiSummary || '상세 내용 없음'}</span>
+        <span className="monitoring-report-card__info">
+          <strong>{report.location || '위치 정보 없음'}</strong>
+          <RiskBadge value={riskLevel} score={riskScore} />
+          <span>{report.isLive
+            ? `상태 ${connection ? connectionStatusLabels[connection.connectionStatus] : '준비 중'}`
+            : `첨부 이미지 ${report.imageCount ?? 0}장`}</span>
+          <span>{reportTypeLabels[report.type]} · 제보 #{report.id}</span>
+          <span className="monitoring-report-card__description">{report.aiSummary || '상세 내용 없음'}</span>
+        </span>
       </button>
-      {isEnded && (
-        <button type="button" className="monitoring-tile__dismiss" onClick={onDismissEnded}>
-          종료 확인 · 관제에서 숨기기
-        </button>
-      )}
+      {/* 액션 영역은 모든 카드에 같은 높이로 둔다. 종료된 라이브에만 있으면 그 카드만
+          키가 커져 같은 행의 다른 카드와 하단선이 어긋난다. 실제로 누를 수 있는 건
+          라이브가 종료된 카드뿐이라 나머지는 비활성으로 자리만 지킨다.
+          동작은 서버 상태 변경이 아니라 이 브라우저의 관제 화면에서만 감추는 것이다
+          (localStorage 저장, 다시 송출되면 자동 복귀). 그래서 문구도 '숨기기'로 둔다. */}
+      <button
+        type="button"
+        className="monitoring-tile__dismiss"
+        disabled={!isEnded}
+        onClick={onDismissEnded}
+        title={isEnded
+          ? '관제 화면에서만 숨깁니다. 다시 송출되면 되돌아옵니다.'
+          : '라이브가 종료된 제보만 숨길 수 있습니다.'}
+      >
+        <HideIcon />
+        <span className="monitoring-tile__dismiss-full">관제에서 숨기기</span>
+        <span className="monitoring-tile__dismiss-short">숨기기</span>
+      </button>
     </div>
   )
 }
@@ -610,7 +654,12 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
               <div><dt>관제센터</dt><dd>{detailReport.controlCenterName ?? '정보 없음'}</dd></div>
               <div><dt>연결 상태</dt><dd>{connectionStatusLabels[connection.connectionStatus]}</dd></div>
               <div><dt>위험도</dt><dd>{getRiskLabel(analysis?.riskLevel ?? connection.riskLevel, analysis?.riskScore ?? connection.riskScore)}</dd></div>
-              <div><dt>AI 분석 결과</dt><dd className="break-text">{connection.aiAnalysisResult || '정보 없음'}</dd></div>
+              {/* 'AI 분석 결과' 항목을 뺐다. 이 화면은 라이브(WebRTC) 제보 전용이고,
+                  값으로 쓰던 connection.aiAnalysisResult 는 toLiveConnection 에서
+                  report.aiSummary(제보자가 쓴 제보 내용)를 그대로 넣은 것이라 위 '제보 내용'
+                  과 같은 문장이 두 번 보였다. 위험도는 바로 위 항목이 이미 보여준다.
+                  WebRTCConnection.aiAnalysisResult 필드와 API 는 그대로 두고 표시만 뺀다.
+                  사진 제보 상세(ReportDetailPage)의 분석 표시는 건드리지 않았다. */}
             </dl>
           </aside>
 

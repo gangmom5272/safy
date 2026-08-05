@@ -15,6 +15,7 @@ const pageTitleByPath: Record<string, string> = {
   [ROUTE_PATHS.QUEUE]: '미배정',
   [ROUTE_PATHS.MONITORING]: '실시간 모니터링',
   [ROUTE_PATHS.RISK_MAP]: '위험도 지도',
+  [ROUTE_PATHS.AREA_REPORT_REQUESTS]: '현장 제보 요청',
   [ROUTE_PATHS.SETTINGS]: '계정 설정',
   [ROUTE_PATHS.OPERATORS]: '담당자 관리',
 }
@@ -54,13 +55,13 @@ export function AdminHeader({ reports, onCheckReport }: AdminHeaderProps) {
   const dangerReports = reports.filter((report) => (
     isNewReport(report) && isEmergencyRisk(report.riskLevel)
   ))
-  const isDashboard = pathname === ROUTE_PATHS.DASHBOARD
   // 긴급 위험 알림은 관제(OPERATOR) 업무라 인사 관리만 하는 SUPER_ADMIN 에게는 숨긴다.
   const isOperator = user?.role === 'OPERATOR'
 
+  // 현재 시각은 모든 관리자 탭 타이틀 옆에 보여준다. 이 헤더는 AdminLayout 이 한 번만
+  // 마운트하고 라우트가 바뀌어도 유지되므로, 타이머도 여기 하나만 돌면 된다.
+  // 페이지마다 setInterval 을 두면 탭을 옮길 때마다 타이머가 늘어난다.
   useEffect(() => {
-    if (!isDashboard) return
-
     const updateCurrentTime = () => setCurrentTime(new Date())
     const initialUpdate = window.setTimeout(updateCurrentTime, 0)
     const timer = window.setInterval(updateCurrentTime, 1000)
@@ -68,17 +69,15 @@ export function AdminHeader({ reports, onCheckReport }: AdminHeaderProps) {
       window.clearTimeout(initialUpdate)
       window.clearInterval(timer)
     }
-  }, [isDashboard])
+  }, [])
 
   return (
     <header className="admin-header">
       <div className="admin-header__left">
         <h1>{getPageTitle(pathname)}</h1>
-        {isDashboard && (
-          <div className="admin-header__status" aria-label="현재 시간">
-            <time dateTime={currentTime.toISOString()}>{formatSeoulDateTime(currentTime)}</time>
-          </div>
-        )}
+        <div className="admin-header__status" aria-label="현재 시간">
+          <time dateTime={currentTime.toISOString()}>{formatSeoulDateTime(currentTime)}</time>
+        </div>
       </div>
       <div className="admin-header__actions">
         <OperatorPresenceToggle />
