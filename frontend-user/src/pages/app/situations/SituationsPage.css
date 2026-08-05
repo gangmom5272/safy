@@ -99,7 +99,8 @@
   outline: 0;
   color: #102033;
   background: transparent;
-  font-size: 14px;
+  /* 16px 미만이면 iOS 에서 포커스 시 화면이 확대된다. */
+  font-size: 16px;
 }
 
 .search-clear-button {

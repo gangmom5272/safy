@@ -407,7 +407,8 @@
   border-radius: 13px;
   color: #111827;
   background: #fff;
-  font-size: 14px;
+  /* 16px 미만이면 iOS 에서 포커스 시 화면이 확대된다. */
+  font-size: 16px;
 }
 
 /* 이메일은 소셜 로그인 값이라 수정할 수 없다. 편집 가능한 이름 칸과 구분되게 둔다. */
@@ -686,12 +687,14 @@
   width: 100%;
   min-width: 0;
   height: 42px;
-  padding: 0 8px;
+  /* 16px 미만이면 iOS 에서 포커스 시 화면이 확대된다. 두 칸이 나란히 놓이므로
+     좌우 padding 을 줄여 글자가 커진 만큼을 흡수한다. */
+  padding: 0 6px;
   border: 1px solid #d9e1ec;
   border-radius: 12px;
   color: #374151;
   background: #fff;
-  font-size: 12px;
+  font-size: 16px;
 }
 
 .report-custom-dates > span {
@@ -929,4 +932,23 @@
     min-height: 66px;
     font-size: 9px;
   }
+}
+
+/* =====================================================
+   모바일 입력 자동 확대 방지
+   iOS Safari 는 포커스한 input·textarea·select 의 글자가 16px 보다 작으면 화면을 확대한다.
+   확대되면 가로 위치까지 어긋나 보이고 키보드를 닫아도 배율이 바로 돌아오지 않는다.
+   마이페이지 폼은 label 이 11px 이고 컨트롤이 font: inherit 로 그 값을 물려받아 11px 이 됐다.
+   그래서 라벨 크기는 그대로 두고 컨트롤만 16px 로 되돌린다.
+   ===================================================== */
+.mypage-shell .mypage-form input,
+.mypage-shell .mypage-form select,
+.mypage-shell .mypage-form textarea {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* 라벨은 기존 크기를 유지한다(컨트롤만 키운다). */
+.mypage-shell .mypage-form label {
+  font-size: 11px;
 }
