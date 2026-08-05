@@ -10,6 +10,7 @@ import com.ojimasam.safy.user.domain.type.UserRole;
 import com.ojimasam.safy.user.domain.type.UserStatus;
 import com.ojimasam.safy.user.domain.type.UserErrorCode;
 import com.ojimasam.safy.user.domain.UserRepository;
+import com.ojimasam.safy.auth.domain.SocialAccountRepository;
 import com.ojimasam.safy.auth.infrastructure.security.RefreshTokenStore;
 import com.ojimasam.safy.admin.domain.AdminCenterMembership;
 import com.ojimasam.safy.admin.domain.AdminCenterMembershipRepository;
@@ -19,11 +20,14 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final RefreshTokenStore refreshTokenStore;
 	private final AdminCenterMembershipRepository membershipRepository;
+	private final SocialAccountRepository socialAccountRepository;
 	public UserService(UserRepository userRepository, RefreshTokenStore refreshTokenStore,
-			AdminCenterMembershipRepository membershipRepository) {
+			AdminCenterMembershipRepository membershipRepository,
+			SocialAccountRepository socialAccountRepository) {
 		this.userRepository = userRepository;
 		this.refreshTokenStore = refreshTokenStore;
 		this.membershipRepository = membershipRepository;
+		this.socialAccountRepository = socialAccountRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -53,6 +57,9 @@ public class UserService {
 		AdminCenterMembership membership = membershipRepository
 				.findByUserIdAndIsPrimaryTrue(user.getId())
 				.orElse(null);
-		return UserResponse.from(user, membership);
+		// 이메일과 프로필 이미지는 users 가 아니라 social_accounts 에만 있다.
+		return UserResponse.from(user, membership, socialAccountRepository
+				.findFirstByUserIdOrderByLastLoginAtDesc(user.getId())
+				.orElse(null));
 	}
 }

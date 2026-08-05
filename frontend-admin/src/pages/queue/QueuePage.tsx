@@ -23,7 +23,7 @@ export function QueuePage() {
       setItems(await getQueue())
       setLoadError('')
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : '공용 큐를 불러오지 못했습니다.')
+      setLoadError(error instanceof Error ? error.message : '미배정 제보를 불러오지 못했습니다.')
     } finally {
       setIsLoading(false)
     }
@@ -66,7 +66,7 @@ export function QueuePage() {
     return (
       <section className="page-stack">
         <p className="admin-card empty-state" role="status">
-          공용 큐는 관제센터에 소속된 담당자만 볼 수 있습니다.
+          미배정 제보는 관제센터에 소속된 담당자만 볼 수 있습니다.
         </p>
       </section>
     )
@@ -78,7 +78,7 @@ export function QueuePage() {
       {claimError && <p className="login-error" role="alert">{claimError}</p>}
 
       <AdminSection
-        title="센터 공용 큐"
+        title="미배정 제보"
         action={
           <button type="button" className="text-button" onClick={() => void loadQueue()}>
             새로고침
@@ -86,9 +86,8 @@ export function QueuePage() {
         }
       >
         <p className="queue-intro">
-          우리 관제센터로 접수됐지만 아직 담당자가 없는 제보입니다. 자동 배정이 실패했거나
-          반납·회수된 건이 쌓이는 안전망이라, <strong>평소에는 비어 있는 것이 정상</strong>입니다.
-          오래 기다린 제보가 위에 옵니다.
+          우리 관제센터에 접수됐지만 아직 담당자에게 배정되지 않은 제보입니다. 자동 배정에
+          실패했거나 반납·회수된 제보가 표시되며, 오래 기다린 제보가 위에 표시됩니다.
         </p>
 
         {isLoading ? (

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { PageHeader } from '../../../components/common/PageHeader'
-import { cancelMyReport, getMe, getMyReport, getMyReports, getNotificationSettings, getReportSummary, logout, updateNotificationSettings } from './mypageApi'
+import { cancelMyReport, getMe, getMyReport, getMyReports, getNotificationSettings, getReportSummary, logout, updateMyProfile, updateNotificationSettings } from './mypageApi'
 import { mockInquiries, mockNotificationSettings, mockReports, mockSummary, mockUser, USE_MYPAGE_MOCK_FALLBACK } from './mypageMock'
 import type { Inquiry, MyPageView, MyReport, Notice, NotificationSettingsData, ReportSummary, UserProfile } from './mypageTypes'
 import { useAuthStore } from '../../../stores/authStore'
@@ -146,7 +146,8 @@ function Main({ user, summary, reports, onGo, onLogout }: { user: UserProfile; s
   // active 는 아직 종결되지 않은 제보(접수 대기 중 + 처리중)다. 목록을 이미 받아왔으면
   // 목록에서 직접 세고, 아직 없으면 요약 API 값을 쓴다.
   const reportCounts = reports.length ? { active: reports.filter((item) => item.status === 'RECEIVED' || item.status === 'IN_PROGRESS').length, closed: reports.filter((item) => item.status === 'CLOSED').length, rejected: reports.filter((item) => item.status === 'REJECTED').length } : { active: summary.receivedCount + summary.inProgressCount, closed: summary.closedCount, rejected: summary.rejectedCount }
-  return <><section className="profile-card"><div className="profile-avatar-wrap"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0, 1)}</div><button type="button" className="profile-edit-button" aria-label="프로필 수정" onClick={() => onGo('PROFILE_EDIT')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10Z"/><path d="m14 7 3 3"/></svg></button></div><div className="profile-details"><h2>{user.nickname}</h2><p>{user.email}</p></div></section><section className="mypage-card my-report-summary"><SectionTitle title="내 제보 관리" action="전체 보기" onAction={() => onGo('REPORTS')} /><div className="report-status-grid"><span><b>{reportCounts.active}</b>진행중</span><span><b>{reportCounts.closed}</b>처리 완료</span><span><b>{reportCounts.rejected}</b>반려됨</span></div></section><section className="mypage-menu">{menus.map(([icon,label,target]) => <button key={target} type="button" onClick={() => onGo(target)}><span className="mypage-menu-icon"><MenuIcon name={icon} /></span><b>{label}</b><em aria-hidden="true"><MenuIcon name="chevron" /></em></button>)}</section><button type="button" className="logout-button" onClick={onLogout}>로그아웃</button></>
+  return <><section className="profile-card"><div className="profile-avatar-wrap"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0, 1)}</div><button type="button" className="profile-edit-button" aria-label="프로필 수정" onClick={() => onGo('PROFILE_EDIT')}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10Z"/><path d="m14 7 3 3"/></svg></button></div><div className="profile-details"><h2>{user.nickname}</h2>{user.email && <p>{user.email}</p>}</div></section><section className="mypage-card my-report-summary"><SectionTitle title="내 제보 관리" action="전체 보기" onAction={() => onGo('REPORTS')} /><div className="report-status-grid"><span><b>{reportCounts.active}</b>진행중</span><span><b>{reportCounts.closed}</b>처리 완료</span><span><b>{reportCounts.rejected}</b>반려됨</span></div></section><section className="mypage-menu">{menus.map(([icon,label,target]) => <button key={target} type="button" onClick={() => onGo(target)}><span className="mypage-menu-icon"><MenuIcon name={icon} /></span><b>{label}</b><em aria-hidden="true"><MenuIcon name="chevron" /></em></button>)}</section><button type="button" className="logout-button" onClick={onLogout}>로그아웃</button></>
+
 }
 
 type MenuIconName = 'settings' | 'support' | 'guide'
@@ -162,54 +163,43 @@ function MenuIcon({ name }: { name: MenuIconName | 'chevron' }) {
 }
 
 function Settings({ onBack, onGo }: { onBack: () => void; onGo: (view: MyPageView) => void }) { const items: [SettingsIconName,string,string,MyPageView][] = [['account','계정 관리','계정 정보와 보안을 관리해요.','ACCOUNT'],['privacy','개인·보안','개인정보와 계정 보안 안내를 확인해요.','PRIVACY'],['notification','알림','유형별 알림 수신 여부를 설정해요.','NOTIFICATION_SETTINGS']]; return <><PageHeader title="설정" onBack={onBack} className="settings-header" /><section className="settings-cards">{items.map(([icon,title,description,target]) => <button type="button" key={target} onClick={() => onGo(target)}><span><SettingsIcon name={icon} /></span><span><strong>{title}</strong><small>{description}</small></span><b><SettingsIcon name="chevron" /></b></button>)}</section></> }
-const PROFILE_EMAIL_CODE = '123456'
-const profileEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// 표시 이름은 백엔드가 @NotBlank @Size(max = 255) 로만 검증한다. 255자는 화면이 깨지므로
+// 입력 자체를 20자로 제한하고, 여기서는 빈 값만 막는다.
+const PROFILE_NAME_MAX_LENGTH = 20
 
+// 이 화면에서 회원이 바꿀 수 있는 값은 PATCH /users/me 의 displayName 하나뿐이다.
+// 이메일과 사진은 social_accounts 에 저장된 소셜 로그인 값이라 수정 API 가 없다.
+// 로그인마다 갱신되므로 읽기 전용으로 보여주기만 한다.
 function ProfileEdit({ user, onBack, onSaved }: { user: UserProfile; onBack: () => void; onSaved: (user: UserProfile) => void }) {
-  const [previewUrl, setPreviewUrl] = useState(user.profileImageUrl ?? '')
-  const [imageChanged, setImageChanged] = useState(false)
-  const [imageError, setImageError] = useState('')
-  const [email, setEmail] = useState(user.email)
-  const [emailTouched, setEmailTouched] = useState(false)
-  const [verificationRequested, setVerificationRequested] = useState(false)
-  const [verificationCode, setVerificationCode] = useState('')
-  const [emailVerified, setEmailVerified] = useState(false)
-  const [verificationError, setVerificationError] = useState('')
+  const [name, setName] = useState(user.nickname)
+  const [nameTouched, setNameTouched] = useState(false)
   const [saving, setSaving] = useState(false)
-  const trimmedEmail = email.trim()
-  const validEmail = profileEmailPattern.test(trimmedEmail)
-  const emailChanged = trimmedEmail !== user.email
-  const emailReady = emailChanged && validEmail && emailVerified
-  const canSave = !saving && (imageChanged || emailReady)
+  const [error, setError] = useState('')
+  const trimmedName = name.trim()
+  const validName = trimmedName.length > 0
+  const nameChanged = trimmedName !== user.nickname
+  const canSave = !saving && nameChanged && validName
 
-  const selectImage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setImageError('jpg, jpeg, png, webp 파일만 선택할 수 있습니다.'); return }
-    const reader = new FileReader()
-    reader.onload = () => { if (typeof reader.result === 'string') { setPreviewUrl(reader.result); setImageChanged(true); setImageError('') } }
-    reader.readAsDataURL(file)
-  }
-
-  const changeEmail = (value: string) => {
-    setEmail(value)
-    setEmailTouched(true)
-    setVerificationRequested(false)
-    setVerificationCode('')
-    setEmailVerified(false)
-    setVerificationError('')
-  }
-
-  const submit = (event: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!canSave) return
     setSaving(true)
-    onSaved({ ...user, profileImageUrl: imageChanged ? previewUrl : user.profileImageUrl, email: emailReady ? trimmedEmail : user.email })
+    setError('')
+
+    try {
+      const saved = await updateMyProfile(trimmedName)
+      // 저장 성공 시 상위에서 MAIN 으로 전환되며 이 컴포넌트가 사라진다.
+      onSaved({ ...user, ...saved })
+    } catch (requestError) {
+      console.error('Profile update failed', requestError)
+      setError('프로필을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.')
+      setSaving(false)
+    }
   }
 
-  return <><PageHeader title="프로필 수정" onBack={onBack} className="profile-edit-header" /><form className="mypage-form account-form profile-edit-form" onSubmit={submit}><div className="profile-edit-avatar"><div className="avatar">{previewUrl ? <img src={previewUrl} alt={`${user.nickname} 프로필 미리보기`} /> : user.nickname.slice(0, 1)}</div><label className="profile-photo-button">사진 변경<input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" onChange={selectImage} /></label>{imageError && <small className="profile-field-error">{imageError}</small>}</div><div className="profile-readonly-field"><label htmlFor="profile-real-name">이름</label><div><input id="profile-real-name" value={user.nickname} readOnly /><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span></div><small>실명 정보는 변경할 수 없습니다.</small></div><div className="profile-email-field"><label htmlFor="profile-email">이메일</label><div><input id="profile-email" type="email" value={email} placeholder="이메일을 입력해주세요." onBlur={() => setEmailTouched(true)} onChange={(event) => changeEmail(event.target.value)} /><button type="button" disabled={!emailChanged || !validEmail} onClick={() => { setVerificationRequested(true); setVerificationCode(''); setEmailVerified(false); setVerificationError('') }}>인증 요청</button></div>{emailTouched && !validEmail && <small className="profile-field-error">올바른 이메일 형식이 아닙니다.</small>}</div>{verificationRequested && <div className="profile-email-field"><label htmlFor="profile-email-code">인증번호</label><div><input id="profile-email-code" inputMode="numeric" maxLength={6} value={verificationCode} placeholder="인증번호 입력" disabled={emailVerified} onChange={(event) => { setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6)); setVerificationError('') }} /><button type="button" disabled={verificationCode.length !== 6 || emailVerified} onClick={() => { if (verificationCode === PROFILE_EMAIL_CODE) { setEmailVerified(true); setVerificationError('') } else setVerificationError('인증번호가 일치하지 않습니다.') }}>확인</button></div>{emailVerified && <p>이메일 인증이 완료되었습니다.</p>}{verificationError && <small className="profile-field-error">{verificationError}</small>}</div>}<button type="submit" disabled={!canSave}>{saving ? '저장 중...' : '저장'}</button></form></>
+  return <><PageHeader title="프로필 수정" onBack={onBack} className="profile-edit-header" /><form className="mypage-form account-form profile-edit-form" onSubmit={(event) => void submit(event)}><div className="profile-edit-avatar"><div className="avatar">{user.profileImageUrl ? <img src={user.profileImageUrl} alt={`${user.nickname} 프로필`} /> : user.nickname.slice(0, 1)}</div></div>{error && <p className="profile-edit-error" role="alert">{error}</p>}<div className="profile-edit-field"><label htmlFor="profile-name">이름</label><input id="profile-name" value={name} maxLength={PROFILE_NAME_MAX_LENGTH} placeholder="이름을 입력해주세요." onBlur={() => setNameTouched(true)} onChange={(event) => setName(event.target.value)} />{nameTouched && !validName && <small className="profile-field-error">이름을 입력해주세요.</small>}</div>{user.email && <div className="profile-edit-field"><label htmlFor="profile-email">이메일</label><input id="profile-email" value={user.email} readOnly /></div>}<button type="submit" disabled={!canSave}>{saving ? '저장 중...' : '저장'}</button></form></>
 }
-function Account({ user, onBack, onLogout }: { user: UserProfile; onBack: () => void; onLogout: () => void }) { const [showWithdrawal, setShowWithdrawal] = useState(false); return <><PageHeader title="계정 관리" onBack={onBack} className="account-header" /><section className="account-menu"><button type="button"><span>계정 정보</span><small>{user.email}</small><b aria-hidden="true">›</b></button><button type="button" onClick={onLogout}><span>로그아웃</span><b aria-hidden="true">›</b></button></section><button type="button" className="account-withdrawal" onClick={() => setShowWithdrawal(true)}>회원 탈퇴</button>{showWithdrawal && <div className="account-modal-backdrop" role="presentation"><section className="account-modal" role="dialog" aria-modal="true" aria-labelledby="withdrawal-title"><h2 id="withdrawal-title">회원 탈퇴</h2><p>회원 탈퇴 시 계정 정보가 삭제될 수 있습니다. 계속하시겠어요?</p><div><button type="button" onClick={() => setShowWithdrawal(false)}>취소</button><button type="button" className="danger" onClick={() => setShowWithdrawal(false)}>탈퇴하기</button></div></section></div>}</> }
+function Account({ user, onBack, onLogout }: { user: UserProfile; onBack: () => void; onLogout: () => void }) { const [showWithdrawal, setShowWithdrawal] = useState(false); return <><PageHeader title="계정 관리" onBack={onBack} className="account-header" /><section className="account-menu"><button type="button"><span>계정 정보</span>{user.email && <small>{user.email}</small>}<b aria-hidden="true">›</b></button><button type="button" onClick={onLogout}><span>로그아웃</span><b aria-hidden="true">›</b></button></section><button type="button" className="account-withdrawal" onClick={() => setShowWithdrawal(true)}>회원 탈퇴</button>{showWithdrawal && <div className="account-modal-backdrop" role="presentation"><section className="account-modal" role="dialog" aria-modal="true" aria-labelledby="withdrawal-title"><h2 id="withdrawal-title">회원 탈퇴</h2><p>회원 탈퇴 시 계정 정보가 삭제될 수 있습니다. 계속하시겠어요?</p><div><button type="button" onClick={() => setShowWithdrawal(false)}>취소</button><button type="button" className="danger" onClick={() => setShowWithdrawal(false)}>탈퇴하기</button></div></section></div>}</> }
 
 type SettingsIconName = 'account' | 'privacy' | 'notification' | 'chevron'
 

@@ -9,7 +9,9 @@ export type ReportStatus = 'RECEIVED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 
 export type ReportTypeCode = 'IMAGE' | 'LIVE'
 export type ReportCategoryCode = 'CROWD_CONGESTION' | 'ACCIDENT_RISK' | 'FLOOD_WEATHER' | 'FACILITY_ROAD' | 'OTHER'
 export type MyPageView = 'MAIN' | 'REPORTS' | 'REPORT_DETAIL' | 'REPORT_EDIT' | 'SUPPORT' | 'FAQ' | 'NOTICES' | 'NOTICE_DETAIL' | 'INQUIRY_FORM' | 'INQUIRIES' | 'INQUIRY_DETAIL' | 'GUIDE' | 'SETTINGS' | 'PROFILE_EDIT' | 'ACCOUNT' | 'PRIVACY' | 'NOTIFICATION_SETTINGS'
-export interface UserProfile { id: number; nickname: string; email: string; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }
+// email·profileImageUrl 은 소셜 계정에서 온 값이라 없을 수 있다. 값이 없을 때 빈 문자열로
+// 채우면 화면에 빈 줄이 남으므로 null 을 그대로 둔다.
+export interface UserProfile { id: number; nickname: string; email: string | null; profileImageUrl?: string | null; grade?: string; helpedCount?: number; badgeCount?: number }
 export interface ReportSummary { totalCount: number; receivedCount: number; inProgressCount: number; closedCount: number; rejectedCount: number }
 // reason 은 서버가 준 값을 그대로 담는다. 상태에 따라 관리자 내부 코드
 // (AUTO_OPERATOR_ASSIGNMENT·OPERATOR_VIEWING·WORK_COMPLETED 등)나 담당자 재배정·센터
