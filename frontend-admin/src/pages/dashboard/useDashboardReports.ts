@@ -23,7 +23,7 @@ function byRecentAssignment(left: AdminReport, right: AdminReport): number {
  * 지도와 최근 배정 제보 테이블이 이 목록 하나만 보므로 두 영역의 확인 상태가 어긋나지 않는다.
  * 실시간 갱신은 기존 SSE 구독(subscribeToRealtimeSignals)을 그대로 재사용한다.
  */
-export function useDashboardReports(onDashboardUpdated?: () => void, enabled = true) {
+export function useDashboardReports(enabled = true) {
   const [reports, setReports] = useState<AdminReport[]>([])
   const [connections, setConnections] = useState<WebRTCConnection[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -63,14 +63,13 @@ export function useDashboardReports(onDashboardUpdated?: () => void, enabled = t
       setReports(mergeReports(loadedReports))
       setConnections(loadedConnections)
       setLoadError('')
-      onDashboardUpdated?.()
     } catch (error) {
       if (requestId !== loadRequestIdRef.current) return
       setLoadError(error instanceof Error ? error.message : '대시보드 정보를 불러오지 못했습니다.')
     } finally {
       if (requestId === loadRequestIdRef.current) setIsLoading(false)
     }
-  }, [mergeReports, onDashboardUpdated])
+  }, [mergeReports])
 
   useEffect(() => {
     if (!enabled) return

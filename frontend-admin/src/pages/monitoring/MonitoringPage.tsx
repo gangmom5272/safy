@@ -36,7 +36,6 @@ type MediaTypeFilter = 'image' | 'live' | typeof allValue
 interface MonitoringFilters {
   mediaType: MediaTypeFilter
   riskLevel: RiskLevel | typeof allValue | typeof unsetValue
-  connectionStatus: WebRTCConnectionStatus | typeof allValue | typeof unsetValue
 }
 
 interface MonitoringNotice {
@@ -48,7 +47,6 @@ interface MonitoringNotice {
 const initialFilters: MonitoringFilters = {
   mediaType: allValue,
   riskLevel: unsetValue,
-  connectionStatus: unsetValue,
 }
 
 function LocationIcon() {
@@ -256,10 +254,7 @@ export function MonitoringPage() {
           filters.riskLevel,
           analysis?.riskScore ?? report.riskScore,
         )
-      const matchesStatus = !filters.connectionStatus || filters.connectionStatus === allValue
-        || connection?.connectionStatus === filters.connectionStatus
-
-      return matchesRegion && matchesType && matchesRisk && matchesStatus
+      return matchesRegion && matchesType && matchesRisk
     }),
     [analyses, dismissedEndedReports, filters, keywordFromUrl, reports],
   )
@@ -341,21 +336,6 @@ export function MonitoringPage() {
                   <option value={unsetValue} disabled>위험도</option>
                   <option value={allValue}>전체</option>
                   {RISK_LEVEL_OPTIONS.map(({ value, label }) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-                <select
-                  aria-label="연결 상태 선택"
-                  className={!filters.connectionStatus ? 'select-placeholder' : undefined}
-                  value={filters.connectionStatus}
-                  onChange={(event) => setFilters((current) => ({
-                    ...current,
-                    connectionStatus: event.target.value as MonitoringFilters['connectionStatus'],
-                  }))}
-                >
-                  <option value={unsetValue} disabled>연결 상태</option>
-                  <option value={allValue}>전체</option>
-                  {Object.entries(connectionStatusLabels).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
                   ))}
                 </select>

@@ -63,7 +63,6 @@ export function DashboardPage() {
                   <th>위험도</th>
                   <th>제보 시간</th>
                   <th>처리 상태</th>
-                  <th>상세 보기</th>
                 </tr>
               </thead>
               <tbody>
@@ -82,23 +81,11 @@ export function DashboardPage() {
                     </td>
                     <td>{formatAdminTimestamp(report.reportedAt) || '정보 없음'}</td>
                     <td>{reportStatusLabels[report.status]}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="text-button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          openReportDetail(report.id)
-                        }}
-                      >
-                        상세
-                      </button>
-                    </td>
                   </tr>
                 ))}
                 {!isLoading && reports.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="empty-state">현재 배정된 제보가 없습니다.</td>
+                    <td colSpan={4} className="empty-state">현재 배정된 제보가 없습니다.</td>
                   </tr>
                 )}
               </tbody>

@@ -383,12 +383,6 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-.admin-header__divider {
-  width: 1px;
-  height: 16px;
-  background: var(--border);
-}
-
 .admin-header__actions {
   display: flex;
   flex: 1 1 auto;
@@ -835,6 +829,8 @@ button:disabled {
   font-size: 12px;
   font-weight: 800;
   border: 1px solid transparent;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .risk-badge--unclassified {
@@ -1403,7 +1399,7 @@ button:disabled {
 }
 
 .recent-reports-table {
-  min-width: 620px;
+  min-width: 560px;
 }
 
 /*
@@ -1558,8 +1554,6 @@ button:disabled {
   justify-content: center;
   padding: 4px 9px;
   border-radius: 999px;
-  background: var(--surface-muted);
-  color: var(--text);
   font-size: 13px;
 }
 
@@ -3212,13 +3206,6 @@ button:disabled {
   }
 }
 
-@media (max-width: 900px) {
-  .admin-header__divider,
-  .admin-header__updated {
-    display: none;
-  }
-}
-
 @media (max-width: 980px) {
   .report-detail-grid--first,
   .report-detail-grid--second { grid-template-columns: 1fr; }
@@ -3271,7 +3258,7 @@ button:disabled {
   .dashboard-equal-section { min-height: auto; }
   .dashboard-map-card,
   .live-connection-panel { min-height: 380px; }
-  .recent-reports-table { min-width: 560px; }
+  .recent-reports-table { min-width: 520px; }
 }
 
 /* 담당자 인사 관리 (SUPER_ADMIN) */

@@ -16,7 +16,7 @@ import { formatAdminTimestamp } from '../../utils/adminDate'
 import { getReportStatusTone } from '../../utils/adminStatus'
 import { compareRiskLevels, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
 import { subscribeToRealtimeSignals } from '../../api/realtime'
-import { getReportRowKey } from './reportRowKey'
+import { deduplicateReportsById } from './reportRowKey'
 
 const allValue = 'all'
 
@@ -127,7 +127,7 @@ export function ReportListPage() {
   const filteredReports = useMemo(() => {
     const keyword = appliedFilters.keyword.trim().toLowerCase()
 
-    return reports
+    return deduplicateReportsById(reports)
       .filter((report) => {
         const searchableText = [
           String(report.id),
@@ -338,7 +338,7 @@ export function ReportListPage() {
               <thead><tr><th>제보 ID</th><th>위치</th><th>카테고리</th><th>위험도</th><th>제보 시간</th><th>AI 분석 상태</th><th>담당자</th><th>처리 상태</th></tr></thead>
               <tbody>
                 {filteredReports.map((report) => (
-                  <tr key={getReportRowKey(report)} className="clickable-row" onClick={() => navigate(createReportDetailPath(report.id))}>
+                  <tr key={report.id} className="clickable-row" onClick={() => navigate(createReportDetailPath(report.id))}>
                     <td>#{report.id}</td><td>{report.location}</td><td>{reportTypeLabels[report.type]}</td>
                     <td><RiskBadge value={report.riskLevel} score={report.riskScore} /></td>
                     <td>{formatAdminTimestamp(report.reportedAt) ?? '정보 없음'}</td><td>{report.aiAnalysisStatus ? aiAnalysisStatusLabels[report.aiAnalysisStatus] : '-'}</td><td>{report.managerName}</td>
