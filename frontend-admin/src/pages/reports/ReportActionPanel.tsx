@@ -20,18 +20,27 @@ const ACTION_LABELS: Record<OperatorAction, string> = {
 }
 
 const ACTION_TITLES: Record<OperatorAction, string> = {
-  complete: '업무를 종료하시겠습니까?',
+  complete: '해당 제보를 확인하셨습니까?',
   reject: '이 제보를 반려하시겠습니까?',
   reassign: '우리 센터 다른 담당자에게 넘기시겠습니까?',
-  transfer: '다른 관제센터로 이관하시겠습니까?',
+  transfer: '주변 다른 관제센터로 이관하시겠습니까?',
 }
 
 const ACTION_CONFIRM: Record<OperatorAction, string> = {
-  complete: '종료',
+  complete: '완료',
   reject: '반려',
   reassign: '넘기기',
   transfer: '이관',
 }
+
+const REASON_PLACEHOLDERS: Record<OperatorAction, string> = {
+  complete: '',
+  reject: '예) 현장 확인 결과 위험 상황이 아님',
+  reassign: '예) 관할 구역 오배정',
+  transfer: '예) 관할 경계 지역이라 인접 센터가 대응',
+}
+
+const REASON_MAX_LENGTH = 500
 
 const REASON_REQUIRED: Record<OperatorAction, boolean> = {
   complete: false,
@@ -202,18 +211,23 @@ export function ReportActionPanel({ reportId, assignmentStatus, onActionComplete
           )
         )}
 
+        {/* 반려·재배정·이관이 같은 사유 입력 양식을 쓴다. 라벨을 위, 입력칸을 아래 전체 너비로
+            두어 세 모달의 폼이 같은 모양이 되게 한다. */}
         {action && REASON_REQUIRED[action] ? (
-          <label>
-            사유 (필수)
+          <label className="admin-field">
+            <span className="admin-field__label">사유 <em>(필수)</em></span>
             <textarea
+              className="admin-field__control"
               value={reason}
-              maxLength={500}
+              rows={4}
+              maxLength={REASON_MAX_LENGTH}
               onChange={(event) => setReason(event.target.value)}
-              placeholder={action === 'transfer' ? '예) 관할 경계 지역이라 인접 센터가 대응' : '예) 관할 구역 오배정'}
+              placeholder={REASON_PLACEHOLDERS[action]}
             />
+            <span className="admin-field__counter">{reason.length} / {REASON_MAX_LENGTH}</span>
           </label>
         ) : (
-          <p>제보를 종료하면 관제센터 라우팅과 진행 중인 라이브 세션도 함께 종료됩니다.</p>
+          <p>제보를 종료하면 사용자 지도에 반영됩니다.</p>
         )}
       </AdminModal>
     </>

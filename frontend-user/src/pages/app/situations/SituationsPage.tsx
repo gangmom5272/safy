@@ -92,7 +92,9 @@ export function SituationsPage() {
           center={mapCenter}
           reports={situation.reports}
           showCurrentLocation={!selectedArea}
-          fitToReports={Boolean(selectedArea)}
+          // 장소 선택은 마커가 지역 제한 없는 전체 피드다. fitToReports 를 켜면 서울
+          // 전역 마커에 맞추려고 지도가 줌아웃돼 "그 장소를 중심으로 본다"가 깨진다.
+          fitToReports={selectedArea?.type === 'area'}
           statusMessage={
             selectedArea
               ? situation.reports.length === 0 && !situation.isReportsLoading

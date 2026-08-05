@@ -1,6 +1,12 @@
 .area-request-page__description {
   margin: 0 0 20px;
-  color: var(--text-muted);
+  padding: 12px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .area-request-form {
@@ -9,39 +15,53 @@
   max-width: 680px;
 }
 
-.area-request-form label {
+/* 짧은 값 두 개(구역·유효 시간)는 한 줄에 둔다. 폭이 좁아지면 자동으로 두 줄이 된다. */
+.area-request-form__row {
   display: grid;
-  gap: 8px;
-  font-weight: 700;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
 }
 
-.area-request-form input,
-.area-request-form select,
-.area-request-form textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 11px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font: inherit;
+.area-request-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
 }
 
-.area-request-form textarea {
-  resize: vertical;
+.area-request-form__actions .primary-button {
+  min-height: 40px;
+  padding: 10px 20px;
+  margin-top: 14px;
 }
 
 .area-request-message {
   margin: 0;
-  padding: 12px;
+  padding: 12px 14px;
+  border: 1px solid transparent;
   border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .area-request-message--error {
+  border-color: #fecdca;
   background: #fff0f0;
   color: #a12626;
 }
 
 .area-request-message--success {
+  border-color: #bbf7d0;
   background: #ecf8f0;
   color: #176b3a;
+}
+
+@media (max-width: 620px) {
+  .area-request-form__actions {
+    justify-content: stretch;
+  }
+
+  .area-request-form__actions .primary-button {
+    width: 100%;
+  }
 }

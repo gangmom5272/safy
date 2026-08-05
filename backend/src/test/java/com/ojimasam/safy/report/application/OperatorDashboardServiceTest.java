@@ -99,6 +99,30 @@ class OperatorDashboardServiceTest {
 	}
 
 	@Test
+	void showsRepresentativeOriginalFrameOnLiveTile() {
+		Report liveReport = report(11L, ReportType.LIVE, "라이브 제보");
+		withRepresentativeFrame(liveReport, "frames/11/live/token/000012.jpg");
+		ReportOperatorAssignment liveAssignment = assignment(101L, liveReport);
+		when(accessService.isSuperAdmin(30L)).thenReturn(false);
+		when(assignmentRepository.findDashboardAssignmentsForOperator(eq(30L), any(), any()))
+				.thenReturn(new PageImpl<>(List.of(liveAssignment)));
+		when(imageRepository.findAllByReportIdInOrderByReportIdAscDisplayOrderAsc(List.of(11L)))
+				.thenReturn(List.of());
+		when(liveSessionRepository.findAllByReportIdIn(List.of(11L))).thenReturn(List.of());
+		when(riskAssessmentRepository.findAllByReportIdIn(List.of(11L))).thenReturn(List.of());
+		when(mediaObjectStorage.createPresignedGetUrl("safy", "frames/11/live/token/000012.jpg",
+				java.time.Duration.ofMinutes(10))).thenReturn("https://storage/frame-thumbnail");
+
+		var result = service().getTiles(30L, 0, 25);
+
+		OperatorDashboardTileView liveTile = result.getContent().getFirst();
+		assertThat(liveTile.image().imageCount()).isEqualTo(1);
+		assertThat(liveTile.image().status()).isEqualTo(MediaStorageStatus.AVAILABLE);
+		assertThat(liveTile.image().thumbnailUrl()).isEqualTo("https://storage/frame-thumbnail");
+		assertThat(liveTile.image().thumbnailUrlExpiresAt()).isEqualTo(NOW.plusSeconds(600));
+	}
+
+	@Test
 	void superAdminGetsAllActiveAssignments() {
 		when(accessService.isSuperAdmin(1L)).thenReturn(true);
 		when(assignmentRepository.findAllByStatusIn(any(), any())).thenReturn(new PageImpl<>(List.of()));
@@ -151,6 +175,17 @@ class OperatorDashboardServiceTest {
 		when(report.getType()).thenReturn(type);
 		when(report.getDescription()).thenReturn(description);
 		return report;
+	}
+
+	/** LIVE 제보의 대표 블러본과 그 블러본이 파생된 원본 프레임을 연결한다. */
+	private void withRepresentativeFrame(Report report, String frameObjectKey) {
+		MediaAsset blurred = mock(MediaAsset.class);
+		MediaAsset frame = mock(MediaAsset.class);
+		when(report.getRepresentativeBlurAsset()).thenReturn(blurred);
+		when(blurred.getSourceMediaAsset()).thenReturn(frame);
+		when(frame.getStorageStatus()).thenReturn(MediaStorageStatus.AVAILABLE);
+		when(frame.getBucketName()).thenReturn("safy");
+		when(frame.getObjectKey()).thenReturn(frameObjectKey);
 	}
 
 	private ReportOperatorAssignment assignment(Long id, Report report) {

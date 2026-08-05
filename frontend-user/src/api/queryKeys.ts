@@ -16,6 +16,11 @@ export const queryKeys = {
   locations: {
     all: ['locations'] as const,
     search: (keyword: string) => [...queryKeys.locations.all, 'search', keyword] as const,
+    // 자치구·장소 구분 없이 "이 검색어가 가리키는 대상"을 찾는 조회의 키다.
+    detail: (key: string) => [...queryKeys.locations.all, 'detail', key] as const,
+    // 우리 식별자가 없는 외부 검색 결과는 좌표가 캐시 키다.
+    status: (latitude: number, longitude: number) =>
+      [...queryKeys.locations.all, 'status', latitude, longitude] as const,
   },
   areas: {
     all: ['areas'] as const,
@@ -25,6 +30,10 @@ export const queryKeys = {
     map: (areaId: string | number) => [...queryKeys.areas.all, 'map', areaId] as const,
     liveReports: (areaId: string | number, filters?: QueryFilter) =>
       [...queryKeys.areas.all, areaId, 'reports', 'live', filters ?? {}] as const,
+  },
+  places: {
+    all: ['places'] as const,
+    status: (placeId: string | number) => [...queryKeys.places.all, 'status', placeId] as const,
   },
   map: {
     all: ['map'] as const,

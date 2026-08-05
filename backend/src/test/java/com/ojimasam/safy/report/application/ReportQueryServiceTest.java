@@ -112,6 +112,25 @@ class ReportQueryServiceTest {
 	}
 
 	@Test
+	void showsRepresentativeFrameAsDetailMediaForLiveReport() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = liveReportWithRepresentativeFrame(42L, 10L, 11L, now);
+		when(reportRepository.findByIdAndReporterId(42L, 1L)).thenReturn(Optional.of(report));
+		when(reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(42L)).thenReturn(List.of());
+		when(mediaObjectStorage.createPresignedGetUrl("safy", blurredFrameKey(42L), java.time.Duration.ofMinutes(10)))
+				.thenReturn("http://localhost:9000/frame-preview");
+
+		ReportDetailView result = service(now).getMine(1L, 42L);
+
+		assertThat(result.images()).hasSize(1);
+		assertThat(result.images().getFirst().previewUrl()).isEqualTo("http://localhost:9000/frame-preview");
+		assertThat(result.images().getFirst().previewUrlExpiresAt()).isEqualTo(now.plusSeconds(600));
+		assertThat(result.images().getFirst().mediaAssetId()).isEqualTo(11L);
+		assertThat(result.images().getFirst().reportImageId()).isNull();
+		assertThat(result.images().getFirst().displayOrder()).isZero();
+	}
+
+	@Test
 	void exposesOriginalPreviewToOperator() {
 		Instant now = Instant.parse("2026-07-21T04:00:00Z");
 		Report report = imageReport(42L);
@@ -130,6 +149,23 @@ class ReportQueryServiceTest {
 		assertThat(result.images().getFirst().mediaAssetId()).isEqualTo(10L);
 		assertThat(result.images().getFirst().previewUrl()).isEqualTo("http://localhost:9000/original");
 		verify(blurResultRepository, never()).findAllBySourceMediaAssetIdIn(org.mockito.ArgumentMatchers.any());
+	}
+
+	@Test
+	void exposesOriginalFrameToOperatorForLiveReport() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = liveReportWithRepresentativeFrame(42L, 10L, 11L, now);
+		when(reportRepository.findOneById(42L)).thenReturn(Optional.of(report));
+		when(reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(42L)).thenReturn(List.of());
+		when(mediaObjectStorage.createPresignedGetUrl("safy", frameKey(42L), java.time.Duration.ofMinutes(10)))
+				.thenReturn("http://localhost:9000/original-frame");
+
+		ReportDetailView result = service(now).getForOperator(30L, 42L);
+
+		assertThat(result.images()).hasSize(1);
+		assertThat(result.images().getFirst().mediaAssetId()).isEqualTo(10L);
+		assertThat(result.images().getFirst().previewUrl()).isEqualTo("http://localhost:9000/original-frame");
+		assertThat(result.images().getFirst().reportImageId()).isNull();
 	}
 
 	@Test
@@ -176,6 +212,29 @@ class ReportQueryServiceTest {
 		var result = service(Instant.parse("2026-07-21T04:00:00Z")).getMyList(1L, 0, 20);
 
 		assertThat(result.getContent()).hasSize(1);
+		assertThat(result.getContent().getFirst().imageCount()).isZero();
+	}
+
+	@Test
+	void showsRepresentativeThumbnailForLiveReportWithoutReportImageRow() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = liveReportWithRepresentativeFrame(7L, 10L, 11L, now);
+		when(reportRepository.findAllByReporterId(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+				.thenReturn(new PageImpl<>(List.of(report)));
+		when(reportImageRepository.findAllByReportIdInOrderByReportIdAscDisplayOrderAsc(List.of(7L)))
+				.thenReturn(List.of());
+		when(mediaObjectStorage.createPresignedGetUrl("safy", blurredFrameKey(7L), java.time.Duration.ofMinutes(10)))
+				.thenReturn("http://localhost:9000/frame-preview");
+
+		var result = service(now).getMyList(1L, 0, 20);
+
+		var representative = result.getContent().getFirst().representativeImage();
+		assertThat(representative).isNotNull();
+		assertThat(representative.previewUrl()).isEqualTo("http://localhost:9000/frame-preview");
+		assertThat(representative.previewUrlExpiresAt()).isEqualTo(now.plusSeconds(600));
+		assertThat(representative.mediaAssetId()).isEqualTo(11L);
+		assertThat(representative.reportImageId()).isNull();
+		assertThat(representative.displayOrder()).isZero();
 		assertThat(result.getContent().getFirst().imageCount()).isZero();
 	}
 
@@ -231,6 +290,31 @@ class ReportQueryServiceTest {
 				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
 		ReflectionTestUtils.setField(report, "id", reportId);
 		return report;
+	}
+
+	/** Egress 프레임 원본과 그 블러본만 있고 report_image 행은 없는 LIVE 제보. */
+	private Report liveReportWithRepresentativeFrame(Long reportId, Long frameAssetId, Long blurredAssetId,
+			Instant now) {
+		Report report = Report.create(1L, ReportType.LIVE,
+				ReportCategory.CROWD_CONGESTION, ReportSubcategory.CROWD_INCREASING, "라이브 제보",
+				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
+		ReflectionTestUtils.setField(report, "id", reportId);
+		MediaAsset frame = MediaAsset.recordServerObject(1L, reportId, "safy", frameKey(reportId), null,
+				"image/jpeg", 1200L, com.ojimasam.safy.media.domain.type.MediaVariantType.ORIGINAL, null, now);
+		ReflectionTestUtils.setField(frame, "id", frameAssetId);
+		MediaAsset blurred = MediaAsset.recordServerObject(1L, reportId, "safy", blurredFrameKey(reportId), null,
+				"image/jpeg", 900L, com.ojimasam.safy.media.domain.type.MediaVariantType.BLURRED, frame, now);
+		ReflectionTestUtils.setField(blurred, "id", blurredAssetId);
+		report.applyRepresentativeBlurAsset(blurred);
+		return report;
+	}
+
+	private String frameKey(Long reportId) {
+		return "frames/%d/live/token/000012.jpg".formatted(reportId);
+	}
+
+	private String blurredFrameKey(Long reportId) {
+		return "frames/%d/live/token/blurred/000012.jpg".formatted(reportId);
 	}
 
 	private MediaAsset originalImage(Long ownerId, Long reportId, Long assetId, Instant now) {

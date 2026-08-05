@@ -311,7 +311,9 @@
   color: var(--color-text-primary);
   background: #ffffff;
   font: inherit;
-  font-size: 14px;
+  /* iOS Safari 는 포커스한 입력칸의 글자가 16px 보다 작으면 화면을 자동으로 확대한다.
+     확대되면 가로 위치까지 어긋나 보이므로 16px 을 유지한다. */
+  font-size: 16px;
   line-height: 1.5;
   box-sizing: border-box;
 }
