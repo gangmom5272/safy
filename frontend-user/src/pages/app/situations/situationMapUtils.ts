@@ -14,6 +14,14 @@ export const RISK_MARKER_COLORS: Record<RiskLevel, string> = {
   very_low: '#2563eb',
 }
 
+/** 아직 평가되지 않은 제보의 색. 관리자 콘솔의 UNCLASSIFIED_RISK_COLOR 와 같은 회색이다. */
+export const UNASSESSED_RISK_COLOR = '#94a3b8'
+
+/** 평가 전 제보를 등급 색으로 칠하면 '미평가'가 특정 등급으로 읽힌다. */
+export function riskMarkerColor(level?: RiskLevel) {
+  return level ? RISK_MARKER_COLORS[level] : UNASSESSED_RISK_COLOR
+}
+
 export interface ReportMarkerGroup {
   key: string
   latitude: number
@@ -45,11 +53,14 @@ export function groupReportsByLocation(reports: LiveReportSummary[]): ReportMark
   return [...groups.values()]
 }
 
-export function highestRiskLevel(reports: LiveReportSummary[]): RiskLevel {
-  // 시작값은 가장 낮은 등급이어야 한다. 'low' 로 두면 very_low 제보만 묶인 마커가
-  // 한 단계 높게 칠해진다.
-  return reports.reduce<RiskLevel>(
-    (highest, report) => (RISK_ORDER[report.riskLevel] > RISK_ORDER[highest] ? report.riskLevel : highest),
-    'very_low',
-  )
+/**
+ * 묶인 제보 중 가장 높은 등급. 평가된 제보가 하나도 없으면 undefined 다 —
+ * 그때 최저 등급을 돌려주면 미평가 마커가 '매우 낮음' 색으로 칠해진다.
+ */
+export function highestRiskLevel(reports: LiveReportSummary[]): RiskLevel | undefined {
+  return reports.reduce<RiskLevel | undefined>((highest, report) => {
+    if (!report.riskLevel) return highest
+    if (!highest) return report.riskLevel
+    return RISK_ORDER[report.riskLevel] > RISK_ORDER[highest] ? report.riskLevel : highest
+  }, undefined)
 }

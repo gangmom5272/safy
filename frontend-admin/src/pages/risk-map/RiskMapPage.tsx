@@ -44,8 +44,8 @@ const allValue = 'all'
 const unsetValue = ''
 // 지도 이동·줌마다 바로 조회하면 드래그 중 요청이 쏟아진다. 계약 권고값(200~300ms).
 const VIEWPORT_DEBOUNCE_MS = 250
-// 시민 공개 집합은 제보 시각 기준 롤링 30분 창이라 관리자가 아무것도 하지 않아도 바뀐다.
-// 다시 받지 않으면 이미 시민 지도에서 사라진 제보가 '공개 중'으로 남는다.
+// 처리 완료 제보 집합은 제보 시각 기준 롤링 30분 창이라 관리자가 아무것도 하지 않아도 바뀐다.
+// 다시 받지 않으면 이미 시민 지도에서 사라진 제보가 남는다.
 const PUBLIC_REFRESH_MS = 30_000
 // '갱신 N초 전' 라벨용. formatLastUpdated 의 최소 단위(10초)에 맞춘다.
 const NOW_TICK_MS = 10_000
@@ -212,7 +212,7 @@ export function RiskMapPage() {
       setPublicError('')
     } catch (error) {
       if (controller.signal.aborted) return
-      setPublicError(error instanceof Error ? error.message : '시민 공개 제보를 불러오지 못했습니다.')
+      setPublicError(error instanceof Error ? error.message : '처리 완료 제보를 불러오지 못했습니다.')
     }
   }, [])
 
@@ -388,9 +388,9 @@ export function RiskMapPage() {
     })
   }, [events, isMapReady, showEventLayer])
 
-  // 시민 공개 레이어: 시민 앱이 지금 보고 있는 공개 제보. 담당 중 제보 핀(보라·파랑)과는
-  // 배타적인 집합이므로 같은 제보가 두 번 찍히지 않는다. 위험 등급이 아니라 공개 상태를
-  // 나타내므로 물방울 핀이 아닌 별도 라벨 마커로 구분한다.
+  // 처리 완료 제보 레이어: 담당자가 완료 처리해 시민 앱에 공개된 제보. 담당 중 제보
+  // 핀(보라·파랑)과는 배타적인 집합이므로 같은 제보가 두 번 찍히지 않는다. 위험 등급이
+  // 아니라 처리 상태를 나타내므로 물방울 핀이 아닌 별도 라벨 마커로 구분한다.
   useEffect(() => {
     const mapApi = mapApiRef.current
     if (!isMapReady || !mapApi) return
@@ -410,7 +410,7 @@ export function RiskMapPage() {
       marker.className = 'public-feed-marker'
       marker.innerHTML = `<i aria-hidden="true"></i><span></span>`
       marker.querySelector('span')!.textContent = label
-      marker.setAttribute('aria-label', `시민 공개 중 ${label} 상세 보기`)
+      marker.setAttribute('aria-label', `처리 완료 제보 ${label} 상세 보기`)
       marker.addEventListener('click', () => {
         setSelectedPublic(report)
         setSelectedCell(null)
@@ -508,13 +508,13 @@ export function RiskMapPage() {
             />
             행사 ({events.length})
           </label>
-          <label title="서버가 공개 중이라고 판단하는 제보 전체입니다. 시민 앱 지도는 이 중 최근 20건만 표시합니다.">
+          <label title="담당자가 완료 처리해 시민 앱에 공개된 제보입니다. 시민 앱 지도는 이 중 최근 20건만 표시합니다.">
             <input
               type="checkbox"
               checked={showPublicLayer}
               onChange={togglePublicLayer}
             />
-            시민 공개 ({publicReports.length})
+            처리 완료 제보 ({publicReports.length})
           </label>
         </fieldset>
         <div className="risk-map-filter__controls">
@@ -575,7 +575,7 @@ export function RiskMapPage() {
           {showPublicLayer && (
             <p className="public-feed-status">
               <span>
-                시민 공개 {publicReports.length}건 · {formatLastUpdated(publicFetchedAt, now)}
+                처리 완료 제보 {publicReports.length}건 · {formatLastUpdated(publicFetchedAt, now)}
               </span>
               <button type="button" className="text-button" onClick={() => { void loadPublicReports() }}>
                 다시 불러오기
@@ -677,7 +677,7 @@ export function RiskMapPage() {
             <article className="admin-card grid-trend-card">
               <div className="grid-trend-card__heading">
                 <div>
-                  <span>시민 공개 중 · 제보 #{selectedPublic.reportId}</span>
+                  <span>처리 완료 · 제보 #{selectedPublic.reportId}</span>
                   <strong>{getSubcategoryLabel(selectedPublic.subcategory) ?? '기타'}</strong>
                 </div>
                 <button type="button" className="text-button" onClick={clearSelection}>닫기</button>
@@ -721,6 +721,14 @@ export function RiskMapPage() {
               <article className="admin-card">
                 <span>확인 제보</span>
                 <strong>{checkedReportCount}건</strong>
+              </article>
+              {/*
+                레이어를 꺼 두면 조회하지 않으므로 0건이 아니라 '-' 로 둔다. 받지 않은
+                값을 0 으로 보여주면 완료 처리된 제보가 없는 것으로 읽힌다.
+              */}
+              <article className="admin-card">
+                <span>처리 완료 제보</span>
+                <strong>{showPublicLayer ? `${publicReports.length}건` : '-'}</strong>
               </article>
             </>
           )}

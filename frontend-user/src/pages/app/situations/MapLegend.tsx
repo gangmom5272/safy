@@ -1,5 +1,5 @@
-import { RISK_MARKER_COLORS } from './situationMapUtils'
-import { shortRiskLevelLabels, type RiskLevel } from './types'
+import { RISK_MARKER_COLORS, UNASSESSED_RISK_COLOR } from './situationMapUtils'
+import { shortRiskLevelLabels, UNASSESSED_RISK_LABEL, type RiskLevel } from './types'
 
 // 지도의 네모칸(격자)과 핀(제보)이 같은 5색 팔레트를 쓰므로 범례 하나로 둘 다 설명한다.
 // 관리자 콘솔 RISK_LEVEL_ORDER 와 같은 순서(높은 등급 먼저)로 둔다. 안전 정보라
@@ -24,6 +24,15 @@ export function MapLegendScale() {
           {shortRiskLevelLabels[level]}
         </li>
       ))}
+      {/* 회색 마커가 무슨 뜻인지 범례에 없으면 알 수 없다. 등급 5단계 뒤에 둔다. */}
+      <li>
+        <span
+          className="map-legend-scale__swatch"
+          style={{ backgroundColor: UNASSESSED_RISK_COLOR }}
+          aria-hidden="true"
+        />
+        {UNASSESSED_RISK_LABEL}
+      </li>
     </ul>
   )
 }

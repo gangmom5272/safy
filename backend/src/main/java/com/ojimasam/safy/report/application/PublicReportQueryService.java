@@ -4,12 +4,16 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ojimasam.safy.analysis.domain.RiskAssessment;
+import com.ojimasam.safy.analysis.domain.RiskAssessmentRepository;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
 import com.ojimasam.safy.media.application.MediaObjectStorage;
@@ -48,19 +52,24 @@ public class PublicReportQueryService {
 	private final ReportRepository reportRepository;
 	private final MediaObjectStorage mediaObjectStorage;
 	private final ReportAnalysisQueryService reportAnalysisQueryService;
+	private final RiskAssessmentRepository riskAssessmentRepository;
 	private final Clock clock;
 
 	@Autowired
 	public PublicReportQueryService(ReportRepository reportRepository, MediaObjectStorage mediaObjectStorage,
-			ReportAnalysisQueryService reportAnalysisQueryService) {
-		this(reportRepository, mediaObjectStorage, reportAnalysisQueryService, Clock.systemUTC());
+			ReportAnalysisQueryService reportAnalysisQueryService,
+			RiskAssessmentRepository riskAssessmentRepository) {
+		this(reportRepository, mediaObjectStorage, reportAnalysisQueryService, riskAssessmentRepository,
+				Clock.systemUTC());
 	}
 
 	PublicReportQueryService(ReportRepository reportRepository, MediaObjectStorage mediaObjectStorage,
-			ReportAnalysisQueryService reportAnalysisQueryService, Clock clock) {
+			ReportAnalysisQueryService reportAnalysisQueryService,
+			RiskAssessmentRepository riskAssessmentRepository, Clock clock) {
 		this.reportRepository = reportRepository;
 		this.mediaObjectStorage = mediaObjectStorage;
 		this.reportAnalysisQueryService = reportAnalysisQueryService;
+		this.riskAssessmentRepository = riskAssessmentRepository;
 		this.clock = clock;
 	}
 
@@ -98,7 +107,9 @@ public class PublicReportQueryService {
 
 	/** 미공개 제보는 404 로 감춘다. 403 이면 "존재하지만 내려갔다"를 알려주는 셈이 된다. */
 	public PublicReportView report(Long reportId) {
-		return toView(requirePublished(reportId), clock.instant().plus(IMAGE_URL_EXPIRY));
+		Report report = requirePublished(reportId);
+		return toView(report, riskAssessmentRepository.findByReportId(reportId).orElse(null),
+				clock.instant().plus(IMAGE_URL_EXPIRY));
 	}
 
 	public ReportAnalysisResponse analysis(Long reportId) {
@@ -115,17 +126,28 @@ public class PublicReportQueryService {
 		boolean hasNext = reports.size() > size;
 		List<Report> page = hasNext ? reports.subList(0, size) : reports;
 		Instant expiresAt = clock.instant().plus(IMAGE_URL_EXPIRY);
-		List<PublicReportView> content = page.stream().map(report -> toView(report, expiresAt)).toList();
+		Map<Long, RiskAssessment> risks = risksByReportId(page);
+		List<PublicReportView> content = page.stream()
+				.map(report -> toView(report, risks.get(report.getId()), expiresAt))
+				.toList();
 		Instant nextCursor = hasNext && !page.isEmpty() ? page.get(page.size() - 1).getReportedAt() : null;
 		return new PublicReportCursorResponse(content, nextCursor, hasNext);
 	}
 
-	private PublicReportView toView(Report report, Instant expiresAt) {
+	/** 목록의 위험도는 한 번에 받는다. 제보마다 조회하면 20건짜리 페이지가 21번 질의한다. */
+	private Map<Long, RiskAssessment> risksByReportId(List<Report> reports) {
+		if (reports.isEmpty()) return Map.of();
+		List<Long> reportIds = reports.stream().map(Report::getId).toList();
+		return riskAssessmentRepository.findAllByReportIdIn(reportIds).stream()
+				.collect(Collectors.toMap(RiskAssessment::getReportId, assessment -> assessment));
+	}
+
+	private PublicReportView toView(Report report, RiskAssessment risk, Instant expiresAt) {
 		MediaAsset asset = report.getRepresentativeBlurAsset();
 		String imageUrl = asset != null && asset.getStorageStatus() == MediaStorageStatus.AVAILABLE
 				? mediaObjectStorage.createPresignedGetUrl(asset.getBucketName(), asset.getObjectKey(), IMAGE_URL_EXPIRY)
 				: null;
-		return PublicReportView.of(report, imageUrl, imageUrl == null ? null : expiresAt);
+		return PublicReportView.of(report, risk, imageUrl, imageUrl == null ? null : expiresAt);
 	}
 
 	private Instant recentWindowStart() {

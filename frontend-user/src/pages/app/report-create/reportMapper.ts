@@ -9,7 +9,12 @@ const categoryValues: Record<ReportCategory, ReportCategoryValue> = {
   etc: 'OTHER',
 }
 
-const subcategoryValues: Record<ReportCategory, Record<ReportTag, ReportSubcategory>> = {
+/**
+ * 제보 작성 화면의 한글 태그 → 백엔드 enum 표. 상황 화면(situations/types.ts)이 이 표를
+ * 뒤집어 지도·목록의 세부 분류 라벨로 쓴다. 같은 표를 두 곳에 두면 백엔드에 항목이
+ * 추가될 때 한쪽만 갱신돼 화면에 영문 enum 이 그대로 노출된다.
+ */
+export const subcategoryValues: Record<ReportCategory, Record<ReportTag, ReportSubcategory>> = {
   crowd: {
     '이동 어려움': 'MOVEMENT_DIFFICULTY',
     '출구 혼잡': 'EXIT_CONGESTION',

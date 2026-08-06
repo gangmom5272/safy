@@ -9,7 +9,8 @@ import {
   mapReportAnalysis,
   mapReportWebRtcInfo,
 } from './situationMapper.ts'
-import { localPeakCongestionLevel } from './types.ts'
+import { getSubcategoryLabel, localPeakCongestionLevel, riskBadgeLabel } from './types.ts'
+import { highestRiskLevel } from './situationMapUtils.ts'
 
 // 공개 피드(/api/v1/feed)의 PublicReportView 그대로.
 // 라이브 세션 정보(streamRoomId·streamStatus)와 처리 상태는 시민에게 내려오지 않는다.
@@ -47,6 +48,46 @@ const areaStatusResponse = {
   recentReportCount: 7,
   updatedAt: '2026-07-29T01:00:00Z',
 }
+
+test('피드가 준 위험도 등급을 쓴다', () => {
+  // 백엔드 PublicReportView 에 riskLevel(소문자 enum)이 추가됐다. critical 은 very_high 다.
+  assert.equal(mapLiveReport({ ...feedItem, riskLevel: 'very_high' }).riskLevel, 'critical')
+  assert.equal(mapLiveReport({ ...feedItem, riskLevel: 'very_low' }).riskLevel, 'very_low')
+})
+
+test('평가 전 제보는 등급 없이 미평가로 남는다', () => {
+  // 기본 등급으로 채우면 판정이 없는데 '낮음'이라고 단정하게 된다. 점수만 있어도 마찬가지다 —
+  // 점수는 등급 문자열이 아니라서 폴백에 쓰면 최저 등급으로 떨어진다.
+  assert.equal(mapLiveReport({ ...feedItem, riskLevel: null }).riskLevel, undefined)
+  assert.equal(mapLiveReport({ ...feedItem, riskLevel: null, riskScore: 88 }).riskLevel, undefined)
+  assert.equal(riskBadgeLabel(mapLiveReport({ ...feedItem, riskLevel: null }).riskLevel), '미평가')
+})
+
+test('묶인 제보 중 평가된 것이 없으면 마커 등급도 없다', () => {
+  // 최저 등급을 돌려주면 미평가 마커가 '매우 낮음' 색으로 칠해진다.
+  const unassessed = mapLiveReport({ ...feedItem, riskLevel: null })
+  assert.equal(highestRiskLevel([unassessed]), undefined)
+  assert.equal(highestRiskLevel([unassessed, mapLiveReport({ ...feedItem, riskLevel: 'high' })]), 'high')
+})
+
+test('피드의 세부 분류를 그대로 싣는다', () => {
+  // 지도 마커가 느낌표 대신 '출구 혼잡' 같은 구체적인 이름을 쓰려면 이 값이 필요하다.
+  assert.equal(mapLiveReport(feedItem).subcategory, 'EXIT_CONGESTION')
+})
+
+test('세부 분류 enum 은 제보 작성 화면과 같은 한글 라벨이 된다', () => {
+  // 표를 새로 적지 않고 report-create 의 한글→enum 표를 뒤집어 쓰므로 두 화면이 어긋나지 않는다.
+  assert.equal(getSubcategoryLabel('EXIT_CONGESTION'), '출구 혼잡')
+  assert.equal(getSubcategoryLabel('MOVEMENT_DIFFICULTY'), '이동 어려움')
+  assert.equal(getSubcategoryLabel('OTHER_SITUATION'), '기타 상황')
+})
+
+test('모르는 세부 분류와 빈 값은 null 이라 상위 분류로 대체된다', () => {
+  // 영문 enum 이 지도에 그대로 나가면 안 되고, '기타'로 뭉개면 상위 분류보다 정보가 적다.
+  assert.equal(getSubcategoryLabel('NEW_FROM_BACKEND'), null)
+  assert.equal(getSubcategoryLabel(undefined), null)
+  assert.equal(getSubcategoryLabel(''), null)
+})
 
 test('목록 조회는 서버가 받는 size 로만 요청한다', () => {
   // 서버(/reports/live)는 cursor·size 만 받는다. limit 으로 보내면 무시되어 항상 20건이
@@ -102,7 +143,9 @@ test('지역 지도 마커가 제보의 지역명을 그대로 쓴다', () => {
       longitude: 127.0276,
       // 예전에는 백엔드에 없는 locationName·title 을 읽어 늘 빈 문자열이었다.
       locationName: '강남구',
-      riskLevel: 'low',
+      // 이 픽스처에는 riskLevel 이 없다. 예전에는 기본값 'low' 로 떨어져 미평가 제보가
+      // '낮음'으로 표시됐다.
+      riskLevel: undefined,
     },
   ])
 })

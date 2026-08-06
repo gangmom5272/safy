@@ -1,3 +1,7 @@
+// 값 import 라 확장자를 붙인다. Node 테스트 러너는 확장자 없는 .ts 를 해석하지 못한다
+// (situationMapper.ts 의 './types.ts' 와 같은 이유).
+import { subcategoryValues } from '../report-create/reportMapper.ts'
+
 export type ReportType = 'crowd' | 'accident' | 'flood_weather' | 'facility_road' | 'etc'
 
 export type ReportSort = 'latest' | 'risk_asc' | 'risk_desc'
@@ -70,7 +74,8 @@ export type ReportMarker = {
   latitude: number
   longitude: number
   locationName: string
-  riskLevel: RiskLevel
+  /** 제보 피드와 같은 매핑을 쓰므로 평가 전 제보는 여기서도 undefined 다. */
+  riskLevel?: RiskLevel
 }
 
 export type AreaMapData = {
@@ -123,13 +128,16 @@ export type LiveReportSummary = {
   id: string
   title: string
   type: ReportType
+  /** 백엔드 ReportSubcategory enum. 지도 마커·목록에 상위 분류보다 구체적인 이름을 보여준다. */
+  subcategory?: string
   locationName: string
   address?: string
   latitude?: number
   longitude?: number
   reportedAt: string
   relativeTime?: string
-  riskLevel: RiskLevel
+  /** 아직 평가되지 않은 제보는 undefined 다. 임의 등급으로 채우면 '미평가'가 그 등급으로 읽힌다. */
+  riskLevel?: RiskLevel
   description?: string
   maskedThumbnailUrl?: string | null
   isWebRtc: boolean
@@ -197,6 +205,22 @@ export const reportTypeLabels: Record<ReportType, string> = {
   etc: '기타',
 }
 
+/**
+ * 세부 분류(MOVEMENT_DIFFICULTY 등)의 한글 라벨. 제보 작성 화면이 이미 갖고 있는
+ * 한글 → enum 표를 뒤집어 쓴다. 새로 적으면 두 표가 갈라져 한쪽만 갱신된다.
+ */
+const subcategoryLabels: Record<string, string> = Object.fromEntries(
+  Object.values(subcategoryValues).flatMap((tags) => (
+    Object.entries(tags).map(([label, value]) => [value, label])
+  )),
+)
+
+/** 모르는 값이면 null 을 준다 — 호출부가 상위 분류 라벨로 대체할 수 있게 둔다. */
+export function getSubcategoryLabel(value?: string | null): string | null {
+  if (!value) return null
+  return subcategoryLabels[value] ?? null
+}
+
 export const riskLevelLabels: Record<RiskLevel, string> = {
   critical: '위험도 매우 높음',
   high: '위험도 높음',
@@ -213,6 +237,13 @@ export const shortRiskLevelLabels: Record<RiskLevel, string> = {
   medium: '보통',
   low: '낮음',
   very_low: '매우 낮음',
+}
+
+/** 아직 평가되지 않았음을 그대로 알린다. 등급 이름으로 대체하면 없는 판정을 지어내는 것이다. */
+export const UNASSESSED_RISK_LABEL = '미평가'
+
+export function riskBadgeLabel(level?: RiskLevel) {
+  return level ? shortRiskLevelLabels[level] : UNASSESSED_RISK_LABEL
 }
 
 // 서울시가 쓰는 표현을 그대로 옮긴다. 임의로 '혼잡'·'매우 혼잡'으로 바꾸면 출처의
