@@ -20,10 +20,16 @@ import jakarta.persistence.Version;
 @Entity
 @Table(
 		name = "notification_push_delivery_jobs",
-		indexes = @Index(
-				name = "idx_notification_push_jobs_ready",
-				columnList = "status, next_attempt_at"
-		),
+		indexes = {
+				@Index(
+						name = "idx_notification_push_jobs_ready",
+						columnList = "status, next_attempt_at"
+				),
+				@Index(
+						name = "idx_notification_push_jobs_recovery",
+						columnList = "status, started_at"
+				)
+		},
 		uniqueConstraints = @UniqueConstraint(
 				name = "uk_notification_push_jobs_target",
 				columnNames = {"notification_id", "subscription_id"}

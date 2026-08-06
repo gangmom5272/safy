@@ -16,6 +16,7 @@ self.addEventListener('push', (event) => {
     body: payload.body || fallback.body,
     icon: '/favicon.svg',
     badge: '/favicon.svg',
+    tag: payload.notificationId ? `safy-notification-${payload.notificationId}` : undefined,
     data: {
       linkUrl: payload.linkUrl || fallback.linkUrl,
       notificationId: payload.notificationId,

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +14,8 @@ class WebPushSubscriptionValidatorTest {
 	private final WebPushSubscriptionValidator validator = new WebPushSubscriptionValidator(new WebPushProperties(
 			true, "mailto:test@example.com", "public", "private", 86400,
 			Duration.ofSeconds(3), Duration.ofSeconds(5), Duration.ofSeconds(1),
-			Duration.ofMinutes(1), Duration.ofMinutes(1), 5,
+			Duration.ofMinutes(1), Duration.ofSeconds(30), Duration.ofMinutes(1), 8, 8,
+			Duration.ofDays(7), Map.of(),
 			List.of("fcm.googleapis.com", ".notify.windows.com")));
 
 	@Test

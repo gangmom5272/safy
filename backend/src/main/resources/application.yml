@@ -86,8 +86,20 @@ app:
     read-timeout: ${WEB_PUSH_READ_TIMEOUT:PT5S}
     scheduler-delay: ${WEB_PUSH_SCHEDULER_DELAY:PT1S}
     retry-delay: ${WEB_PUSH_RETRY_DELAY:PT1M}
+    retry-jitter: ${WEB_PUSH_RETRY_JITTER:PT30S}
     processing-timeout: ${WEB_PUSH_PROCESSING_TIMEOUT:PT1M}
-    max-attempts: ${WEB_PUSH_MAX_ATTEMPTS:5}
+    max-attempts: ${WEB_PUSH_MAX_ATTEMPTS:8}
+    # 동시 전송 수. HTTP 커넥션 풀의 route 당 상한도 이 값을 따라간다.
+    send-concurrency: ${WEB_PUSH_SEND_CONCURRENCY:8}
+    # 완료·실패로 끝난 전송 작업을 남겨두는 기간. 0 이면 정리하지 않는다.
+    cleanup-delay: ${WEB_PUSH_CLEANUP_DELAY:PT1H}
+    completed-retention: ${WEB_PUSH_COMPLETED_RETENTION:P7D}
+    # 알림이 가치를 유지하는 시간. 푸시 서비스 TTL 과 재시도 종료 시점을 함께 정한다.
+    # 위험 정보는 오래된 채 도착하면 지난 상황을 현재로 오인시키므로 짧게 잡는다.
+    validity:
+      SAFETY: ${WEB_PUSH_VALIDITY_SAFETY:PT15M}
+      REPORT: ${WEB_PUSH_VALIDITY_REPORT:PT12H}
+      SYSTEM: ${WEB_PUSH_VALIDITY_SYSTEM:PT24H}
     allowed-endpoint-hosts: ${WEB_PUSH_ALLOWED_ENDPOINT_HOSTS:fcm.googleapis.com,updates.push.services.mozilla.com,web.push.apple.com,.notify.windows.com}
   public-data:
     base-url: ${PUBLIC_DATA_BASE_URL:http://localhost:8000}

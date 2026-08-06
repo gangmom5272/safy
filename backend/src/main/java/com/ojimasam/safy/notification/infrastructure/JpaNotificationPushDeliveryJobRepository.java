@@ -27,4 +27,8 @@ public interface JpaNotificationPushDeliveryJobRepository
 
 	List<NotificationPushDeliveryJob> findTop100ByStatusAndStartedAtBeforeOrderByStartedAtAsc(
 			NotificationPushDeliveryStatus status, Instant startedBefore);
+
+	// 한 번에 가져오는 건수는 NotificationPushDeliveryCleanupWorker.BATCH_SIZE 와 같아야 한다.
+	List<NotificationPushDeliveryJob> findTop500ByStatusInAndCompletedAtBeforeOrderByCompletedAtAsc(
+			Collection<NotificationPushDeliveryStatus> statuses, Instant completedBefore);
 }

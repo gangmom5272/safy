@@ -52,8 +52,12 @@ public class WebPushSender {
 				.setConnectionRequestTimeout(milliseconds(properties.connectTimeout().toMillis()))
 				.setSocketTimeout(milliseconds(properties.readTimeout().toMillis()))
 				.build();
+		// 기본 커넥션 풀은 route 당 2개로 묶여 있다. 푸시 엔드포인트는 대부분 같은 호스트라
+		// 이 값을 올리지 않으면 동시 전송이 2건으로 막히고 나머지는 대기하다 타임아웃된다.
 		httpClient = HttpClients.custom()
 				.setDefaultRequestConfig(requestConfig)
+				.setMaxConnTotal(properties.sendConcurrency())
+				.setMaxConnPerRoute(properties.sendConcurrency())
 				.disableRedirectHandling()
 				.build();
 		if (isConfigured()) {
@@ -84,25 +88,34 @@ public class WebPushSender {
 					"linkUrl", linkUrl(notification)
 			));
 			nl.martijndwars.webpush.Notification message = new nl.martijndwars.webpush.Notification(
-					endpoint, subscription.getP256dh().trim(), subscription.getAuth().trim(), payload, ttlSeconds());
+					endpoint, subscription.getP256dh().trim(), subscription.getAuth().trim(), payload,
+					ttlSeconds(notification));
 			HttpPost request = pushService.preparePost(message, Encoding.AES128GCM);
 			try (CloseableHttpResponse response = httpClient.execute(request)) {
 				int status = response.getStatusLine().getStatusCode();
 				EntityUtils.consumeQuietly(response.getEntity());
-				if (status >= 200 && status < 300) return WebPushSendResult.SUCCESS;
-				if (status == 404 || status == 410) return WebPushSendResult.EXPIRED;
-				log.warn("Web Push 전송이 거절되었습니다. status={}, notificationId={}, subscriptionId={}",
-						status, notification.getId(), subscription.getId());
+				WebPushSendResult result = WebPushSendResult.fromHttpStatus(status);
+				if (result != WebPushSendResult.SUCCESS) {
+					log.warn("Web Push 전송이 거절되었습니다. status={}, result={}, notificationId={}, subscriptionId={}",
+							status, result, notification.getId(), subscription.getId());
+				}
+				return result;
 			}
 		} catch (JsonProcessingException exception) {
 			log.error("Web Push payload 직렬화에 실패했습니다. notificationId={}", notification.getId(), exception);
-		} catch (GeneralSecurityException | IOException | JoseException exception) {
+			return WebPushSendResult.REJECTED;
+		} catch (IOException exception) {
 			log.warn("Web Push 전송에 실패했습니다. notificationId={}, subscriptionId={}",
 					notification.getId(), subscription.getId(), exception);
+			return WebPushSendResult.FAILED;
+		} catch (GeneralSecurityException | JoseException exception) {
+			log.error("Web Push 암호화 또는 VAPID 서명에 실패했습니다. notificationId={}, subscriptionId={}",
+					notification.getId(), subscription.getId(), exception);
+			return WebPushSendResult.REJECTED;
 		} catch (IllegalArgumentException exception) {
 			log.warn("Web Push 구독 정보가 올바르지 않습니다. subscriptionId={}", subscription.getId(), exception);
+			return WebPushSendResult.EXPIRED;
 		}
-		return WebPushSendResult.FAILED;
 	}
 
 	public boolean isConfigured() {
@@ -114,8 +127,8 @@ public class WebPushSender {
 		return value != null && !value.isBlank();
 	}
 
-	private int ttlSeconds() {
-		long ttl = properties.ttlSeconds();
+	private int ttlSeconds(Notification notification) {
+		long ttl = properties.validityFor(notification.getType()).toSeconds();
 		return ttl > 0 && ttl <= Integer.MAX_VALUE ? (int) ttl : 86400;
 	}
 
