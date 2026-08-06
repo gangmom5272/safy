@@ -1,18 +1,18 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router'
 import { RiskLevelIndicator } from '../../components/admin/RiskLevelIndicator'
-import { useAuth } from '../../auth/useAuth'
 import { reportTypeLabels } from '../../mocks/adminMockData'
 import { ROUTE_PATHS } from '../../router/paths'
-import type { AdminReport, ReportStatus } from '../../types/admin'
+import type { AdminReport } from '../../types/admin'
 import { formatAdminDate } from '../../utils/adminDate'
 import { getSubcategoryLabel } from '../../utils/reportLabels'
 import {
   detailToAdminReport,
   getOperatorReportDetail,
   getReportAnalysis,
-  toMyOutcome,
+  getReportHandlingHistory,
   type AssignmentStatus,
+  type ReportHandlingHistory,
   type ReportImage,
   type ReportAnalysis,
 } from './reportApi'
@@ -117,15 +117,15 @@ export function ReportDetailPage() {
   const { reportId } = useParams()
   const navigate = useNavigate()
   const { markReportChecked } = useOutletContext<AdminLayoutOutletContext>()
-  const { user } = useAuth()
   const numericReportId = Number(reportId)
   const isValidReportId = Number.isInteger(numericReportId) && numericReportId > 0
 
   const [report, setReport] = useState<AdminReport | null>(null)
   const [analysis, setAnalysis] = useState<ReportAnalysis | null>(null)
   const [images, setImages] = useState<ReportImage[]>([])
-  const [myOutcome, setMyOutcome] = useState<ReportStatus | null>(null)
   const [myAssignmentStatus, setMyAssignmentStatus] = useState<AssignmentStatus | null>(null)
+  const [assignedOperatorName, setAssignedOperatorName] = useState<string | null>(null)
+  const [handlingHistory, setHandlingHistory] = useState<ReportHandlingHistory | null>(null)
   const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null)
   const [imageIndex, setImageIndex] = useState(0)
   const [loadError, setLoadError] = useState('')
@@ -143,12 +143,17 @@ export function ReportDetailPage() {
         markReportChecked(numericReportId)
         setReport(detailToAdminReport(detail))
         setImages(detail.images)
-        setMyOutcome(toMyOutcome(detail))
         setMyAssignmentStatus(detail.myAssignmentStatus)
+        setAssignedOperatorName(detail.assignedOperatorName)
 
-        // 분석 API는 아직 준비 중이라 실패해도 상세 화면은 유지한다.
-        const loadedAnalysis = await getReportAnalysis(numericReportId).catch(() => null)
-        if (active) setAnalysis(loadedAnalysis)
+        // 분석·처리 이력은 실패해도 상세 화면 자체는 유지한다. 서로 독립이라 함께 받는다.
+        const [loadedAnalysis, loadedHistory] = await Promise.all([
+          getReportAnalysis(numericReportId).catch(() => null),
+          getReportHandlingHistory(numericReportId).catch(() => null),
+        ])
+        if (!active) return
+        setAnalysis(loadedAnalysis)
+        setHandlingHistory(loadedHistory)
       } catch (error) {
         if (active) setLoadError(error instanceof Error ? error.message : '제보를 불러오지 못했습니다.')
       } finally {
@@ -189,14 +194,7 @@ export function ReportDetailPage() {
   const moveImage = (step: number) => setImageIndex(
     (currentIndex + step + previewImages.length) % previewImages.length,
   )
-  // 담당자용 이력 API 가 생기면 history 만 여기에 넘기면 된다(reportProgress 주석 참고).
-  const progressSteps = toReportProgressSteps({
-    status: report.status,
-    reportedAt: report.reportedAt,
-    outcome: myOutcome,
-    myControlCenterName: user?.controlCenterName,
-    assignedControlCenterName: report.controlCenterName,
-  })
+  const progressSteps = handlingHistory ? toReportProgressSteps(handlingHistory) : []
 
   return (
     <section className="page-stack report-detail-page">
@@ -315,12 +313,12 @@ export function ReportDetailPage() {
           {/* 현재 상태와 처리 결과는 아래 타임라인이 이미 보여주므로 넣지 않는다. */}
           <dl className="report-info report-info--summary">
             <div><dt>소속</dt><dd>{report.controlCenterName || '-'}</dd></div>
-            {/* 담당자 이름은 상세 조회 응답(OperatorReportDetail)에 아직 없다. 필드가 생기면
-                여기에 연결한다. report.managerName 은 관제센터 이름이 들어가 있어 쓰지 않는다. */}
-            <div><dt>담당자</dt><dd>-</dd></div>
+            <div><dt>담당자</dt><dd>{assignedOperatorName || '-'}</dd></div>
           </dl>
 
-          <ReportProgressTimeline steps={progressSteps} />
+          {progressSteps.length > 0
+            ? <ReportProgressTimeline steps={progressSteps} />
+            : <p className="empty-state" role="status">처리 이력을 불러오지 못했습니다.</p>}
         </DetailCard>
       </div>
 

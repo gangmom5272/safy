@@ -1,5 +1,5 @@
 import { formatAdminDate } from '../../utils/adminDate'
-import { isFailedProgressStep, type ReportProgressStep } from './reportProgress'
+import type { ReportProgressStep } from './reportProgress'
 
 interface ReportProgressTimelineProps {
   steps: ReportProgressStep[]
@@ -8,16 +8,16 @@ interface ReportProgressTimelineProps {
 /**
  * 처리 이력 타임라인. 사용자 앱의 처리 이력과 같은 구성(단계명·설명·일시)이지만,
  * 사용자 앱 컴포넌트는 별도 프로젝트라 관리자 화면용으로 따로 둔다.
- * 도달한 단계만 그리므로 마지막 항목이 현재 단계다.
+ * 지난 단계는 회색, 마지막(현재) 단계는 파란색, 반려·취소로 끝났으면 빨간색이다.
  */
 export function ReportProgressTimeline({ steps }: ReportProgressTimelineProps) {
   return (
     <ol className="status-timeline" aria-label="처리 이력">
-      {steps.map((step, index) => {
-        const state = isFailedProgressStep(step) ? 'failed' : step.isCurrent ? 'current' : 'complete'
+      {steps.map((step) => {
+        const state = step.isFailed ? 'failed' : step.isCurrent ? 'current' : 'complete'
         return (
           <li
-            key={`${step.status}-${index}`}
+            key={step.key}
             className={`status-timeline__step status-timeline__step--${state}`}
             aria-current={step.isCurrent ? 'step' : undefined}
           >
@@ -25,6 +25,8 @@ export function ReportProgressTimeline({ steps }: ReportProgressTimelineProps) {
             <div className="status-timeline__content">
               <strong>{step.title}</strong>
               <p>{step.description}</p>
+              {/* 담당자가 입력한 원본 사유. 설명과 구분되게 따로 둔다. */}
+              {step.reason && <p className="status-timeline__reason break-text">사유 · {step.reason}</p>}
               {step.changedAt && (
                 <time dateTime={step.changedAt}>{formatAdminDate(step.changedAt)}</time>
               )}
