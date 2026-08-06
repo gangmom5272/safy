@@ -32,6 +32,46 @@
   text-overflow: ellipsis;
 }
 
+/*
+ * 색깔 범례 오버레이. 관리자 위험도 지도(.risk-map-legend)와 같은 형태지만 우측 상단에
+ * 둔다 — 하단은 .situation-map-message 토스트와 .situation-map-group 시트가 쓰고 있어
+ * 폰 폭에서 겹친다. 상단에는 지도 컨트롤을 올리지 않아 비어 있다.
+ */
+.map-legend-scale {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 8px;
+  max-width: calc(100% - 20px);
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: 0 4px 10px rgba(22, 33, 58, 0.16);
+  list-style: none;
+}
+
+.map-legend-scale li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-primary);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.map-legend-scale__swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
 .situation-map-current {
   display: block;
   width: 16px;

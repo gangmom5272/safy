@@ -19,6 +19,7 @@ import {
 } from './situationMapUtils'
 import { normalizeRiskLevel } from './situationMapper'
 import { getGridRisks, resolutionForLevel, snapBounds, type GridRisk } from './gridRiskApi'
+import { MapLegendScale } from './MapLegend'
 import './SituationMap.css'
 
 // 카카오맵은 숫자가 작을수록 확대된 상태다.
@@ -264,6 +265,9 @@ export function SituationMap({
   return (
     <div className="situation-map-frame">
       <div ref={containerRef} className="situation-map" role="application" aria-label="지역 상황 지도" />
+
+      {/* 설명할 지도가 실제로 떠 있을 때만 얹는다. 실패·로딩 중에는 빈 상자 위에 뜬다. */}
+      {isReady && !hasFailed && <MapLegendScale />}
 
       {hasFailed && <p className="situation-map-message">지도를 불러오지 못했습니다.</p>}
       {!hasFailed && statusMessage && <p className="situation-map-message">{statusMessage}</p>}
