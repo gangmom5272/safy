@@ -61,6 +61,7 @@ public class AreaSituationController {
 					+ "시민 화면은 GET /api/v1/feed/areas/{areaId}/reports 를 사용합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "지역별 라이브 제보 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "담당자 권한 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "행정구역을 찾을 수 없음", content = @Content)
 	public ApiResponse<ReportCursorResponse> liveReports(
 			@PathVariable Long areaId,

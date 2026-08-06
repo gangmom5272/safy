@@ -45,6 +45,7 @@ public class ReportFeedController {
 	@Operation(summary = "최근 제보 목록 조회", description = "노출 가능 상태의 최근 제보를 커서 기반으로 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "최근 제보 목록 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "담당자 권한 필요", content = @Content)
 	public ApiResponse<ReportCursorResponse> recent(
 			@RequestParam(required = false) Instant cursor,
 			@RequestParam(defaultValue = "20") int size
@@ -57,6 +58,7 @@ public class ReportFeedController {
 	@Operation(summary = "라이브 제보 목록 조회", description = "라이브 유형 제보를 커서 기반으로 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "라이브 제보 목록 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "담당자 권한 필요", content = @Content)
 	public ApiResponse<ReportCursorResponse> live(
 			@RequestParam(required = false) Instant cursor,
 			@RequestParam(defaultValue = "20") int size
@@ -69,6 +71,7 @@ public class ReportFeedController {
 	@Operation(summary = "제보 분석 결과 조회", description = "제보의 AI 분석·위험도 결과를 조회합니다. 아직 결과가 없으면 NOT_STARTED를 반환합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 분석 결과 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "담당자 권한 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	public ApiResponse<ReportAnalysisResponse> analysis(@PathVariable Long reportId) {
 		return ApiResponse.success(reportFeedQueryService.analysis(reportId));
@@ -79,6 +82,7 @@ public class ReportFeedController {
 	@Operation(summary = "제보 라이브 세션 정보 조회", description = "제보에 연결된 라이브 세션 정보와 입장 가능 여부를 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 라이브 세션 정보 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "담당자 권한 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	public ApiResponse<ReportWebRtcResponse> webrtc(@PathVariable Long reportId) {
 		return ApiResponse.success(reportFeedQueryService.webrtc(reportId));
@@ -89,6 +93,7 @@ public class ReportFeedController {
 	@Operation(summary = "내 제보 요약 조회", description = "본인 제보의 전체/진행/종료 건수를 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "내 제보 요약 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "시민 권한 필요", content = @Content)
 	public ApiResponse<MyReportSummaryResponse> mySummary(@AuthenticationPrincipal Jwt jwt) {
 		return ApiResponse.success(reportFeedQueryService.mySummary(CurrentUser.id(jwt)));
 	}

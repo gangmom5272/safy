@@ -56,6 +56,7 @@ public class ReportController {
 	@PatchMapping("/{reportId}/cancel")
 	@Operation(summary = "제보 취소", description = "접수(RECEIVED) 또는 배정(ASSIGNED) 상태인 본인의 제보를 취소합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "제보 취소 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "취소할 수 없는 상태의 제보", content = @Content)
 	public ResponseEntity<Void> cancel(
@@ -74,6 +75,7 @@ public class ReportController {
 	@GetMapping("/{reportId}")
 	@Operation(summary = "내 제보 상세 조회", description = "본인이 등록한 제보의 상세 정보와 배정 관제센터를 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 상세 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	public ResponseEntity<ApiResponse<ReportDetailView>> getMine(
 			@AuthenticationPrincipal Jwt jwt,
@@ -86,6 +88,7 @@ public class ReportController {
 	@GetMapping("/{reportId}/status-history")
 	@Operation(summary = "내 제보 상태 변경 이력 조회", description = "본인 제보의 상태 전이 이력을 시간순으로 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "상태 변경 이력 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	public ResponseEntity<ApiResponse<List<ReportStatusHistoryResponse>>> getMyStatusHistory(
 			@AuthenticationPrincipal Jwt jwt,
@@ -101,6 +104,7 @@ public class ReportController {
 	@Operation(summary = "내 제보 목록 조회", description = "본인이 등록한 제보를 페이지 단위로 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 목록 조회 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 페이지 요청", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public ResponseEntity<ApiResponse<PageResponse<ReportListItemView>>> getMyList(
 			@AuthenticationPrincipal Jwt jwt,
 			@RequestParam(defaultValue = "0") int page,
@@ -129,6 +133,7 @@ public class ReportController {
 	)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "제보 등록 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "제보를 등록할 수 없는 상태", content = @Content)
 	public ResponseEntity<ApiResponse<CreateReportResponse>> create(
 			@AuthenticationPrincipal Jwt jwt,

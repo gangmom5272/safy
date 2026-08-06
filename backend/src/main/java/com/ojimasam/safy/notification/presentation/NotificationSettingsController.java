@@ -15,6 +15,8 @@ import com.ojimasam.safy.notification.application.UserLocationPresenceService;
 import com.ojimasam.safy.notification.application.dto.NotificationSettingsView;
 import com.ojimasam.safy.notification.presentation.dto.UpdateNotificationSettingsRequest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -33,11 +35,18 @@ public class NotificationSettingsController {
 	}
 
 	@GetMapping
+	@Operation(summary = "알림 설정 조회")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알림 설정 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public ApiResponse<NotificationSettingsView> get(@AuthenticationPrincipal Jwt jwt) {
 		return ApiResponse.success(service.get(CurrentUser.id(jwt)));
 	}
 
 	@PatchMapping
+	@Operation(summary = "알림 설정 변경",
+			description = "위치 기반 알림(locationRequestEnabled)을 끄면 공유 중이던 위치 정보도 함께 해제됩니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알림 설정 변경 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public ApiResponse<NotificationSettingsView> update(@AuthenticationPrincipal Jwt jwt,
 			@RequestBody UpdateNotificationSettingsRequest request) {
 		Long userId = CurrentUser.id(jwt);

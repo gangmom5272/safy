@@ -22,6 +22,9 @@ import com.ojimasam.safy.analysis.domain.MediaBlurResultRepository;
 import com.ojimasam.safy.analysis.domain.type.MediaBlurStatus;
 import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.common.exception.CommonErrorCode;
+import com.ojimasam.safy.live.domain.StreamRecording;
+import com.ojimasam.safy.live.domain.StreamRecordingRepository;
+import com.ojimasam.safy.live.domain.type.StreamRecordingStatus;
 import com.ojimasam.safy.media.application.MediaObjectStorage;
 import com.ojimasam.safy.media.domain.MediaAsset;
 import com.ojimasam.safy.media.domain.type.MediaStorageStatus;
@@ -36,6 +39,7 @@ import com.ojimasam.safy.report.domain.ReportOperatorAssignmentRepository;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
 import com.ojimasam.safy.report.domain.ReportStatusHistoryRepository;
 import com.ojimasam.safy.report.domain.type.ReportStatus;
+import com.ojimasam.safy.report.domain.type.ReportType;
 import com.ojimasam.safy.administrativearea.domain.AdministrativeArea;
 import com.ojimasam.safy.report.application.dto.AssignedControlCenterView;
 import com.ojimasam.safy.report.application.dto.ReportDetailView;
@@ -56,6 +60,7 @@ public class ReportQueryService {
 	private final ReportOperatorAssignmentRepository assignmentRepository;
 	private final MediaBlurResultRepository blurResultRepository;
 	private final com.ojimasam.safy.media.domain.MediaAssetRepository mediaAssetRepository;
+	private final StreamRecordingRepository streamRecordingRepository;
 	private final Clock clock;
 
 	@Autowired
@@ -68,10 +73,12 @@ public class ReportQueryService {
 			OperatorReportAccessService operatorAccessService,
 			ReportOperatorAssignmentRepository assignmentRepository,
 			MediaBlurResultRepository blurResultRepository,
-			com.ojimasam.safy.media.domain.MediaAssetRepository mediaAssetRepository
+			com.ojimasam.safy.media.domain.MediaAssetRepository mediaAssetRepository,
+			StreamRecordingRepository streamRecordingRepository
 	) {
 		this(reports, images, storage, routeRepository, historyRepository, operatorAccessService,
-				assignmentRepository, blurResultRepository, mediaAssetRepository, Clock.systemUTC());
+				assignmentRepository, blurResultRepository, mediaAssetRepository, streamRecordingRepository,
+				Clock.systemUTC());
 	}
 
 	ReportQueryService(ReportRepository reports, ReportImageRepository images, MediaObjectStorage storage,
@@ -79,7 +86,8 @@ public class ReportQueryService {
 			OperatorReportAccessService operatorAccessService,
 			ReportOperatorAssignmentRepository assignmentRepository,
 			MediaBlurResultRepository blurResultRepository,
-			com.ojimasam.safy.media.domain.MediaAssetRepository mediaAssetRepository, Clock clock) {
+			com.ojimasam.safy.media.domain.MediaAssetRepository mediaAssetRepository,
+			StreamRecordingRepository streamRecordingRepository, Clock clock) {
 		this.reportRepository = reports;
 		this.reportImageRepository = images;
 		this.mediaObjectStorage = storage;
@@ -89,6 +97,7 @@ public class ReportQueryService {
 		this.assignmentRepository = assignmentRepository;
 		this.blurResultRepository = blurResultRepository;
 		this.mediaAssetRepository = mediaAssetRepository;
+		this.streamRecordingRepository = streamRecordingRepository;
 		this.clock = clock;
 	}
 
@@ -134,6 +143,7 @@ public class ReportQueryService {
 				.orElse(null);
 		ReportStatus visibleStatus = exposeOriginal ? report.getStatus() : citizenCurrentStatus(report);
 		boolean cancellable = visibleStatus == ReportStatus.IN_PROGRESS ? false : report.isCancellable();
+		RecordingView recording = exposeOriginal ? recordingView(report, expiresAt) : RecordingView.EMPTY;
 		return new ReportDetailView(
 				report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
 				report.getDescription(), report.getLatitude(), report.getLongitude(),
@@ -141,8 +151,40 @@ public class ReportQueryService {
 				area == null ? null : area.getId(), area == null ? null : area.getCode(), area == null ? null : area.getName(),
 				assignedCenter,
 				report.getReportedAt(), report.getCreatedAt(), report.getUpdatedAt(), images,
-				myAssignmentStatus
+				myAssignmentStatus,
+				recording.status(), recording.videoUrl(), recording.videoUrlExpiresAt(), recording.videoMimeType()
 		);
+	}
+
+	/**
+	 * 재접속으로 녹화가 여러 건 생겨도 최신 COMPLETED 1건만 내려준다.
+	 * COMPLETED가 없으면 상태 표시용으로 가장 최근 시도(진행 중/실패 등)만 알려주고 URL은 없다.
+	 */
+	private RecordingView recordingView(Report report, Instant expiresAt) {
+		if (report.getType() != ReportType.LIVE) return RecordingView.EMPTY;
+		return streamRecordingRepository
+				.findTopByReportIdAndStatusOrderByEndedAtDesc(report.getId(), StreamRecordingStatus.COMPLETED)
+				.map(recording -> completedRecordingView(recording, expiresAt))
+				.orElseGet(() -> streamRecordingRepository.findTopByReportIdOrderByStartedAtDesc(report.getId())
+						.map(recording -> new RecordingView(recording.getStatus(), null, null, null))
+						.orElse(RecordingView.EMPTY));
+	}
+
+	private RecordingView completedRecordingView(StreamRecording recording, Instant expiresAt) {
+		Long mediaAssetId = recording.getMediaAssetId();
+		MediaAsset asset = mediaAssetId == null ? null
+				: mediaAssetRepository.findAllById(List.of(mediaAssetId)).stream().findFirst().orElse(null);
+		if (asset == null || asset.getStorageStatus() != MediaStorageStatus.AVAILABLE) {
+			return new RecordingView(StreamRecordingStatus.COMPLETED, null, null, null);
+		}
+		String videoUrl = mediaObjectStorage.createPresignedGetUrl(
+				asset.getBucketName(), asset.getObjectKey(), PREVIEW_URL_EXPIRY);
+		return new RecordingView(StreamRecordingStatus.COMPLETED, videoUrl, expiresAt, asset.getContentType());
+	}
+
+	private record RecordingView(
+			StreamRecordingStatus status, String videoUrl, Instant videoUrlExpiresAt, String videoMimeType) {
+		static final RecordingView EMPTY = new RecordingView(null, null, null, null);
 	}
 
 	@Transactional(readOnly = true)

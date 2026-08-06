@@ -17,4 +17,8 @@ public interface StreamRecordingRepository {
 	List<StreamRecording> findAllByLiveSessionIdAndStatusIn(
 			UUID liveSessionId, Collection<StreamRecordingStatus> statuses);
 	List<StreamRecording> findTop100ByStatusInOrderByStartedAtAsc(Collection<StreamRecordingStatus> statuses);
+
+	Optional<StreamRecording> findTopByReportIdAndStatusOrderByEndedAtDesc(
+			Long reportId, StreamRecordingStatus status);
+	Optional<StreamRecording> findTopByReportIdOrderByStartedAtDesc(Long reportId);
 }

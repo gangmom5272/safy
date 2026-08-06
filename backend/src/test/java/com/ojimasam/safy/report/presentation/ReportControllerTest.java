@@ -85,7 +85,8 @@ class ReportControllerTest {
 				42L, ReportType.IMAGE, ReportCategory.FLOOD_WEATHER, ReportSubcategory.ROAD_FLOODING,
 				"제보 내용", new BigDecimal("37.5"), new BigDecimal("127.0"),
 				"서울특별시 중구", ReportStatus.RECEIVED, true, ReportRoutingStatus.ROUTED,
-				2L, "1114000000", "중구", null, now, now, now, List.of(), null
+				2L, "1114000000", "중구", null, now, now, now, List.of(), null,
+				null, null, null, null
 		));
 
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/reports/42")
