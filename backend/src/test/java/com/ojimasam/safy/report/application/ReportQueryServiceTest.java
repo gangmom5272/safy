@@ -24,6 +24,7 @@ import com.ojimasam.safy.common.exception.BusinessException;
 import com.ojimasam.safy.analysis.domain.MediaBlurResultRepository;
 import com.ojimasam.safy.analysis.domain.MediaBlurResult;
 import com.ojimasam.safy.analysis.application.dto.BlurredImageResult;
+import com.ojimasam.safy.live.domain.StreamRecordingRepository;
 import com.ojimasam.safy.media.application.MediaObjectStorage;
 import com.ojimasam.safy.media.domain.MediaAsset;
 import com.ojimasam.safy.report.domain.Report;
@@ -41,6 +42,9 @@ import com.ojimasam.safy.report.domain.type.ReportSubcategory;
 import com.ojimasam.safy.report.domain.ReportCenterRoute;
 import com.ojimasam.safy.report.domain.type.ReportCenterRouteStatus;
 import com.ojimasam.safy.controlcenter.domain.ControlCenter;
+import com.ojimasam.safy.live.domain.StreamRecording;
+import com.ojimasam.safy.live.domain.type.StreamRecordingStatus;
+import com.ojimasam.safy.media.domain.type.MediaVariantType;
 import com.ojimasam.safy.report.application.dto.ReportDetailView;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,6 +58,7 @@ class ReportQueryServiceTest {
 	@Mock ReportOperatorAssignmentRepository assignmentRepository;
 	@Mock MediaBlurResultRepository blurResultRepository;
 	@Mock com.ojimasam.safy.media.domain.MediaAssetRepository mediaAssetRepository;
+	@Mock StreamRecordingRepository streamRecordingRepository;
 
 	@Test
 	void getsOwnedReportWithBlurredPreviewUrl() {
@@ -169,6 +174,86 @@ class ReportQueryServiceTest {
 	}
 
 	@Test
+	void exposesLatestCompletedRecordingUrlToOperator() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = liveReportWithRepresentativeFrame(42L, 10L, 11L, now);
+		when(reportRepository.findOneById(42L)).thenReturn(Optional.of(report));
+		when(reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(42L)).thenReturn(List.of());
+		when(mediaObjectStorage.createPresignedGetUrl("safy", frameKey(42L), java.time.Duration.ofMinutes(10)))
+				.thenReturn("http://localhost:9000/original-frame");
+		MediaAsset video = MediaAsset.recordServerObject(1L, 42L, "safy", "recordings/42/session/token.mp4",
+				null, "video/mp4", 2048L, MediaVariantType.ORIGINAL, null, now);
+		ReflectionTestUtils.setField(video, "id", 90L);
+		StreamRecording recording = completedRecording(42L, 90L, now);
+		when(streamRecordingRepository.findTopByReportIdAndStatusOrderByEndedAtDesc(42L, StreamRecordingStatus.COMPLETED))
+				.thenReturn(Optional.of(recording));
+		when(mediaAssetRepository.findAllById(List.of(90L))).thenReturn(List.of(video));
+		when(mediaObjectStorage.createPresignedGetUrl(
+				"safy", "recordings/42/session/token.mp4", java.time.Duration.ofMinutes(10)))
+				.thenReturn("http://localhost:9000/recording");
+
+		ReportDetailView result = service(now).getForOperator(30L, 42L);
+
+		assertThat(result.recordingStatus()).isEqualTo(StreamRecordingStatus.COMPLETED);
+		assertThat(result.originalVideoUrl()).isEqualTo("http://localhost:9000/recording");
+		assertThat(result.originalVideoUrlExpiresAt()).isEqualTo(now.plusSeconds(600));
+		assertThat(result.videoMimeType()).isEqualTo("video/mp4");
+	}
+
+	@Test
+	void fallsBackToLatestAttemptStatusWhenNoCompletedRecordingExists() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = liveReportWithRepresentativeFrame(42L, 10L, 11L, now);
+		when(reportRepository.findOneById(42L)).thenReturn(Optional.of(report));
+		when(reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(42L)).thenReturn(List.of());
+		when(mediaObjectStorage.createPresignedGetUrl("safy", frameKey(42L), java.time.Duration.ofMinutes(10)))
+				.thenReturn("http://localhost:9000/original-frame");
+		when(streamRecordingRepository.findTopByReportIdAndStatusOrderByEndedAtDesc(42L, StreamRecordingStatus.COMPLETED))
+				.thenReturn(Optional.empty());
+		when(streamRecordingRepository.findTopByReportIdOrderByStartedAtDesc(42L))
+				.thenReturn(Optional.of(failedRecording(42L, now)));
+
+		ReportDetailView result = service(now).getForOperator(30L, 42L);
+
+		assertThat(result.recordingStatus()).isEqualTo(StreamRecordingStatus.FAILED);
+		assertThat(result.originalVideoUrl()).isNull();
+	}
+
+	@Test
+	void doesNotExposeRecordingFieldsToCitizen() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = liveReportWithRepresentativeFrame(42L, 10L, 11L, now);
+		when(reportRepository.findByIdAndReporterId(42L, 1L)).thenReturn(Optional.of(report));
+		when(reportImageRepository.findAllByReportIdOrderByDisplayOrderAsc(42L)).thenReturn(List.of());
+		when(mediaObjectStorage.createPresignedGetUrl(
+				"safy", blurredFrameKey(42L), java.time.Duration.ofMinutes(10)))
+				.thenReturn("http://localhost:9000/frame-preview");
+
+		ReportDetailView result = service(now).getMine(1L, 42L);
+
+		assertThat(result.recordingStatus()).isNull();
+		assertThat(result.originalVideoUrl()).isNull();
+		verify(streamRecordingRepository, never()).findTopByReportIdAndStatusOrderByEndedAtDesc(
+				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+	}
+
+	private StreamRecording completedRecording(Long reportId, Long mediaAssetId, Instant now) {
+		StreamRecording recording = StreamRecording.start(
+				java.util.UUID.randomUUID(), reportId, "egress-1", "recordings/" + reportId + "/session/token.mp4",
+				"frames/" + reportId + "/session/token/", now);
+		recording.complete(mediaAssetId, 5000L, now.plusSeconds(30));
+		return recording;
+	}
+
+	private StreamRecording failedRecording(Long reportId, Instant now) {
+		StreamRecording recording = StreamRecording.start(
+				java.util.UUID.randomUUID(), reportId, "egress-2", "recordings/" + reportId + "/session/token2.mp4",
+				"frames/" + reportId + "/session/token2/", now);
+		recording.fail("업로드 실패", now.plusSeconds(10));
+		return recording;
+	}
+
+	@Test
 	void includesAssignedControlCenterInOwnedReportDetail() {
 		Instant now = Instant.parse("2026-07-21T04:00:00Z");
 		Report report = Report.create(1L, ReportType.IMAGE,
@@ -280,7 +365,7 @@ class ReportQueryServiceTest {
 	private ReportQueryService service(Instant now) {
 		return new ReportQueryService(reportRepository, reportImageRepository, mediaObjectStorage,
 				routeRepository, historyRepository, operatorAccessService, assignmentRepository,
-				blurResultRepository, mediaAssetRepository,
+				blurResultRepository, mediaAssetRepository, streamRecordingRepository,
 				Clock.fixed(now, ZoneOffset.UTC));
 	}
 

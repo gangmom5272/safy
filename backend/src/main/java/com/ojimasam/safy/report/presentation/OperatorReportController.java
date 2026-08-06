@@ -43,7 +43,7 @@ import com.ojimasam.safy.report.presentation.dto.OperatorReportReleaseRequest;
 @RequestMapping("/api/v1/operator/reports")
 @PreAuthorize("hasAnyRole('OPERATOR','SUPER_ADMIN')")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "담당자 제보 처리")
+@Tag(name = "담당자 제보 처리", description = "담당자의 제보 배정·처리·이관과 공개 제보 내리기")
 public class OperatorReportController {
 	private final ReportOperatorAssignmentService assignmentService;
 	private final ReportQueryService reportQueryService;
@@ -64,6 +64,7 @@ public class OperatorReportController {
 			description = "업무 종료로 시민에게 공개된 제보를 부적절 판단 시 다시 비공개로 내립니다. "
 					+ "제보 처리 상태와 라이브 세션에는 영향을 주지 않습니다. 담당했던 제보이거나 SUPER_ADMIN 이어야 합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "비공개 전환 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 제보에 대한 권한 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	public ResponseEntity<Void> withhold(
@@ -78,6 +79,8 @@ public class OperatorReportController {
 	@Operation(summary = "담당자 제보 상세 조회",
 			description = "담당자가 처리 대상 제보의 상세 정보를 조회합니다. 배정 담당자가 조회하면 자동으로 '처리중(확인)'으로 전이됩니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 상세 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 제보에 대한 권한 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	public ApiResponse<ReportDetailView> detail(@AuthenticationPrincipal Jwt jwt, @PathVariable Long reportId) {
 		Long operatorId = CurrentUser.id(jwt);
@@ -96,6 +99,7 @@ public class OperatorReportController {
 					+ "**risk** 는 위험도 평가 결과입니다. 평가가 없는 제보는 null 이며, 0점으로 채우지 않습니다 "
 					+ "— 0점은 very_low(안전)로 읽혀 오판을 만듭니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "배정 제보 목록 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public ApiResponse<PageResponse<OperatorAssignmentResponse>> listMine(
 			@AuthenticationPrincipal Jwt jwt,
 			@Parameter(description = "배정 상태 필터. 생략하면 전체 이력을 조회합니다.")
@@ -113,6 +117,7 @@ public class OperatorReportController {
 			description = "센터 공용 큐의 미배정 제보를 직접 담당합니다. 담당 즉시 내 관제 타일에 들어오며, "
 					+ "동시에 다른 담당자가 먼저 담당했다면 409를 반환합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "담당하기 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 다른 담당자가 담당했거나 소속 관제센터의 제보가 아님", content = @Content)
 	public ApiResponse<OperatorAssignmentResponse> claim(
@@ -127,6 +132,7 @@ public class OperatorReportController {
 	@Operation(summary = "업무 종료",
 			description = "제보를 종료합니다. 제보가 CLOSED 되고 관제센터 라우팅과 진행 중인 라이브 세션도 함께 종료되며 제보자에게 통지됩니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "업무 종료 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "종료할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
 	public ApiResponse<OperatorAssignmentResponse> complete(
@@ -142,6 +148,7 @@ public class OperatorReportController {
 			description = "무효·중복·오배정 등으로 제보를 대응 없이 종결(REJECTED)합니다. 라이브가 있으면 세션도 종료되고 제보자에게 통지됩니다. 사유 필수.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 반려 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "반려 사유 누락", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "반려할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
 	public ApiResponse<OperatorAssignmentResponse> reject(
@@ -159,6 +166,7 @@ public class OperatorReportController {
 					+ "현재 센터는 제외하며, 고를 수 없는 센터도 사유를 표시할 수 있도록 함께 내려주고 "
 					+ "선택 가능 여부는 transferable 로 판단합니다. 행정구역이 확정되지 않은 제보는 빈 배열입니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "현재 관제센터 소속 담당자가 아님", content = @Content)
 	public ApiResponse<List<ReportTransferTargetResponse>> transferTargets(
@@ -177,6 +185,7 @@ public class OperatorReportController {
 					+ "선택지는 transfer-targets 로 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "이관 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "사유 누락 또는 대상 센터가 행정구역을 담당하지 않음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이관할 수 없는 상태이거나 근무자 없는 거쳐온 센터", content = @Content)
 	public ApiResponse<ReportTransferResponse> transfer(
@@ -194,6 +203,7 @@ public class OperatorReportController {
 			description = "담당자가 처리를 놓고 같은 관제센터의 다른 담당자에게 재배정을 요청합니다. 제보는 유효한 상태로 유지되며 라이브 송출도 이어집니다. 사유 필수.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "재배정 요청 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "재배정 사유 누락", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "재배정할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
 	public ApiResponse<OperatorAssignmentResponse> reassign(

@@ -30,6 +30,7 @@ import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -53,7 +54,7 @@ public class AuthController {
 	@GetMapping("/social/{provider}/login")
 	@Operation(summary = "소셜 로그인 시작", description = "Google 또는 Kakao 로그인 페이지로 리다이렉트합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "소셜 제공자 로그인 페이지로 이동")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "지원하지 않는 소셜 제공자")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "지원하지 않는 소셜 제공자", content = @Content)
 	public ResponseEntity<Void> socialLogin(
 			@Parameter(description = "소셜 제공자", example = "kakao", schema = @Schema(allowableValues = {"google", "kakao"}))
 			@org.springframework.web.bind.annotation.PathVariable String provider) {
@@ -66,7 +67,7 @@ public class AuthController {
 	@PostMapping("/social/exchange")
 	@Operation(summary = "소셜 로그인 코드 교환", description = "OAuth2 로그인 완료 후 프론트로 전달된 60초 일회용 코드를 SAFY 토큰으로 교환합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Access Token 발급 및 Refresh Token 쿠키 설정")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "유효하지 않거나 만료된 일회용 코드")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "유효하지 않거나 만료된 일회용 코드", content = @Content)
 	public ResponseEntity<ApiResponse<TokenResponse>> exchangeSocialCode(
 			@Valid @RequestBody SocialCodeExchangeRequest request) {
 		return loginResponse(authService.exchangeSocialLoginCode(request.code()), properties.refreshCookieName());
@@ -77,7 +78,7 @@ public class AuthController {
 			description = "관리자 아이디와 비밀번호를 검증하고 토큰을 발급합니다. "
 					+ "Refresh Token 쿠키는 시민 앱과 이름이 다른 관리자 전용 쿠키로 내려갑니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그인 성공")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "아이디 또는 비밀번호 불일치")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "아이디 또는 비밀번호 불일치", content = @Content)
 	public ResponseEntity<ApiResponse<TokenResponse>> adminLogin(@Valid @RequestBody AdminLoginRequest request) {
 		return loginResponse(authService.adminLogin(request.loginId(), request.password()),
 				properties.adminRefreshCookieName());
@@ -88,7 +89,7 @@ public class AuthController {
 			parameters = @Parameter(name = "SAFY_REFRESH_TOKEN", in = ParameterIn.COOKIE, required = true,
 					description = "로그인 시 발급된 Refresh Token"))
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "토큰 재발급 성공")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh Token 누락·만료·위조")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh Token 누락·만료·위조", content = @Content)
 	public ResponseEntity<ApiResponse<TokenResponse>> refresh(
 			@Parameter(hidden = true)
 			@CookieValue(name = "SAFY_REFRESH_TOKEN", required = false) String refreshToken) {
@@ -103,7 +104,7 @@ public class AuthController {
 			parameters = @Parameter(name = "SAFY_ADMIN_REFRESH_TOKEN", in = ParameterIn.COOKIE, required = true,
 					description = "관리자 로그인 시 발급된 Refresh Token"))
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "토큰 재발급 성공")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh Token 누락·만료·위조")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Refresh Token 누락·만료·위조", content = @Content)
 	public ResponseEntity<ApiResponse<TokenResponse>> refreshAdmin(
 			@Parameter(hidden = true)
 			@CookieValue(name = "SAFY_ADMIN_REFRESH_TOKEN", required = false) String refreshToken) {

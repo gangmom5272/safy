@@ -18,6 +18,7 @@ import com.ojimasam.safy.user.domain.type.UserRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.ojimasam.safy.common.api.ApiResponse;
@@ -39,6 +40,7 @@ public class RealtimeEventController {
 	@Operation(summary = "실시간 이벤트 구독(SSE)", description = "text/event-stream으로 실시간 알림을 구독합니다. Last-Event-ID 헤더로 놓친 이벤트부터 재수신할 수 있습니다.")
 	@Parameter(name = "Last-Event-ID", in = ParameterIn.HEADER, description = "마지막으로 수신한 이벤트 ID (재연결 시 사용)")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "이벤트 스트림 연결 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public SseEmitter subscribe(@AuthenticationPrincipal Jwt jwt,
 			@RequestHeader(name = "Last-Event-ID", required = false) Long lastEventId) {
 		Long userId = CurrentUser.id(jwt);

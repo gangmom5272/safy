@@ -44,6 +44,7 @@ public class OperatorLiveSessionController {
 	@PostMapping("/{streamRoomId}/tokens")
 	@Operation(summary = "시청 토큰 발급(담당자)", description = "배정받은 담당자가 해당 스트림 룸의 영상을 구독(시청)하기 위한 WebRTC 토큰을 발급합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "시청 토큰 발급 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 세션을 시청할 권한이 없음", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "스트림 룸을 찾을 수 없음", content = @Content)
 	public ResponseEntity<ApiResponse<LiveTokenView>> viewerToken(@AuthenticationPrincipal Jwt jwt,
@@ -54,6 +55,7 @@ public class OperatorLiveSessionController {
 	@GetMapping
 	@Operation(summary = "라이브 세션 목록 조회(담당자)", description = "상태·커서 기반으로 담당자가 볼 수 있는 라이브 세션 목록을 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "라이브 세션 목록 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public ResponseEntity<ApiResponse<LiveSessionCursorView>> list(
 			@AuthenticationPrincipal Jwt jwt,
 			@RequestParam(required = false) LiveSessionStatus status,
@@ -67,6 +69,7 @@ public class OperatorLiveSessionController {
 	@GetMapping("/{streamRoomId}")
 	@Operation(summary = "라이브 세션 상세 조회(담당자)", description = "담당자가 특정 라이브 세션의 상세 정보를 조회합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "라이브 세션 상세 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "스트림 룸을 찾을 수 없음", content = @Content)
 	public ResponseEntity<ApiResponse<OperatorLiveSessionView>> detail(@AuthenticationPrincipal Jwt jwt,
 			@PathVariable UUID streamRoomId) {

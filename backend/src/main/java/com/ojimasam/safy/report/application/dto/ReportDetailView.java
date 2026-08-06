@@ -10,6 +10,7 @@ import com.ojimasam.safy.report.domain.type.ReportCategory;
 import com.ojimasam.safy.report.domain.type.ReportSubcategory;
 import com.ojimasam.safy.report.domain.type.ReportRoutingStatus;
 import com.ojimasam.safy.report.domain.type.ReportOperatorAssignmentStatus;
+import com.ojimasam.safy.live.domain.type.StreamRecordingStatus;
 
 public record ReportDetailView(
 		Long reportId,
@@ -37,6 +38,14 @@ public record ReportDetailView(
 		 * 제보는 다른 담당자에게서 계속 진행되므로, 제보 상태만으로는 내 처리 결과를 알 수 없다.
 		 * 시민 조회와 SUPER_ADMIN 조회에서는 null 이다.
 		 */
-		ReportOperatorAssignmentStatus myAssignmentStatus
+		ReportOperatorAssignmentStatus myAssignmentStatus,
+		/**
+		 * LIVE 제보의 원본 녹화 상태. 라이브가 아니거나 녹화가 없으면 null이다.
+		 * 담당자 조회에서만 채워지고 시민 조회에서는 항상 null이다.
+		 */
+		StreamRecordingStatus recordingStatus,
+		String originalVideoUrl,
+		Instant originalVideoUrlExpiresAt,
+		String videoMimeType
 ) {
 }

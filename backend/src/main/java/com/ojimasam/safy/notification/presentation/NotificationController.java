@@ -16,6 +16,8 @@ import com.ojimasam.safy.notification.application.NotificationService;
 import com.ojimasam.safy.notification.application.dto.NotificationView;
 import com.ojimasam.safy.notification.domain.type.NotificationType;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -31,6 +33,9 @@ public class NotificationController {
 	}
 
 	@GetMapping
+	@Operation(summary = "알림 목록 조회", description = "현재 사용자의 알림을 유형별로 필터링하여 페이지 단위로 조회합니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알림 목록 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public ApiResponse<PageResponse<NotificationView>> findAll(
 			@AuthenticationPrincipal Jwt jwt,
 			@RequestParam(required = false) NotificationType type,
@@ -40,11 +45,18 @@ public class NotificationController {
 	}
 
 	@GetMapping("/unread-count")
+	@Operation(summary = "읽지 않은 알림 수 조회")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "읽지 않은 알림 수 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public ApiResponse<Long> unreadCount(@AuthenticationPrincipal Jwt jwt) {
 		return ApiResponse.success(service.unreadCount(CurrentUser.id(jwt)));
 	}
 
 	@PatchMapping("/{notificationId}/read")
+	@Operation(summary = "알림 읽음 처리")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알림 읽음 처리 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "알림을 찾을 수 없음", content = @Content)
 	public ApiResponse<Void> markAsRead(@AuthenticationPrincipal Jwt jwt,
 			@PathVariable Long notificationId) {
 		service.markAsRead(CurrentUser.id(jwt), notificationId);
@@ -52,6 +64,9 @@ public class NotificationController {
 	}
 
 	@PatchMapping("/read-all")
+	@Operation(summary = "전체 알림 읽음 처리")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "전체 알림 읽음 처리 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public ApiResponse<Void> markAllAsRead(@AuthenticationPrincipal Jwt jwt) {
 		service.markAllAsRead(CurrentUser.id(jwt));
 		return ApiResponse.successWithoutData();

@@ -40,8 +40,8 @@ public class AdminController {
 	@PreAuthorize("hasAnyRole('OPERATOR','SUPER_ADMIN')")
 	@Operation(summary = "관리자 비밀번호 변경", description = "현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "비밀번호 변경 성공")
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패", content = @Content)
-	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 또는 현재 비밀번호 확인 실패", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패 또는 현재 비밀번호 불일치", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	public ApiResponse<Void> changePassword(@AuthenticationPrincipal Jwt jwt,
 			@Valid @RequestBody ChangePasswordRequest request) {
 		adminService.changePassword(CurrentUser.id(jwt), request.currentPassword(), request.newPassword());
@@ -71,6 +71,7 @@ public class AdminController {
 	@PreAuthorize("hasRole('SUPER_ADMIN')")
 	@Operation(summary = "관리자 상세 조회")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "관리자 상세 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "관리자를 찾을 수 없음", content = @Content)
 	public ApiResponse<OperatorResponse> get(@PathVariable Long operatorId) {
 		return ApiResponse.success(adminService.get(operatorId));
@@ -94,6 +95,7 @@ public class AdminController {
 	@Operation(summary = "관리자 정보·소속 수정")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "관리자 정보 수정 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "관리자 또는 관제센터를 찾을 수 없음", content = @Content)
 	public ApiResponse<OperatorResponse> update(@PathVariable Long operatorId,
 			@Valid @RequestBody UpdateOperatorRequest request) {
@@ -105,6 +107,7 @@ public class AdminController {
 	@Operation(summary = "관리자 정지·활성화", description = "관리자의 상태를 ACTIVE 또는 SUSPENDED로 변경합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "관리자 상태 변경 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "허용되지 않는 상태값", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "관리자를 찾을 수 없음", content = @Content)
 	public ApiResponse<OperatorResponse> status(@PathVariable Long operatorId,
 			@Valid @RequestBody UpdateOperatorStatusRequest request) {

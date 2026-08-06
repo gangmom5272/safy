@@ -47,6 +47,7 @@ public class MediaAssetController {
 	@Operation(summary = "이미지 업로드 URL 발급", description = "MinIO에 직접 업로드할 presigned PUT URL과 필요한 헤더·만료 시각을 발급합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "업로드 URL 발급 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "파일명·형식 검증 실패", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "업로드 발급 요청 한도 초과", content = @Content)
 	public ResponseEntity<ApiResponse<IssueImageUploadResponse>> issueUpload(
 			@AuthenticationPrincipal Jwt jwt,
@@ -70,6 +71,7 @@ public class MediaAssetController {
 	@Operation(summary = "이미지 업로드 완료 처리", description = "MinIO 업로드 완료 후 실제 파일 존재·크기·형식을 검증하고 미디어를 사용 가능 상태로 전환합니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "업로드 완료 처리 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "파일 검증 실패", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "미디어를 찾을 수 없음", content = @Content)
 	public ResponseEntity<Void> completeUpload(
 			@AuthenticationPrincipal Jwt jwt,

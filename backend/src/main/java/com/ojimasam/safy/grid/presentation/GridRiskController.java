@@ -20,6 +20,7 @@ import com.ojimasam.safy.grid.application.dto.GridRiskTrendPoint;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
@@ -69,6 +70,7 @@ public class GridRiskController {
 					"""
 	)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "조회 범위가 올바르지 않거나 너무 넓음", content = @Content)
 	public ResponseEntity<ApiResponse<List<GridRiskResponse>>> risks(
 			@Parameter(description = "남쪽 경계 위도", example = "37.55")
 			@RequestParam BigDecimal minLat,

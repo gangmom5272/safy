@@ -52,6 +52,7 @@ public class ControlCenterController {
 	@Operation(summary = "관제센터 생성")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "관제센터 생성 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "관제센터 코드 중복", content = @Content)
 	public ResponseEntity<ApiResponse<ControlCenterResponse>> create(
@@ -64,6 +65,9 @@ public class ControlCenterController {
 
 	@GetMapping
 	@Operation(summary = "관제센터 목록 조회")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "관제센터 목록 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
 	public ApiResponse<PageResponse<ControlCenterResponse>> list(
 			@RequestParam(required = false) ControlCenterStatus status,
 			Pageable pageable
@@ -73,12 +77,22 @@ public class ControlCenterController {
 
 	@GetMapping("/{centerId}")
 	@Operation(summary = "관제센터 상세 조회")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "관제센터 상세 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "관제센터를 찾을 수 없음", content = @Content)
 	public ApiResponse<ControlCenterResponse> get(@PathVariable Long centerId) {
 		return ApiResponse.success(controlCenterService.get(centerId));
 	}
 
 	@PatchMapping("/{centerId}")
 	@Operation(summary = "관제센터 수정")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "관제센터 수정 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "관제센터를 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "비활성화 전환 시 근무 중인 담당자 존재", content = @Content)
 	public ApiResponse<ControlCenterResponse> update(
 			@PathVariable Long centerId,
 			@Valid @RequestBody UpdateControlCenterRequest request
@@ -88,6 +102,11 @@ public class ControlCenterController {
 
 	@DeleteMapping("/{centerId}")
 	@Operation(summary = "관제센터 비활성화", description = "관제센터 이력을 보존하기 위해 물리 삭제하지 않고 비활성화합니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "비활성화 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "관제센터를 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "근무 중인 담당자가 있어 비활성화할 수 없음", content = @Content)
 	public ResponseEntity<Void> deactivate(@PathVariable Long centerId) {
 		controlCenterService.deactivate(centerId);
 		return ResponseEntity.noContent().build();
@@ -95,12 +114,22 @@ public class ControlCenterController {
 
 	@GetMapping("/{centerId}/areas")
 	@Operation(summary = "관제센터 담당 구역 목록 조회")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "담당 구역 목록 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "관제센터를 찾을 수 없음", content = @Content)
 	public ApiResponse<List<ControlCenterAreaResponse>> listAreas(@PathVariable Long centerId) {
 		return ApiResponse.success(controlCenterService.listAreas(centerId));
 	}
 
 	@PostMapping("/{centerId}/areas")
 	@Operation(summary = "관제센터 담당 구역 설정")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "담당 구역 설정 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "관제센터 또는 행정구역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 같은 역할로 담당 중인 구역", content = @Content)
 	public ResponseEntity<ApiResponse<ControlCenterAreaResponse>> assignArea(
 			@PathVariable Long centerId,
 			@Valid @RequestBody AssignControlCenterAreaRequest request
@@ -115,6 +144,12 @@ public class ControlCenterController {
 
 	@PatchMapping("/{centerId}/areas/{coverageId}")
 	@Operation(summary = "관제센터 담당 구역 수정")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "담당 구역 수정 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "담당 구역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "이미 같은 역할로 담당 중인 구역", content = @Content)
 	public ApiResponse<ControlCenterAreaResponse> updateArea(
 			@PathVariable Long centerId,
 			@PathVariable Long coverageId,
@@ -127,6 +162,10 @@ public class ControlCenterController {
 
 	@DeleteMapping("/{centerId}/areas/{coverageId}")
 	@Operation(summary = "관제센터 담당 구역 해제", description = "담당 구역 이력을 보존하기 위해 종료 시각과 비활성 상태를 기록합니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "담당 구역 해제 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "SUPER_ADMIN 권한 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "담당 구역을 찾을 수 없음", content = @Content)
 	public ResponseEntity<Void> deactivateArea(
 			@PathVariable Long centerId,
 			@PathVariable Long coverageId
