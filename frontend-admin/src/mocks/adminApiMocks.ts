@@ -1,6 +1,12 @@
 // 목 모드에서 API 대신 돌려줄 응답들.
 // 화면용 목 데이터(adminMockData)를 백엔드 응답 형태로 옮겨 담는다.
-import type { OperatorReportDetail, ReportAnalysis, TransferTarget } from '../pages/reports/reportApi'
+import type {
+  OperatorReportDetail,
+  ReportAnalysis,
+  ReportHandlingEvent,
+  ReportHandlingHistory,
+  TransferTarget,
+} from '../pages/reports/reportApi'
 import type { OperatorLiveSession } from '../pages/monitoring/monitoringApi'
 import type { QueueItem } from '../pages/queue/queueApi'
 import type { AdminReport, ReportType } from '../types/admin'
@@ -36,7 +42,9 @@ export function mockReportDetail(reportId: number): OperatorReportDetail {
     status: 'IN_PROGRESS',
     routingStatus: 'ROUTED',
     administrativeAreaName: report.location,
-    assignedControlCenter: { name: report.managerName, administrativeAreaName: report.location },
+    assignedControlCenter: { name: '강남구 재난안전상황실', administrativeAreaName: report.location },
+    assignedOperatorId: 1,
+    assignedOperatorName: report.managerName,
     reportedAt: report.reportedAt,
     // 목 모드에서도 "내 처리 결과"가 보이도록 제보 상태에 맞춰 배정 결과를 흉내낸다.
     myAssignmentStatus: report.status === 'completed'
@@ -102,6 +110,105 @@ export function mockReportAnalysis(reportId: number): ReportAnalysis {
     crowdCount: 120,
     confidence: 0.87,
     analyzedAt: report.reportedAt,
+  }
+}
+
+/**
+ * 처리 이력 목 응답. 재배정과 이관이 섞인 제보를 보여줘야 타임라인의 사건별 표시를
+ * 확인할 수 있어서, 종결된 제보에는 앞선 담당자의 조치까지 넣는다.
+ */
+export function mockReportHandlingHistory(reportId: number): ReportHandlingHistory {
+  const report = adminReports.find((item) => item.id === reportId) ?? adminReports[0]
+  const receivedAt = report.reportedAt
+  const minutesLater = (minutes: number) =>
+    new Date(new Date(receivedAt).getTime() + minutes * 60_000).toISOString()
+
+  const events: ReportHandlingEvent[] = [
+    {
+      type: 'AUTO_ASSIGNED',
+      occurredAt: minutesLater(2),
+      operatorId: null,
+      operatorName: null,
+      controlCenterId: 11,
+      controlCenterName: '마포구 재난안전상황실',
+      toControlCenterId: null,
+      toControlCenterName: null,
+      reason: null,
+    },
+    {
+      type: 'VIEWED',
+      occurredAt: minutesLater(6),
+      operatorId: 2,
+      operatorName: '박담당',
+      controlCenterId: 11,
+      controlCenterName: '마포구 재난안전상황실',
+      toControlCenterId: null,
+      toControlCenterName: null,
+      reason: null,
+    },
+    {
+      type: 'TRANSFERRED',
+      occurredAt: minutesLater(21),
+      operatorId: 2,
+      operatorName: '박담당',
+      controlCenterId: 11,
+      controlCenterName: '마포구 재난안전상황실',
+      toControlCenterId: 23,
+      toControlCenterName: '강남구 재난안전상황실',
+      reason: '관할 경계 지역이라 인접 센터가 대응하는 것이 빠릅니다.',
+    },
+    {
+      type: 'CLAIMED',
+      occurredAt: minutesLater(24),
+      operatorId: 1,
+      operatorName: report.managerName,
+      controlCenterId: 23,
+      controlCenterName: '강남구 재난안전상황실',
+      toControlCenterId: null,
+      toControlCenterName: null,
+      reason: null,
+    },
+  ]
+
+  const closingType = report.status === 'completed'
+    ? 'COMPLETED'
+    : report.status === 'rejected'
+      ? 'REJECTED'
+      : report.status === 'cancelled'
+        ? 'REPORTER_CANCELLED'
+        : null
+
+  if (closingType) {
+    events.push({
+      type: closingType,
+      occurredAt: minutesLater(48),
+      operatorId: 1,
+      operatorName: report.managerName,
+      controlCenterId: 23,
+      controlCenterName: '강남구 재난안전상황실',
+      toControlCenterId: null,
+      toControlCenterName: null,
+      reason: closingType === 'REJECTED' ? '현장 확인 결과 위험 상황이 아니었습니다.' : null,
+    })
+  }
+
+  return {
+    reportId,
+    stages: {
+      receivedAt,
+      firstInProgressAt: minutesLater(6),
+      closedAt: closingType ? minutesLater(48) : null,
+      currentStatus: closingType === 'COMPLETED'
+        ? 'CLOSED'
+        : closingType === 'REJECTED'
+          ? 'REJECTED'
+          : closingType === 'REPORTER_CANCELLED'
+            ? 'CANCELLED'
+            : 'IN_PROGRESS',
+      reassignCount: 0,
+      transferCount: 1,
+    },
+    events,
   }
 }
 

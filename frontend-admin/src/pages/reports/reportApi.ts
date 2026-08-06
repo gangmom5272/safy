@@ -4,6 +4,7 @@ import {
   mockDashboardReports,
   mockReportAnalysis,
   mockReportDetail,
+  mockReportHandlingHistory,
   mockTransferTargets,
 } from '../../mocks/adminApiMocks'
 import type { ApiResponse, PageResponse } from '../../api/types'
@@ -154,10 +155,56 @@ export interface OperatorReportDetail {
   routingStatus: string | null
   administrativeAreaName: string | null
   assignedControlCenter: { name: string; administrativeAreaName: string | null } | null
+  /** 현재 배정된 담당자. 아직 배정 전이거나 종결됐으면 null. */
+  assignedOperatorId: number | null
+  assignedOperatorName: string | null
   reportedAt: string
   images: ReportImage[]
   // 조회한 담당자 본인의 최신 배정 상태. SUPER_ADMIN 은 null.
   myAssignmentStatus: AssignmentStatus | null
+}
+
+/**
+ * 담당 이력 타임라인의 사건 종류. 백엔드 ReportHandlingEventType 과 같은 값이다.
+ * 제보 상태(ReportStatus)와 다른 축이라는 점이 중요하다. 재배정과 이관은 상태 전이가
+ * 서로 완전히 같아 상태만으로는 구분되지 않으므로 반드시 이 값으로 판별한다.
+ */
+export type ReportHandlingEventType =
+  | 'AUTO_ASSIGNED' | 'CLAIMED' | 'VIEWED' | 'COMPLETED' | 'REJECTED'
+  | 'REASSIGNED' | 'TRANSFERRED' | 'AUTO_TRANSFERRED'
+  | 'ASSIGNMENT_TIMEOUT' | 'OPERATOR_OFFLINE' | 'OPERATOR_AWAY' | 'REPORTER_CANCELLED'
+
+export interface ReportHandlingEvent {
+  type: ReportHandlingEventType
+  occurredAt: string
+  /** 조치한 담당자. 자동 배정과 시스템 자동 이관은 null 이다. */
+  operatorId: number | null
+  operatorName: string | null
+  /** 이 조치가 일어난 관제센터. 이관에서는 보내는 쪽이다. */
+  controlCenterId: number | null
+  controlCenterName: string | null
+  /** 이관 목적지. TRANSFERRED·AUTO_TRANSFERRED 에서만 채워진다. */
+  toControlCenterId: number | null
+  toControlCenterName: string | null
+  /** 담당자가 입력한 원본 사유. 자동 회수에는 사람이 적은 문장이 없어 null 이다. */
+  reason: string | null
+}
+
+export interface ReportHandlingStages {
+  receivedAt: string
+  /** 담당자가 처음 상세를 연 시각. 재배정으로 왕복해도 '최초' 값이라 뒤로 밀리지 않는다. */
+  firstInProgressAt: string | null
+  closedAt: string | null
+  currentStatus: BackendReportStatus
+  reassignCount: number
+  transferCount: number
+}
+
+export interface ReportHandlingHistory {
+  reportId: number
+  stages: ReportHandlingStages
+  /** 시간 오름차순. 같은 시각이면 놓은 사건이 받은 사건보다 앞에 온다. */
+  events: ReportHandlingEvent[]
 }
 
 // 담당자가 상세를 조회하면 백엔드가 제보를 '처리중'으로 자동 전이시킨다.
@@ -166,18 +213,6 @@ export async function getOperatorReportDetail(reportId: number) {
 
   const response = await apiClient.get<ApiResponse<OperatorReportDetail>>(`/operator/reports/${reportId}`)
   return response.data.data
-}
-
-/** 상세에서도 목록과 같은 기준(내 배정 결과)으로 표시하기 위한 판정. */
-export function toMyOutcome(detail: OperatorReportDetail): ReportStatus | null {
-  if (!detail.myAssignmentStatus) return null
-  if (detail.myAssignmentStatus === 'COMPLETED') return 'completed'
-  if (detail.myAssignmentStatus === 'CANCELLED') {
-    if (detail.status === 'REJECTED') return 'rejected'
-    if (detail.status === 'CANCELLED') return 'cancelled'
-    return 'reassigned'
-  }
-  return null
 }
 
 export function detailToAdminReport(detail: OperatorReportDetail): AdminReport {
@@ -194,7 +229,9 @@ export function detailToAdminReport(detail: OperatorReportDetail): AdminReport {
     status: toUiStatus(detail.status),
     reviewStatus: null,
     aiAnalysisStatus: null,
-    managerName: detail.assignedControlCenter?.name ?? '미배정',
+    // 관제센터 이름이 아니라 담당자 이름이다. assignedOperatorName 이 생기기 전에는
+    // 센터 이름이 들어가 있어 목록의 '담당자' 열에 센터가 보였다.
+    managerName: detail.assignedOperatorName ?? '미배정',
     aiSummary: detail.description,
     riskTags: [],
     history: [],
@@ -297,6 +334,19 @@ export async function getMyAssignedReports(page = 0, size = 100) {
     { params: { page, size, sort: 'assignedAt,desc' } },
   )
   return response.data.data.content.map(assignmentToAdminReport)
+}
+
+/**
+ * 담당자용 처리 이력. 시민용 `/reports/{id}/status-history` 와 달리 상태를 3단계로 접지
+ * 않고 담당자가 입력한 원본 사유를 그대로 준다. 조회 권한은 상세 조회와 같다.
+ */
+export async function getReportHandlingHistory(reportId: number) {
+  if (USE_MOCK_API) return mockResponse(mockReportHandlingHistory(reportId))
+
+  const response = await apiClient.get<ApiResponse<ReportHandlingHistory>>(
+    `/operator/reports/${reportId}/handling-history`,
+  )
+  return response.data.data
 }
 
 export async function getReportAnalysis(reportId: number) {

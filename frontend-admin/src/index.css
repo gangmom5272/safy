@@ -3895,6 +3895,20 @@ textarea.admin-field__control {
   font-size: 12.5px;
 }
 
+/* 담당자가 입력한 원본 사유. 설명 문구와 섞이지 않게 배경을 깔아 구분한다. */
+.status-timeline__reason {
+  width: 100%;
+  padding: 6px 9px;
+  border-left: 2px solid var(--border);
+  border-radius: 0 6px 6px 0;
+  background: var(--surface-muted);
+  color: var(--text) !important;
+}
+
+.status-timeline__step--failed .status-timeline__reason {
+  border-left-color: var(--danger);
+}
+
 .timeline-status-row {
   display: flex;
   align-items: center;
