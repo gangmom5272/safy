@@ -72,6 +72,10 @@ create table if not exists notification_push_delivery_jobs (
 create index if not exists idx_notification_push_jobs_ready
     on notification_push_delivery_jobs (status, next_attempt_at);
 
+-- 중단된 작업 회수 조회(status = PROCESSING, started_at 기준)가 매 주기 실행된다.
+create index if not exists idx_notification_push_jobs_recovery
+    on notification_push_delivery_jobs (status, started_at);
+
 create table if not exists user_location_presences (
     user_id bigint primary key,
     latitude numeric(10, 7) not null,
