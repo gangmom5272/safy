@@ -15,6 +15,7 @@ import {
   getOperatorReportDetail,
   getReportAnalysis,
   type OperatorReportDetail,
+  type RecordingStatus,
   type ReportAnalysis,
 } from '../reports/reportApi'
 import { ReportActionPanel } from '../reports/ReportActionPanel'
@@ -81,6 +82,16 @@ const realtimeNoticeMessages: Partial<Record<RealtimeEventType, { tone: Monitori
   LIVE_RECONNECTED: { tone: 'success', text: '제보자의 라이브 연결이 복구되었습니다.' },
   LIVE_ENDED: { tone: 'warning', text: '제보자가 라이브 송출을 종료했습니다.' },
   REPORT_CANCELLED: { tone: 'warning', text: '제보자가 제보를 취소했습니다.' },
+}
+
+// 원본 녹화 URL 이 없을 때 왜 볼 수 없는지 알려준다. COMPLETED 인데 URL 이 없는 경우는
+// 파일이 아직 스토리지에 올라오지 않은 상태다.
+const recordingHints: Record<RecordingStatus, string> = {
+  STARTING: '원본 영상을 준비하는 중입니다.',
+  ACTIVE: '원본 영상을 준비하는 중입니다.',
+  COMPLETED: '원본 영상을 아직 불러올 수 없습니다.',
+  FAILED: '원본 영상이 저장되지 않았습니다.',
+  ABORTED: '원본 영상이 저장되지 않았습니다.',
 }
 
 function toLiveConnection(report: AdminReport): WebRTCConnection | null {
@@ -456,6 +467,10 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
   const [messageError, setMessageError] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [messages, setMessages] = useState<ReportMessage[]>([])
+  // 라이브가 끝난 뒤 같은 프레임에서 원본 녹화를 재생한다. presigned URL 은 만료될 수 있어
+  // 재생 실패도 프레임 안에서 안내하고 종료 화면으로 되돌린다.
+  const [isRecordingOpen, setIsRecordingOpen] = useState(false)
+  const [recordingError, setRecordingError] = useState('')
 
   useEffect(() => {
     let active = true
@@ -528,6 +543,10 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
   }
 
   const detailReport = reportDetail ? detailToAdminReport(reportDetail) : report
+  const recordingUrl = reportDetail?.originalVideoUrl ?? null
+  const recordingHint = recordingUrl || !reportDetail?.recordingStatus
+    ? ''
+    : recordingHints[reportDetail.recordingStatus]
 
   return (
     <>
@@ -537,9 +556,44 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
         <article className="admin-card monitoring-featured-video">
           <div className="featured-video-frame">
             {connection.connectionStatus === 'live' && <span className="live-badge">LIVE</span>}
-            {connection.connectionStatus === 'ended'
-              ? <span className="featured-live-status">라이브 송출이 종료되었습니다.</span>
-              : <LiveViewer connection={connection} />}
+            {connection.connectionStatus !== 'ended' ? (
+              <LiveViewer connection={connection} />
+            ) : isRecordingOpen && recordingUrl ? (
+              <>
+                <video
+                  className="featured-live-video featured-recording-video"
+                  src={recordingUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  onError={() => {
+                    setIsRecordingOpen(false)
+                    setRecordingError('원본 영상을 재생하지 못했습니다. 잠시 후 다시 시도해주세요.')
+                  }}
+                />
+                <button type="button" className="featured-recording-close" onClick={() => setIsRecordingOpen(false)}>
+                  영상 닫기
+                </button>
+              </>
+            ) : (
+              <div className="featured-live-ended">
+                <span>라이브 송출이 종료되었습니다.</span>
+                {recordingUrl && (
+                  <button
+                    type="button"
+                    className="featured-recording-link"
+                    onClick={() => {
+                      setRecordingError('')
+                      setIsRecordingOpen(true)
+                    }}
+                  >
+                    원본 영상 보기
+                  </button>
+                )}
+                {recordingHint && <span className="featured-recording-hint">{recordingHint}</span>}
+                {recordingError && <span className="featured-recording-hint" role="alert">{recordingError}</span>}
+              </div>
+            )}
           </div>
           <form className="live-message-form" onSubmit={sendMessage}>
             <label className="sr-only" htmlFor={`live-message-${connection.id}`}>현장 사용자에게 보낼 메시지</label>

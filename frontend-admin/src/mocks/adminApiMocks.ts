@@ -62,6 +62,9 @@ export function mockReportDetail(reportId: number): OperatorReportDetail {
           previewUrl: index === 0 ? report.imageUrl! : mockPhoto(`현장 이미지 ${index + 1}`, background),
         }))
       : [],
+    // 목 모드에는 재생할 녹화 파일이 없어 상태만 흉내낸다.
+    recordingStatus: report.imageUrl ? null : 'FAILED',
+    originalVideoUrl: null,
   }
 }
 
