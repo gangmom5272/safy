@@ -156,10 +156,28 @@ public class OperatorReportController {
 		return ApiResponse.success(assignmentService.claim(CurrentUser.id(jwt), reportId));
 	}
 
+	@PatchMapping("/{reportId}/confirm")
+	@PreAuthorize("hasRole('OPERATOR')")
+	@Operation(summary = "제보 승인",
+			description = "제보를 진짜 상황으로 승인해 시민 지도(마커·격자 위험도)에 반영합니다. "
+					+ "제보가 CONFIRMED 되고 배정·라이브 세션은 유지되며 제보자에게 반영 사실이 통지됩니다. "
+					+ "대응이 끝나면 별도로 업무 종료(complete)를 호출합니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "제보 승인 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "승인할 수 없는 상태이거나 소속 담당자가 아님", content = @Content)
+	public ApiResponse<OperatorAssignmentResponse> confirm(
+			@AuthenticationPrincipal Jwt jwt,
+			@PathVariable Long reportId
+	) {
+		return ApiResponse.success(assignmentService.confirm(CurrentUser.id(jwt), reportId));
+	}
+
 	@PatchMapping("/{reportId}/complete")
 	@PreAuthorize("hasRole('OPERATOR')")
-	@Operation(summary = "업무 종료",
-			description = "제보를 종료합니다. 제보가 CLOSED 되고 관제센터 라우팅과 진행 중인 라이브 세션도 함께 종료되며 제보자에게 통지됩니다.")
+	@Operation(summary = "상황 종료",
+			description = "대응을 마치고 제보를 종료합니다. 제보가 CLOSED 되고 관제센터 라우팅과 진행 중인 라이브 세션도 함께 종료되며 제보자에게 통지됩니다. "
+					+ "시민 지도 반영(공개)은 승인(confirm)의 몫이며 종료가 대신 공개하지 않습니다.")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "업무 종료 성공")
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보 또는 배정 내역을 찾을 수 없음", content = @Content)

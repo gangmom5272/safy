@@ -45,7 +45,7 @@ class NotificationServiceTest {
 		verify(repository).save(notification.capture());
 		assertEquals(30L, notification.getValue().getRecipientUserId());
 		assertEquals(10L, notification.getValue().getReportId());
-		assertEquals("제보 처리가 완료되었습니다", notification.getValue().getTitle());
+		assertEquals("상황이 종료되었습니다", notification.getValue().getTitle());
 		verify(pushDeliveryService).enqueue(notification.getValue());
 	}
 

@@ -31,7 +31,7 @@ class ReportPublicVisibilityServiceTest {
 
 	@Test
 	void withholdsPublishedReport() {
-		Report report = closedReport();
+		Report report = confirmedReport();
 		when(reportRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(report));
 
 		service().withhold(1L, 42L);
@@ -39,7 +39,7 @@ class ReportPublicVisibilityServiceTest {
 		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.WITHHELD);
 	}
 
-	/** 아직 공개되지 않은 제보도 미리 내려둘 수 있다. 이후 업무 종료가 이를 되살리지 않는다. */
+	/** 아직 공개되지 않은 제보도 미리 내려둘 수 있다. 이후 승인이 이를 되살리지 않는다. */
 	@Test
 	void withholdsReportThatWasNeverPublished() {
 		Report report = report();
@@ -82,11 +82,11 @@ class ReportPublicVisibilityServiceTest {
 				new BigDecimal("37.5"), new BigDecimal("127.0"), null);
 	}
 
-	private Report closedReport() {
+	private Report confirmedReport() {
 		Report report = report();
 		report.assign();
 		report.beginHandling();
-		report.completeWork(Instant.now().plusSeconds(60));
+		report.confirm(Instant.now().plusSeconds(60));
 		return report;
 	}
 }

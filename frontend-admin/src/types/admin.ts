@@ -15,6 +15,8 @@ export type ReportStatus =
   | 'received'
   | 'checking'
   | 'in_progress'
+  // 담당자가 진짜 제보로 승인해 시민 지도에 반영됨. 대응은 계속 진행 중이다(종결 아님).
+  | 'confirmed'
   | 'completed'
   | 'rejected'
   | 'cancelled'

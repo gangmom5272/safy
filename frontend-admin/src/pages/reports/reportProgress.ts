@@ -18,7 +18,8 @@ const EVENT_TITLES: Record<ReportHandlingEventType, string> = {
   AUTO_ASSIGNED: '담당자 배정',
   CLAIMED: '담당자 지정',
   VIEWED: '확인 시작',
-  COMPLETED: '처리 완료',
+  CONFIRMED: '승인됨',
+  COMPLETED: '상황 종료',
   REJECTED: '반려됨',
   REASSIGNED: '재배정됨',
   TRANSFERRED: '이관됨',
@@ -48,8 +49,11 @@ function describeEvent(event: ReportHandlingEvent): string {
       return `${operatorLabel(event)} 미배정 목록에서 직접 담당했습니다.`
     case 'VIEWED':
       return `${operatorLabel(event)} 제보를 확인하기 시작했습니다.`
+    // 승인은 제보에 시각만 남고 누가 눌렀는지는 저장하지 않아 담당자 이름을 쓰지 않는다.
+    case 'CONFIRMED':
+      return '제보가 승인되어 사용자 지도에 반영되었습니다.'
     case 'COMPLETED':
-      return `${operatorLabel(event)} 제보 처리를 완료했습니다.`
+      return `${operatorLabel(event)} 대응을 마치고 상황을 종료했습니다.`
     case 'REJECTED':
       return `${operatorLabel(event)} 제보를 반려했습니다.`
     case 'REASSIGNED':

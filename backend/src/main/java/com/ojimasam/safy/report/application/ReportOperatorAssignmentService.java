@@ -235,6 +235,31 @@ public class ReportOperatorAssignmentService {
 		realtimeNotifier.reportInProgress(report.getId(), report.getReporterId());
 	}
 
+	/**
+	 * 담당자가 진짜 제보로 승인해 시민 지도(마커·격자)에 반영한다. 종결이 아니다 —
+	 * 배정·라우팅·라이브 세션은 그대로 유지되고 담당자는 계속 모니터링한다.
+	 * 대응이 끝나면 {@link #complete}로 별도 종료한다.
+	 */
+	@Transactional
+	public OperatorAssignmentResponse confirm(Long operatorId, Long reportId) {
+		Report report = reportForUpdate(reportId);
+		ReportOperatorAssignment assignment = requireOwnedActiveAssignment(operatorId, reportId);
+		validateActiveMembership(operatorId, assignment.getRoute().getControlCenter().getId());
+
+		Instant now = clock.instant();
+		ReportStatus previous = report.getStatus();
+		try {
+			report.confirm(now);
+		} catch (IllegalArgumentException | IllegalStateException exception) {
+			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
+		}
+		historyRepository.save(ReportStatusHistory.record(
+				report, previous, report.getStatus(), assignment.getOperator(), "REPORT_CONFIRMED", now
+		));
+		realtimeNotifier.reportConfirmed(report.getId(), report.getReporterId());
+		return OperatorAssignmentResponse.from(assignment);
+	}
+
 	@Transactional
 	public OperatorAssignmentResponse complete(Long operatorId, Long reportId) {
 		Report report = reportForUpdate(reportId);

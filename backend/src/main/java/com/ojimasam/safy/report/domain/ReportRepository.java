@@ -102,8 +102,14 @@ public interface ReportRepository {
 	 * 들어와 위험도 평가 시각이 갱신되므로, {@code assessedAt} 으로 자르면 30분 전
 	 * 제보가 현재 위험으로 잡힌다. "지금 이 격자에 무슨 일이 벌어지고 있나"를 재는
 	 * 값이라 접수 시각을 쓴다.
+	 *
+	 * <p>공개 여부는 시민 지도 마커와 같은 기준({@code publicVisibility})으로 거른다.
+	 * 상태(CONFIRMED)로 거르지 않는 이유는 승인된 제보가 재배정되면 상태가 RECEIVED 로
+	 * 되돌아가 마커에는 있는데 격자에서는 빠지는 어긋남이 생기기 때문이다. 담당자가
+	 * 수동으로 내린(WITHHELD) 제보도 이 기준이면 함께 빠진다.
 	 */
-	List<Report> findByGridCellCodeIsNotNullAndReportedAtBetween(Instant from, Instant to);
+	List<Report> findByGridCellCodeIsNotNullAndPublicVisibilityAndReportedAtBetween(
+			ReportPublicVisibility publicVisibility, Instant from, Instant to);
 
 	long countByAdministrativeArea_IdAndStatusIn(Long administrativeAreaId, Collection<ReportStatus> statuses);
 	long countByReporterId(Long reporterId);

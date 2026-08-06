@@ -14,6 +14,8 @@ public enum ReportHandlingEventType {
 	CLAIMED,
 	/** 담당자가 상세를 열어 처리중으로 전이됨. */
 	VIEWED,
+	/** 담당자가 진짜 제보로 승인해 시민 지도에 반영됨. 종결이 아니라 대응은 계속된다. */
+	CONFIRMED,
 	/** 업무 종료. */
 	COMPLETED,
 	/** 반려로 종결. */

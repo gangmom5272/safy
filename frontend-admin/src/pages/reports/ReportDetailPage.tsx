@@ -120,6 +120,8 @@ export function ReportDetailPage() {
   const [imageIndex, setImageIndex] = useState(0)
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(isValidReportId)
+  // 승인 후 상세를 다시 읽어 상태·타임라인을 갱신한다. 승인은 종결이 아니라 화면에 남는다.
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!isValidReportId) return
@@ -153,7 +155,7 @@ export function ReportDetailPage() {
 
     void load()
     return () => { active = false }
-  }, [isValidReportId, markReportChecked, numericReportId])
+  }, [isValidReportId, markReportChecked, numericReportId, refreshKey])
 
   if (isLoading) {
     return <section className="admin-card"><p role="status">제보를 불러오는 중입니다...</p></section>
@@ -304,7 +306,12 @@ export function ReportDetailPage() {
             <ReportActionPanel
               reportId={numericReportId}
               assignmentStatus={myAssignmentStatus}
-              onActionComplete={() => navigate(ROUTE_PATHS.REPORTS, { replace: true })}
+              isConfirmed={report.status === 'confirmed'}
+              onActionComplete={(action) => {
+                // 승인은 종결이 아니다 — 담당자는 화면에 남아 계속 모니터링한다.
+                if (action === 'confirm') setRefreshKey((key) => key + 1)
+                else navigate(ROUTE_PATHS.REPORTS, { replace: true })
+              }}
             />
           </DetailCard>
 

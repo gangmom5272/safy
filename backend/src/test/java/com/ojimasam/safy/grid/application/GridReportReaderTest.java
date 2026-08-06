@@ -22,6 +22,7 @@ import com.ojimasam.safy.grid.domain.GridCell;
 import com.ojimasam.safy.grid.domain.GridCellRepository;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
+import com.ojimasam.safy.report.domain.type.ReportPublicVisibility;
 
 class GridReportReaderTest {
 	private static final Instant WINDOW_END = Instant.parse("2026-08-03T12:00:00Z");
@@ -109,7 +110,9 @@ class GridReportReaderTest {
 	}
 
 	private void givenReports(Report... values) {
-		when(reports.findByGridCellCodeIsNotNullAndReportedAtBetween(WINDOW_START, WINDOW_END))
+		// 공개(PUBLISHED)된 제보만 격자에 반영한다. 마커와 같은 기준이다.
+		when(reports.findByGridCellCodeIsNotNullAndPublicVisibilityAndReportedAtBetween(
+				ReportPublicVisibility.PUBLISHED, WINDOW_START, WINDOW_END))
 				.thenReturn(List.of(values));
 	}
 

@@ -39,6 +39,7 @@ ALTER TABLE realtime_events
         'LIVE_DISCONNECTED',
         'LIVE_RECONNECTED',
         'LIVE_ENDED',
+        'REPORT_CONFIRMED',
         'REPORT_CLOSED',
         'REPORT_REJECTED',
         'REPORT_CANCELLED',

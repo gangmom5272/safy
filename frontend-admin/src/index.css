@@ -1956,6 +1956,12 @@ textarea.admin-field__control {
   color: var(--accent) !important;
 }
 
+/* 되돌릴 수 없는 조치를 알릴 때. 색은 .monitoring-notice--warning 과 맞춘다. */
+.notice-text--warning {
+  background: #fff7ed;
+  color: #9a3412 !important;
+}
+
 .status-management-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

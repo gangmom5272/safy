@@ -224,7 +224,9 @@ public class ReportQueryService {
 	private ReportStatus citizenStatus(ReportStatus status) {
 		return switch (status) {
 			case RECEIVED, ASSIGNED -> ReportStatus.RECEIVED;
-			case IN_PROGRESS -> ReportStatus.IN_PROGRESS;
+			// 승인(CONFIRMED)은 지도 반영 여부라 제보자 처리 단계로는 '처리 중'이다.
+			// 반영 사실 자체는 REPORT_CONFIRMED 알림으로 따로 전달한다.
+			case IN_PROGRESS, CONFIRMED -> ReportStatus.IN_PROGRESS;
 			case CLOSED, REJECTED, CANCELLED -> status;
 		};
 	}
@@ -232,8 +234,8 @@ public class ReportQueryService {
 	private String citizenStatusDescription(ReportStatus status) {
 		return switch (status) {
 			case RECEIVED, ASSIGNED -> "제보가 접수되었습니다.";
-			case IN_PROGRESS -> "제보 내용을 확인하고 있습니다.";
-			case CLOSED -> "제보 처리가 완료되었습니다.";
+			case IN_PROGRESS, CONFIRMED -> "제보 내용을 확인하고 있습니다.";
+			case CLOSED -> "상황 대응이 종료되었습니다.";
 			case REJECTED -> "제보가 반려되었습니다.";
 			case CANCELLED -> "제보가 취소되었습니다.";
 		};
