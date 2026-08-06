@@ -45,15 +45,21 @@ function report(overrides: Partial<AdminReport> = {}): AdminReport {
   }
 }
 
-test('배정된 지 30분이 지나지 않은 미확인 제보만 신규로 강조한다', () => {
+test('배정 시각과 제보 시각이 모두 30분 안인 미확인 제보만 신규로 강조한다', () => {
   assert.equal(isNewReportAt(report(), NOW), true)
-  assert.equal(isNewReportAt(report({ assignedAt: '2026-08-06T11:31:00Z' }), NOW), true)
+  assert.equal(isNewReportAt(report({ reportedAt: '2026-08-06T11:31:00Z', assignedAt: '2026-08-06T11:31:00Z' }), NOW), true)
   assert.equal(isNewReportAt(report({ assignedAt: '2026-08-06T11:29:00Z' }), NOW), false)
+  assert.equal(isNewReportAt(report({ reportedAt: '2026-08-06T11:29:00Z' }), NOW), false)
   assert.equal(isNewReportAt(report({ verificationStatus: 'CHECKED' }), NOW), false)
 })
 
-test('재배정으로 배정 시각이 갱신되면 그때부터 다시 30분간 강조한다', () => {
+test('제보 시각이 30분을 넘었으면 방금 재배정돼도 강조하지 않는다', () => {
   const reassigned = report({ reportedAt: '2026-08-06T08:00:00Z', assignedAt: '2026-08-06T11:55:00Z' })
+  assert.equal(isNewReportAt(reassigned, NOW), false)
+})
+
+test('최근 제보를 재배정으로 받으면 새 배정 시각으로 강조한다', () => {
+  const reassigned = report({ reportedAt: '2026-08-06T11:40:00Z', assignedAt: '2026-08-06T11:55:00Z' })
   assert.equal(isNewReportAt(reassigned, NOW), true)
 })
 
