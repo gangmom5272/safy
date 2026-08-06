@@ -18,7 +18,7 @@ function ActionIcon({ name }: { name: HomeActionButtonProps['icon'] }) {
   if (name === 'search') {
     return <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden="true"><circle cx="21" cy="21" r="13"/><path d="m31 31 10 10"/></svg>
   }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+  return <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M27 9H11a4 4 0 0 0-4 4v24a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4V21"/><path d="m19 29 2-8L36 6a4 4 0 0 1 6 6L27 27Z"/><path d="m33 9 6 6"/></svg>
 }
 
 function HomeActionButton({ label, variant, icon, onClick }: HomeActionButtonProps) {

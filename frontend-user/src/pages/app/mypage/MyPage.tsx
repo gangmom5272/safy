@@ -39,11 +39,7 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
     : reports.find((item) => item.id === selectedReportId) ?? null
   const go = (next: MyPageView) => { setHistory((items) => [...items, view]); setView(next); setMessage(''); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const back = () => {
-    if (history.length === 0) {
-      if (view !== 'MAIN') navigate('/app/mypage', { replace: true })
-      return
-    }
-    const previous = history.at(-1) as MyPageView
+    const previous = history.at(-1) ?? 'MAIN'
     setHistory((items) => items.slice(0, -1))
     setView(previous)
     setMessage('')
@@ -153,7 +149,7 @@ export function MyPageApp({ view: initialView = 'MAIN', reportId }: Initial) {
 }
 
 function Main({ user, summary, reports, onGo, onLogout }: { user: UserProfile; summary: ReportSummary; reports: MyReport[]; onGo: (view: MyPageView) => void; onLogout: () => void }) {
-  const menus: [MenuIconName, string, MyPageView][] = [['support','고객센터','SUPPORT'],['guide','이용안내','GUIDE']]
+  const menus: [MenuIconName, string, MyPageView][] = [['settings','설정','SETTINGS'],['support','고객센터','SUPPORT'],['guide','이용안내','GUIDE']]
   // active 는 아직 종결되지 않은 제보(접수 대기 중 + 처리중)다. 목록을 이미 받아왔으면
   // 목록에서 직접 세고, 아직 없으면 요약 API 값을 쓴다.
   const reportCounts = reports.length ? { active: reports.filter((item) => item.status === 'RECEIVED' || item.status === 'IN_PROGRESS').length, closed: reports.filter((item) => item.status === 'CLOSED').length, rejected: reports.filter((item) => item.status === 'REJECTED').length } : { active: summary.receivedCount + summary.inProgressCount, closed: summary.closedCount, rejected: summary.rejectedCount }
@@ -161,10 +157,11 @@ function Main({ user, summary, reports, onGo, onLogout }: { user: UserProfile; s
 
 }
 
-type MenuIconName = 'support' | 'guide'
+type MenuIconName = 'settings' | 'support' | 'guide'
 
 function MenuIcon({ name }: { name: MenuIconName | 'chevron' }) {
   const paths = {
+    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></>,
     support: <><path d="M4 13a8 8 0 0 1 16 0"/><path d="M4 13v5h4v-6H4M20 13v5h-4v-6h4M16 20c-1 1-2 1-4 1"/></>,
     guide: <><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></>,
     chevron: <path d="m9 5 7 7-7 7"/>,
