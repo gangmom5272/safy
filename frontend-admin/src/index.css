@@ -1082,15 +1082,13 @@ button:disabled {
 .monitoring-grid {
   display: grid;
   gap: 10px;
-  --tile-pad: 12px;
-  --tile-gap: 7px;
+  --tile-pad: 10px;
+  --tile-gap: 5px;
   --tile-font: 13px;
   --tile-title: 15px;
   --tile-badge-font: 11px;
   --tile-address-clamp: 2;
   --tile-description-clamp: 2;
-  --tile-action-height: 32px;
-  --tile-action-font: 12px;
 }
 
 .monitoring-grid.columns-2 {
@@ -1103,14 +1101,12 @@ button:disabled {
 
 .monitoring-grid.columns-5 {
   grid-template-columns: repeat(5, minmax(120px, 1fr));
-  --tile-pad: 9px;
-  --tile-gap: 5px;
+  --tile-pad: 8px;
+  --tile-gap: 4px;
   --tile-font: 11px;
   --tile-title: 13px;
   --tile-badge-font: 10px;
   --tile-description-clamp: 2;
-  --tile-action-height: 28px;
-  --tile-action-font: 11px;
 }
 
 .monitoring-grid-card {
@@ -1215,87 +1211,25 @@ button:disabled {
   color: #166534;
 }
 
-/* 카드가 남는 높이를 가져가고 하단 액션은 항상 타일 맨 아래에 붙는다. 덕분에 같은 행의
-   카드들끼리 액션 버튼 높이가 맞는다. */
-.monitoring-tile {
-  display: grid;
-  grid-template-rows: 1fr auto;
+.monitoring-report-card {
+  width: 100%;
   min-width: 0;
-  overflow: hidden;
   border-radius: 8px;
   background: #101828;
 }
 
-.monitoring-report-card {
-  width: 100%;
-  border-radius: 8px;
-}
-
-.monitoring-tile:has(.monitoring-tile__dismiss) .monitoring-report-card {
-  border-radius: 8px 8px 0 0;
-}
-
-/* 카드 하단 전체 너비 액션. 높이를 grid 모드별로 고정해 모든 타일의 하단선을 맞춘다. */
-.monitoring-tile__dismiss {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: var(--tile-action-height, 32px);
-  padding: 0 10px;
-  border: 0;
-  border-top: 1px solid #475467;
-  background: #344054;
-  color: #ffffff;
-  font-size: var(--tile-action-font, 12px);
-  font-weight: 800;
-  line-height: 1.3;
-  white-space: nowrap;
-}
-
-.monitoring-tile__dismiss:hover:not(:disabled) {
-  background: #475467;
-}
-
-.monitoring-tile__dismiss:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-/* 누를 수 없는 카드에서는 자리만 지킨다. 대비를 낮춰 활성 버튼과 확실히 구분한다. */
-.monitoring-tile__dismiss:disabled {
-  border-top-color: #344054;
-  background: #1d2939;
-  color: #667085;
-  cursor: default;
-}
-
-.monitoring-tile__dismiss-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  stroke: currentColor;
-  stroke-width: 2;
+/* 주소 앞 위치 아이콘. 주소 strong 은 -webkit-line-clamp 로 줄 수를 고정하므로 아이콘도
+   인라인으로 흘려보낸다. 크기를 em 으로 두면 grid 모드별 --tile-title 에 맞춰 따라간다. */
+.monitoring-report-card__pin {
+  width: 1em;
+  height: 1em;
+  margin-right: 5px;
+  vertical-align: -0.15em;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-/* 카드가 좁아지는 5x5 에서만 문구를 줄인다. DOM 은 그대로다. */
-.monitoring-tile__dismiss-short {
-  display: none;
-}
-
-.monitoring-grid.columns-5 .monitoring-tile__dismiss-full {
-  display: none;
-}
-
-.monitoring-grid.columns-5 .monitoring-tile__dismiss-short {
-  display: inline;
-}
-
-.monitoring-grid.columns-5 .monitoring-tile__dismiss-icon {
-  width: 12px;
-  height: 12px;
 }
 
 /* 기준 부모는 .video-card__stream 이다. 카드가 아니라 미디어 프레임 우측 상단에
@@ -1876,9 +1810,11 @@ textarea.admin-field__control {
   vertical-align: middle;
 }
 
+/* 카드가 늘어나면 점수·척도·요약 세 덩어리가 위아래로 벌어져 카드를 채운다. */
 .risk-indicator {
   display: grid;
-  gap: 18px;
+  align-content: space-between;
+  gap: 14px;
 }
 
 .risk-indicator__score {
@@ -1890,50 +1826,97 @@ textarea.admin-field__control {
 
 .risk-indicator__score span {
   color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .risk-indicator__score strong {
   color: var(--accent);
   font-size: 28px;
+  line-height: 1;
 }
 
+/* 1~5 단계를 가로 눈금으로 편다. 현재 단계까지 막대가 채워지고, 숫자와 단계 이름이
+   그 아래에 붙는다. */
 .risk-indicator__levels {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .risk-indicator__level {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  text-align: center;
+}
+
+.risk-indicator__bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.risk-indicator__step {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.risk-indicator__label {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.risk-indicator__level.is-current .risk-indicator__step,
+.risk-indicator__level.is-current .risk-indicator__label {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.risk-indicator__summary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.risk-indicator__summary > div {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.risk-indicator__summary dt {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.risk-indicator__summary dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.risk-indicator__current {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   background: var(--surface-muted);
-  opacity: 0.45;
-}
-
-.risk-indicator__level span {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.risk-indicator__level.is-passed {
-  opacity: 0.7;
-}
-
-.risk-indicator__level.is-current {
-  transform: translateX(8px);
-  opacity: 1;
-  color: #fff;
-  box-shadow: var(--shadow);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .secondary-button {
@@ -2191,16 +2174,84 @@ textarea.admin-field__control {
 
 /* 미배정 제보 */
 
+.queue-panel {
+  gap: 14px;
+}
+
+/* 설명과 새로고침 버튼을 한 행에 두고 세로 가운데로 맞춘다. 폭이 좁아지면 버튼이
+   설명 아래로 내려간다. */
+.queue-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .queue-intro {
-  margin: 0 0 4px;
+  min-width: min(100%, 320px);
+  flex: 1 1 420px;
+  margin: 0;
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.6;
 }
 
+.queue-refresh {
+  flex: 0 0 auto;
+  gap: 6px;
+  padding: 7px 14px;
+  color: var(--accent);
+  border-color: #bcd3f5;
+}
+
+.queue-refresh:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.queue-refresh:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.queue-refresh:active:not(:disabled) {
+  background: var(--surface-muted);
+}
+
+.queue-refresh__spinner {
+  display: inline-flex;
+}
+
+.queue-refresh__spinner.is-spinning {
+  animation: queue-refresh-spin 0.8s linear infinite;
+}
+
+.queue-refresh__icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes queue-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .queue-refresh__spinner.is-spinning {
+    animation: none;
+  }
+}
+
 .queue-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-items: stretch;
+  justify-content: start;
   gap: 14px;
   margin: 0;
   padding: 0;
@@ -2233,10 +2284,13 @@ textarea.admin-field__control {
   object-fit: cover;
 }
 
+/* 빈 썸네일 문구만 가운데로 모은다. 읽어야 하는 주소·카테고리·내용은 왼쪽 정렬이다. */
 .queue-card__placeholder {
+  padding: 0 10px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-muted);
+  text-align: center;
 }
 
 .queue-card__live {
@@ -2253,8 +2307,11 @@ textarea.admin-field__control {
 }
 
 .queue-card__body {
+  flex: 1 1 auto;
   display: grid;
-  gap: 5px;
+  align-content: start;
+  gap: 6px;
+  text-align: left;
 }
 
 .queue-card__top {
@@ -2262,6 +2319,7 @@ textarea.admin-field__control {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-height: 24px;
 }
 
 .queue-card__elapsed {
@@ -2271,9 +2329,15 @@ textarea.admin-field__control {
   font-variant-numeric: tabular-nums;
 }
 
+/* 주소가 길어도 카드 높이가 카드마다 달라지지 않게 두 줄에서 자른다. */
 .queue-card__address {
   font-size: 14.5px;
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .queue-card__category {
@@ -2293,7 +2357,14 @@ textarea.admin-field__control {
 }
 
 .queue-card__claim {
+  width: 100%;
+  min-height: 38px;
   margin-top: auto;
+}
+
+.queue-card__claim:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .detail-grid {
@@ -2503,8 +2574,11 @@ textarea.admin-field__control {
   grid-template-columns: minmax(0, 1fr) 260px;
 }
 
+/* 위험도 지도만 쓰는 크기다(대시보드는 .map-preview). 헤더·필터·카드 여백을 뺀 만큼
+   화면 아래까지 채우고, 화면이 짧아도 560px 아래로는 줄지 않는다. 옆 통계 블록은
+   .map-stats 의 align-self: start 때문에 같이 늘어나지 않는다. */
 .map-placeholder {
-  min-height: 500px;
+  min-height: max(560px, calc(100vh - 280px));
 }
 
 .active-layer-list {
@@ -3310,68 +3384,239 @@ textarea.admin-field__control {
   color: var(--text);
 }
 
-.report-detail-grid {
+/* 제보 상세 3열 배치. DOM 순서는 좁은 화면 읽기 순서에 맞추고, 넓은 화면의 열 배치는
+   grid-template-areas 가 담당한다. 왼쪽=이미지 한 장(세로로 전부 차지),
+   가운데=기본 정보·제보 내용·위험도, 오른쪽=제보 처리 버튼과 처리 정보다. */
+.report-detail-layout {
   display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(300px, 1fr);
+  grid-template-areas:
+    'image info process'
+    'image content handling'
+    'image risk handling';
   gap: 14px;
   align-items: stretch;
 }
 
-.report-detail-grid--first {
-  grid-template-columns: minmax(320px, 0.8fr) minmax(620px, 1.6fr);
+.report-detail-layout__image { grid-area: image; }
+.report-detail-layout__info { grid-area: info; }
+.report-detail-layout__content { grid-area: content; }
+.report-detail-layout__risk { grid-area: risk; }
+.report-detail-layout__process { grid-area: process; }
+.report-detail-layout__handling { grid-area: handling; }
+
+.report-card {
+  gap: 12px;
 }
 
-.report-detail-grid--second {
-  grid-template-columns: minmax(320px, 0.8fr) minmax(620px, 1.6fr);
+/* 카드는 배치 칸을 그대로 채우고, 본문에 해당하는 행에 1fr 을 줘서 카드마다 아래쪽에
+   빈 공간이 남지 않게 한다. 1fr 의 최소 크기는 auto 라 내용이 잘리지도 않는다. */
+.report-detail-layout__image { grid-template-rows: auto 1fr auto; }
+
+.report-detail-layout__info,
+.report-detail-layout__content,
+.report-detail-layout__risk,
+.report-detail-layout__process { grid-template-rows: auto 1fr; }
+
+/* 제목 · 요약 한 줄 · 처리 이력 타임라인. 남는 높이는 타임라인이 갖는다. */
+.report-detail-layout__handling { grid-template-rows: auto auto 1fr; }
+
+/* 요약과 이력을 선으로 끊는다. 타임라인 자체는 다른 곳에서도 쓸 수 있으므로
+   이 카드 안에서만 여백과 구분선을 준다. */
+.report-detail-layout__handling .status-timeline {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 
-.report-image,
+.report-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+
+.report-card__icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: var(--accent);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 카드가 늘어나면 남는 높이만큼 각 행 사이가 고르게 벌어진다. */
+.report-info {
+  display: grid;
+  align-content: space-between;
+  margin: 0;
+}
+
+.report-info > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(84px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-info > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.report-info > div:first-child {
+  padding-top: 0;
+}
+
+/* 소속과 담당자는 짧은 값이라 한 줄에 나란히 두고, 카드가 좁아지면 두 줄로 접힌다. */
+.report-info--summary {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 18px;
+}
+
+.report-info--summary > div {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.report-info dt {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.report-info dd {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-weight: 700;
+}
+
+.report-info__live-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--safe);
+}
+
+.report-content {
+  min-height: 132px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfe;
+  color: var(--text) !important;
+  line-height: 1.6;
+}
+
+/* 한 장씩 보여주는 뷰어. 이미지는 원래 크기 그대로 두고 칸을 넘칠 때만 줄인다. */
+.report-image-frame {
+  position: relative;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+/* 원래 크기로 두되 카드 폭을 넘지 않게만 줄이고, 세로로 지나치게 긴 사진은 잘라내는
+   대신 상한만 둔다. */
+.report-image {
+  max-width: 100%;
+  max-height: 520px;
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
 .report-image-placeholder {
   width: 100%;
   height: 100%;
-  min-height: 360px;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-.report-image-placeholder {
+  min-height: 200px;
   display: grid;
   place-items: center;
   border: 1px dashed var(--border);
+  border-radius: 8px;
   background: linear-gradient(145deg, var(--accent-muted), var(--surface-muted));
   color: var(--text-muted);
   font-weight: 700;
 }
 
-.report-image-gallery {
+/* 확대·이전·다음 버튼. 이미지 위에 겹쳐 두고 확대만 오른쪽 위에 붙인다. */
+.report-image-action {
+  position: absolute;
+  width: 32px;
+  height: 32px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  max-height: 760px;
-  overflow-y: auto;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.55);
+  color: #fff;
 }
 
-.report-image-gallery .report-image {
-  height: auto;
-  min-height: 180px;
-  aspect-ratio: 4 / 3;
+.report-image-action:hover {
+  background: rgba(15, 23, 42, 0.78);
 }
 
-/* 썸네일이 button 으로 감싸져 있어 그리드 아이템은 .report-image-thumb 이다. */
-.report-image-thumb:first-child {
-  grid-column: 1 / -1;
+.report-image-action:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
-.report-image-thumb:first-child .report-image {
-  min-height: 320px;
+.report-image-action--zoom { top: 12px; right: 12px; }
+.report-image-action--prev { top: 50%; left: 12px; transform: translateY(-50%); }
+.report-image-action--next { top: 50%; right: 12px; transform: translateY(-50%); }
+
+.report-image-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.report-image-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .report-image-thumb {
-  display: block;
+  width: 56px;
+  height: 44px;
   padding: 0;
-  border: 0;
-  background: none;
-  border-radius: 8px;
-  cursor: zoom-in;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.report-image-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.report-image-thumb.is-active {
+  border-color: var(--accent);
 }
 
 .report-image-thumb:focus-visible {
@@ -3414,6 +3659,8 @@ textarea.admin-field__control {
 }
 
 .report-action-closed {
+  display: grid;
+  place-items: center;
   margin: 0;
   padding: 14px 16px;
   border: 1px dashed var(--border);
@@ -3421,36 +3668,65 @@ textarea.admin-field__control {
   background: var(--surface-muted);
   color: var(--text-muted);
   font-weight: 700;
+  text-align: center;
 }
 
-/* 처리 버튼 4개는 좁은 우측 패널에서도 한 줄을 유지한다. 예전에는 .button-row 의
-   flex-wrap 과 button 의 min-width:96px+좌우 padding 20px 이 겹쳐 패널 폭을 넘기면
-   2줄로 접혔다. 같은 너비 4칸 grid 로 두면 폭에 맞춰 칸이 줄어들 뿐 줄바꿈은 없다. */
+/* 처리 버튼 4개는 우측 처리 카드 안에서 한 칸씩 세로로 쌓는다. 한 칸 grid 에 같은 크기
+   행 4개라 카드 폭·높이가 바뀌어도 네 버튼의 너비와 높이가 같이 유지되고, 카드에 남는
+   높이는 버튼이 나눠 채운다. */
 .report-action-buttons {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  /* '제보 처리' 카드는 옆 카드(위험도 지표) 높이에 맞춰 늘어난다. start 로 고정하지 않으면
-     버튼이 그 높이를 채우며 세로로 길게 늘어난다. */
-  align-items: start;
-  align-self: start;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(48px, 1fr);
+  gap: 8px;
   width: 100%;
 }
 
 .report-action-buttons > button {
   display: inline-flex;
-  width: auto;
+  width: 100%;
+  height: 100%;
   min-width: 0;
-  min-height: 36px;
+  min-height: 48px;
   align-items: center;
   justify-content: center;
-  padding: 8px 6px;
+  gap: 8px;
+  padding: 10px 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   line-height: 1.3;
   text-align: center;
   white-space: nowrap;
+}
+
+.report-action-buttons > button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.report-action-buttons > .secondary-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.report-action-buttons > .danger-button:hover:not(:disabled) {
+  background: #b42318;
+}
+
+.report-action-buttons > button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.report-action-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .image-lightbox {
@@ -3525,50 +3801,13 @@ textarea.admin-field__control {
   font-weight: 700;
 }
 
-.report-summary__group dd {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-weight: 400;
-}
-
-.report-summary__group dd > span:first-child {
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.report-summary__identity {
-  grid-column: span 2;
-}
-
-.report-summary__time,
-.report-summary__group {
-  grid-column: span 3;
-}
-
-.report-summary__wide {
-  grid-column: 1 / -1;
-}
-
-.report-summary__title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.report-summary__content-icon {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 auto;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
+/* 처리 이력 타임라인. 도달한 단계만 그리므로 마지막 항목이 현재 단계다.
+   지난 단계는 연한 회색, 현재 단계는 파랑, 반려·취소로 끝난 단계는 빨강이다. */
+/* 카드가 늘어나면 단계 사이가 아니라 단계 자체가 늘어나야 한다. 행 사이에 gap 을 주면
+   연결선(::before 는 li 안에 있다)이 그 자리에서 끊긴다. */
 .status-timeline {
   display: grid;
+  grid-auto-rows: minmax(min-content, 1fr);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -3576,20 +3815,24 @@ textarea.admin-field__control {
 
 .status-timeline__step {
   position: relative;
-  min-height: 96px;
+  min-width: 0;
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  gap: 12px;
-  padding-bottom: 18px;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+  padding-bottom: 14px;
+}
+
+.status-timeline__step:last-child {
+  padding-bottom: 0;
 }
 
 .status-timeline__step:not(:last-child)::before {
   position: absolute;
-  top: 19px;
-  bottom: -2px;
+  top: 16px;
+  bottom: 0;
   left: 7px;
   width: 2px;
-  background: var(--border);
+  background: var(--accent);
   content: '';
 }
 
@@ -3597,33 +3840,42 @@ textarea.admin-field__control {
   z-index: 1;
   width: 16px;
   height: 16px;
-  margin-top: 3px;
-  border: 3px solid #fff;
+  margin-top: 2px;
+  border: 4px solid #fff;
   border-radius: 50%;
-  background: #98a2b3;
-  box-shadow: 0 0 0 2px #98a2b3;
+  background: #cbd5e1;
+  box-shadow: 0 0 0 2px #cbd5e1;
 }
 
-.status-timeline__step--complete .status-timeline__marker { background: var(--safe); box-shadow: 0 0 0 2px var(--safe); }
-.status-timeline__step--current .status-timeline__marker { background: var(--accent); box-shadow: 0 0 0 3px var(--accent); }
+.status-timeline__step--current .status-timeline__marker { background: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 .status-timeline__step--failed .status-timeline__marker { background: var(--danger); box-shadow: 0 0 0 2px var(--danger); }
 
 .status-timeline__content {
   min-width: 0;
   display: grid;
   justify-items: start;
-  gap: 9px;
+  gap: 3px;
 }
 
-.status-timeline__content h3 {
-  margin: 0;
-  font-size: 15px;
+.status-timeline__content strong {
+  font-size: 14px;
+  line-height: 1.4;
 }
+
+.status-timeline__step--current .status-timeline__content strong { color: var(--accent); }
+.status-timeline__step--failed .status-timeline__content strong { color: var(--danger); }
 
 .status-timeline__content p,
 .status-timeline__content time {
   margin: 0;
   color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.status-timeline__content time {
+  font-size: 12.5px;
 }
 
 .timeline-status-row {
@@ -3674,8 +3926,16 @@ textarea.admin-field__control {
       'risk analysis'
       'media actions';
   }
-  .report-detail-grid--first,
-  .report-detail-grid--second { grid-template-columns: minmax(280px, 0.75fr) minmax(0, 1.4fr); }
+  /* 3열을 유지하기에는 좁아지는 구간이라 2열로 접고 처리 카드를 아래 전체 폭에 둔다. */
+  /* 3열을 유지하기에는 좁아지는 구간이라 2열로 접는다. */
+  .report-detail-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'image info'
+      'image process'
+      'content handling'
+      'risk handling';
+  }
 }
 
 @media (max-width: 1180px) {
@@ -3700,13 +3960,17 @@ textarea.admin-field__control {
 }
 
 @media (max-width: 980px) {
-  .report-detail-grid--first,
-  .report-detail-grid--second { grid-template-columns: 1fr; }
+  .report-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'image'
+      'info'
+      'content'
+      'risk'
+      'process'
+      'handling';
+  }
   .report-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .report-summary__identity,
-  .report-summary__time,
-  .report-summary__group { grid-column: span 1; }
-  /* 이 폭에서는 상세가 1단이 되어 패널이 넓어지므로 처리 버튼은 계속 한 줄로 둔다. */
 }
 
 @media (max-width: 760px) {
@@ -3731,12 +3995,6 @@ textarea.admin-field__control {
     width: 100%;
   }
   .report-filter__sort button { width: 100%; }
-  .report-summary__identity,
-  .report-summary__time,
-  .report-summary__group { grid-column: auto; }
-  .report-summary__wide { grid-column: auto; }
-  /* 여기서만 2x2 로 접는다. 4칸을 유지하면 글자가 잘린다. */
-  .report-action-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .report-filter__actions { justify-content: stretch; }
   .report-filter__actions button { flex: 1; }
   /* 한 줄에 다 들어가지 않으면 검색창이 윗줄을 전부 쓰고 select 2개와 초기화가

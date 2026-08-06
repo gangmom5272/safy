@@ -1,5 +1,10 @@
+/* 공통 헤더 바로 아래에 오는 안내 블록. 카드 사이 간격은 .page-stack 이 맡으므로
+   따로 margin 을 두지 않는다. */
 .area-request-page__description {
-  margin: 0 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
   padding: 12px 14px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
@@ -7,6 +12,16 @@
   color: #1e3a8a;
   font-size: 13px;
   line-height: 1.6;
+}
+
+.area-request-page__description-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .area-request-form {

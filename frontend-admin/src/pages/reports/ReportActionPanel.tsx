@@ -42,6 +42,42 @@ const REASON_PLACEHOLDERS: Record<OperatorAction, string> = {
 
 const REASON_MAX_LENGTH = 500
 
+function CompleteIcon() {
+  return (
+    <svg className="report-action-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M8.5 12.2l2.5 2.5 4.5-5" />
+    </svg>
+  )
+}
+
+function ReassignIcon() {
+  return (
+    <svg className="report-action-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+      <path d="M16.5 6.5a3 3 0 0 1 0 5.6M18 19a5.6 5.6 0 0 0-2.2-4.4" />
+    </svg>
+  )
+}
+
+function TransferIcon() {
+  return (
+    <svg className="report-action-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M4 9h14l-3-3M20 15H6l3 3" />
+    </svg>
+  )
+}
+
+function RejectIcon() {
+  return (
+    <svg className="report-action-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M6.5 6.5l11 11" />
+    </svg>
+  )
+}
+
 const REASON_REQUIRED: Record<OperatorAction, boolean> = {
   complete: false,
   reject: true,
@@ -154,18 +190,19 @@ export function ReportActionPanel({ reportId, assignmentStatus, onActionComplete
   return (
     <>
       {actionError && <p className="login-error" role="alert">{actionError}</p>}
-      <div className="button-row report-action-buttons">
+      {/* 처리 버튼은 우측 처리 카드 안에서 세로 한 칸씩 쌓아 너비·높이를 맞춘다. */}
+      <div className="report-action-buttons">
         <button type="button" className="primary-button" disabled={isSubmitting} onClick={() => selectAction('complete')}>
-          {ACTION_LABELS.complete}
+          <CompleteIcon />{ACTION_LABELS.complete}
         </button>
         <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => selectAction('reassign')}>
-          {ACTION_LABELS.reassign}
+          <ReassignIcon />{ACTION_LABELS.reassign}
         </button>
         <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => selectAction('transfer')}>
-          {ACTION_LABELS.transfer}
+          <TransferIcon />{ACTION_LABELS.transfer}
         </button>
         <button type="button" className="danger-button" disabled={isSubmitting} onClick={() => selectAction('reject')}>
-          {ACTION_LABELS.reject}
+          <RejectIcon />{ACTION_LABELS.reject}
         </button>
       </div>
 

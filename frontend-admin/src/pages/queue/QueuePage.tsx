@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { AdminSection } from '../../components/admin/AdminSection'
 import { RiskBadge } from '../../components/admin/RiskBadge'
 import { useAuth } from '../../auth/useAuth'
 import { createReportDetailPath } from '../../router/paths'
 import { subscribeToRealtimeSignals } from '../../api/realtime'
 import { getSubcategoryLabel } from '../../utils/reportLabels'
 import { claimReport, formatElapsed, getQueue, QUEUE_CATEGORY_LABELS, type QueueItem } from './queueApi'
+
+function RefreshIcon() {
+  return (
+    <svg className="queue-refresh__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M20 12a8 8 0 1 1-2.6-5.9" />
+      <path d="M20 4v4.5h-4.5" />
+    </svg>
+  )
+}
 
 export function QueuePage() {
   const navigate = useNavigate()
@@ -17,6 +25,7 @@ export function QueuePage() {
   const [loadError, setLoadError] = useState('')
   const [claimingId, setClaimingId] = useState<number | null>(null)
   const [claimError, setClaimError] = useState('')
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const loadQueue = useCallback(async () => {
     try {
@@ -45,6 +54,19 @@ export function QueuePage() {
       unsubscribe()
     }
   }, [isOperator, loadQueue])
+
+  // 새로고침 버튼용 래퍼. 실시간 신호로도 같은 loadQueue 가 돌기 때문에 버튼을 누른
+  // 동안만 회전·비활성 표시를 하려고 상태를 여기서만 감싼다.
+  const refresh = async () => {
+    if (isRefreshing) return
+
+    setIsRefreshing(true)
+    try {
+      await loadQueue()
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   const claim = async (reportId: number) => {
     if (claimingId !== null) return
@@ -77,18 +99,27 @@ export function QueuePage() {
       {loadError && <p className="admin-card empty-state" role="alert">{loadError}</p>}
       {claimError && <p className="login-error" role="alert">{claimError}</p>}
 
-      <AdminSection
-        title="미배정 제보"
-        action={
-          <button type="button" className="text-button" onClick={() => void loadQueue()}>
-            새로고침
+      {/* 페이지 제목은 공통 헤더가 이미 '미배정'으로 보여주므로 본문에서는 반복하지 않고,
+          설명과 새로고침 버튼을 한 줄짜리 도구 영역으로 묶는다. */}
+      <div className="admin-card queue-panel">
+        <div className="queue-toolbar">
+          <p className="queue-intro">
+            우리 관제센터에 접수됐지만 아직 담당자에게 배정되지 않은 제보입니다. 자동 배정에
+            실패했거나 반납·회수된 제보가 표시되며, 오래 기다린 제보가 위에 표시됩니다.
+          </p>
+          <button
+            type="button"
+            className="secondary-button queue-refresh"
+            aria-label="미배정 제보 새로고침"
+            disabled={isRefreshing}
+            onClick={() => void refresh()}
+          >
+            <span className={isRefreshing ? 'queue-refresh__spinner is-spinning' : 'queue-refresh__spinner'}>
+              <RefreshIcon />
+            </span>
+            {isRefreshing ? '새로고침 중...' : '새로고침'}
           </button>
-        }
-      >
-        <p className="queue-intro">
-          우리 관제센터에 접수됐지만 아직 담당자에게 배정되지 않은 제보입니다. 자동 배정에
-          실패했거나 반납·회수된 제보가 표시되며, 오래 기다린 제보가 위에 표시됩니다.
-        </p>
+        </div>
 
         {isLoading ? (
           <p className="empty-state" role="status">불러오는 중...</p>
@@ -137,7 +168,7 @@ export function QueuePage() {
             ))}
           </ul>
         )}
-      </AdminSection>
+      </div>
     </section>
   )
 }
