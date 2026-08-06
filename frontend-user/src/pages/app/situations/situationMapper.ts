@@ -244,13 +244,17 @@ export function mapLiveReport(raw: unknown): LiveReportSummary {
     // 백엔드 피드에는 제목 필드가 없어 본문 앞부분을 제목으로 쓴다.
     title: asString(item.title, '') || description || '제목 없는 제보',
     type: normalizeReportType(item.type ?? item.category),
+    subcategory: asString(item.subcategory) || undefined,
     locationName: asString(item.locationName ?? item.areaName ?? item.placeName),
     address: asString(item.address),
     latitude: asOptionalNumber(item.latitude ?? item.lat),
     longitude: asOptionalNumber(item.longitude ?? item.lng),
     reportedAt: asString(item.reportedAt ?? item.createdAt ?? item.createdDate),
     relativeTime: asString(item.relativeTime),
-    riskLevel: normalizeRiskLevel(item.riskLevel ?? item.risk ?? item.riskScore),
+    // 백엔드는 평가 전 제보의 riskLevel 을 null 로 준다. 기본 등급으로 채우면 '미평가'가
+    // '낮음'이 된다. riskScore 로 폴백해서도 안 된다 — 점수는 등급 문자열이 아니어서
+    // normalizeRiskLevel 의 어느 분기에도 걸리지 않고 결국 최저 등급으로 떨어진다.
+    riskLevel: item.riskLevel ? normalizeRiskLevel(item.riskLevel) : undefined,
     description,
     // 공개 피드는 블러 처리된 대표 이미지만 blurredImageUrl 로 내려준다(원본은 관제 전용).
     maskedThumbnailUrl:

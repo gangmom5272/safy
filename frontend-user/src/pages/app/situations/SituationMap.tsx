@@ -6,8 +6,9 @@ import {
   type KakaoPolygon,
 } from '../report-create/kakaoMap'
 import {
+  getSubcategoryLabel,
   reportTypeLabels,
-  shortRiskLevelLabels,
+  riskBadgeLabel,
   type Coordinates,
   type LiveReportSummary,
 } from './types'
@@ -15,6 +16,7 @@ import {
   groupReportsByLocation,
   highestRiskLevel,
   RISK_MARKER_COLORS,
+  riskMarkerColor,
   type ReportMarkerGroup,
 } from './situationMapUtils'
 import { normalizeRiskLevel } from './situationMapper'
@@ -222,13 +224,18 @@ export function SituationMap({
         const marker = document.createElement('button')
         marker.type = 'button'
         marker.className = 'situation-map-marker'
-        marker.style.backgroundColor = RISK_MARKER_COLORS[riskLevel]
-        marker.textContent = group.reports.length > 1 ? String(group.reports.length) : '!'
+        marker.style.backgroundColor = riskMarkerColor(riskLevel)
+        // 느낌표만 찍으면 무슨 상황인지 지도에서 알 수 없다. 한 건이면 세부 분류를
+        // 이름으로 쓰고, 없을 때만 상위 분류로 내려간다. 여러 건은 개수를 유지한다.
+        const single = group.reports[0]
+        const singleLabel = getSubcategoryLabel(single.subcategory) ?? reportTypeLabels[single.type]
+        marker.textContent = group.reports.length > 1 ? String(group.reports.length) : singleLabel
+        // 색만으로는 미평가를 알 수 없으니 읽어 주는 이름에는 등급을 함께 넣는다.
         marker.setAttribute(
           'aria-label',
           group.reports.length > 1
-            ? `같은 위치 제보 ${group.reports.length}건 목록 열기`
-            : `제보 상세 보기: ${group.reports[0].title}`,
+            ? `같은 위치 제보 ${group.reports.length}건 · 위험도 ${riskBadgeLabel(riskLevel)} 목록 열기`
+            : `제보 상세 보기: ${singleLabel} · 위험도 ${riskBadgeLabel(riskLevel)} · ${single.title}`,
         )
         marker.addEventListener('click', () => {
           if (group.reports.length === 1) {
@@ -289,13 +296,13 @@ export function SituationMap({
                 <button type="button" onClick={() => onSelectReport(report.id)}>
                   <span
                     className="situation-map-group__risk"
-                    style={{ backgroundColor: RISK_MARKER_COLORS[report.riskLevel] }}
+                    style={{ backgroundColor: riskMarkerColor(report.riskLevel) }}
                   >
-                    {shortRiskLevelLabels[report.riskLevel]}
+                    {riskBadgeLabel(report.riskLevel)}
                   </span>
                   <span className="situation-map-group__title">{report.title}</span>
                   <span className="situation-map-group__meta">
-                    {reportTypeLabels[report.type]}
+                    {getSubcategoryLabel(report.subcategory) ?? reportTypeLabels[report.type]}
                     {report.relativeTime ? ` · ${report.relativeTime}` : ''}
                   </span>
                 </button>

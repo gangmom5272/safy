@@ -98,7 +98,9 @@ export const mockKeywordLocations: LocationSearchResult[] = [
   },
 ]
 
-export const mockReports: LiveReportSummary[] = [
+// 실제 피드는 평가 전 제보의 riskLevel 이 없지만 목업은 모든 항목에 등급을 준다.
+// 타입에 그 사실을 적어 두면 아래 분석 목업이 없는 값을 지어내지 않고도 등급을 쓸 수 있다.
+export const mockReports: (LiveReportSummary & { riskLevel: RiskLevel })[] = [
   {
     id: 'report-hongdae-crowd-live',
     title: '홍대입구역 9번 출구 인근 인파 과밀',
@@ -479,7 +481,8 @@ function sortReports(reports: LiveReportSummary[], sort: ReportSort) {
       return new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime()
     }
 
-    const diff = riskOrder[b.riskLevel] - riskOrder[a.riskLevel]
+    // 평가 전 제보는 등급이 없다. 0 으로 두어 위험도 정렬에서 가장 뒤에 놓는다.
+    const diff = (b.riskLevel ? riskOrder[b.riskLevel] : 0) - (a.riskLevel ? riskOrder[a.riskLevel] : 0)
     return sort === 'risk_desc' ? diff : -diff
   })
 }

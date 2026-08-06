@@ -3891,7 +3891,7 @@ textarea.admin-field__control {
   text-align: center;
 }
 
-/* 위험도 지도: 혼잡도(서울시 121장소)·행사·시민 공개 마커 */
+/* 위험도 지도: 혼잡도(서울시 121장소)·행사·처리 완료 제보 마커 */
 .congestion-place-marker,
 .event-place-marker,
 .public-feed-marker {
@@ -3941,7 +3941,7 @@ textarea.admin-field__control {
 }
 
 /*
- * 시민 공개 마커. 위험 등급(빨강·주황·노랑·초록·파랑)과 담당 핀(보라·파랑)에 쓰이지 않은
+ * 처리 완료 제보 마커. 위험 등급(빨강·주황·노랑·초록·파랑)과 담당 핀(보라·파랑)에 쓰이지 않은
  * teal 계열을 쓰고, 30분 뒤 사라지는 임시 상태라는 뜻으로 점선 테두리를 준다.
  */
 .public-feed-marker {

@@ -103,6 +103,7 @@ class PublicReportFeedControllerTest {
 				42L, ReportType.LIVE, ReportCategory.CROWD_CONGESTION, ReportSubcategory.EXIT_CONGESTION,
 				"출구 주변이 혼잡합니다.", new BigDecimal("37.5665000"), new BigDecimal("126.9780000"),
 				"서울특별시 중구", 1L, "11140", "중구", REPORTED_AT,
+				"high", 72.5,
 				"http://localhost:9000/blurred", REPORTED_AT.plusSeconds(600)
 		);
 	}
