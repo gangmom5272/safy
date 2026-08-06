@@ -353,39 +353,6 @@ export function RiskMapPage() {
           })
         }}
       >
-        <div className="risk-map-filter__controls">
-          <div className="risk-map-filter__region">
-            <LocationIcon />
-            <input
-              aria-label="지역 검색"
-              type="search"
-              value={draftFilters.region}
-              onChange={(event) => setDraftFilters((current) => ({ ...current, region: event.target.value }))}
-              placeholder="지역명을 입력하세요."
-            />
-          </div>
-          <select
-            aria-label="위험도 선택"
-            className={!draftFilters.riskLevel ? 'select-placeholder' : undefined}
-            value={draftFilters.riskLevel}
-            onChange={(event) => setDraftFilters((current) => ({
-              ...current,
-              riskLevel: event.target.value as MapFilters['riskLevel'],
-            }))}
-          >
-            <option value={unsetValue} disabled>위험도</option>
-            <option value={allValue}>전체</option>
-            {RISK_LEVEL_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <button type="button" className="secondary-button" onClick={resetFilters}>
-            초기화
-          </button>
-          <button type="submit" className="primary-button">필터 적용</button>
-        </div>
         <fieldset className="layer-options">
           <legend>레이어 선택</legend>
           <label>
@@ -421,6 +388,41 @@ export function RiskMapPage() {
             행사 ({events.length})
           </label>
         </fieldset>
+        <div className="risk-map-filter__controls">
+          <div className="risk-map-filter__region">
+            <LocationIcon />
+            <input
+              aria-label="지역 검색"
+              type="search"
+              value={draftFilters.region}
+              onChange={(event) => setDraftFilters((current) => ({ ...current, region: event.target.value }))}
+              placeholder="지역명을 입력하세요."
+            />
+          </div>
+          {/* 별도 '필터 적용' 버튼이 없으므로 위험도는 고르는 즉시 반영한다.
+              지역명은 입력 중 지도가 계속 다시 그려지지 않도록 Enter(form submit)에서 반영한다. */}
+          <select
+            aria-label="위험도 선택"
+            className={!draftFilters.riskLevel ? 'select-placeholder' : undefined}
+            value={draftFilters.riskLevel}
+            onChange={(event) => {
+              const riskLevel = event.target.value as MapFilters['riskLevel']
+              setDraftFilters((current) => ({ ...current, riskLevel }))
+              setAppliedFilters((current) => ({ ...current, riskLevel }))
+            }}
+          >
+            <option value={unsetValue} disabled>위험도</option>
+            <option value={allValue}>전체</option>
+            {RISK_LEVEL_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="secondary-button" onClick={resetFilters}>
+            초기화
+          </button>
+        </div>
       </form>
 
       <div className="risk-map-layout">
