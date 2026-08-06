@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:mock": "vite --mode mock",
-    "test": "node --test --experimental-strip-types src/pages/reports/reportRowKey.test.ts src/pages/reports/ReportListPage.test.ts src/utils/adminRisk.test.ts src/utils/reportLabels.test.ts",
+    "test": "node --test --experimental-strip-types src/pages/reports/reportRowKey.test.ts src/pages/reports/ReportListPage.test.ts src/utils/adminRisk.test.ts src/utils/adminVerification.test.ts src/utils/reportLabels.test.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
