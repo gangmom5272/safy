@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { reportTypeLabels } from '../../mocks/adminMockData'
 import type { AdminReport, RiskLevel, WebRTCConnection, WebRTCConnectionStatus } from '../../types/admin'
-import { AdminSection } from '../../components/admin/AdminSection'
 import { RiskBadge } from '../../components/admin/RiskBadge'
 import { getRiskConfig, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
 import { ROUTE_PATHS, createMonitoringDetailPath, createReportDetailPath } from '../../router/paths'
@@ -59,6 +58,25 @@ function ClearIcon() {
   return (
     <svg className="monitoring-filter__clear-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       <path d="m6 6 12 12M18 6 6 18" />
+    </svg>
+  )
+}
+
+function DetailInfoIcon() {
+  return (
+    <svg className="report-card__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 8h8M8 12h8M8 16h5" />
+    </svg>
+  )
+}
+
+function HandlingIcon() {
+  return (
+    <svg className="report-card__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+      <path d="M16.5 6.5a3 3 0 0 1 0 5.6M18 19a5.6 5.6 0 0 0-2.2-4.4" />
     </svg>
   )
 }
@@ -573,9 +591,9 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
         </article>
 
         <div className="monitoring-detail-sidebar">
-          {/* 제목을 카드 밖으로 뺀다. 아래 '제보 처리'와 같은 AdminSection 골격이라
-              두 블록의 제목 높이와 카드 시작 위치가 맞는다. */}
-          <AdminSection title="제보 상세 정보" cardClassName="monitor-detail">
+          {/* 제목을 카드 안에 두어 사진 제보 상세(ReportDetailPage)와 같은 골격을 쓴다. */}
+          <article className="admin-card report-card monitor-detail">
+            <h2 className="report-card__title"><DetailInfoIcon />제보 상세 정보</h2>
             {detailError && <p className="login-error" role="alert">{detailError}</p>}
             <dl className="monitor-detail__list">
               <div className="monitor-detail__row"><dt>제보 ID</dt><dd>#{connection.reportId}</dd></div>
@@ -608,15 +626,16 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
                 <dd className="break-text">{reportDetail?.description ?? detailReport.aiSummary}</dd>
               </div>
             </dl>
-          </AdminSection>
+          </article>
 
-          <AdminSection title="제보 처리">
+          <article className="admin-card report-card">
+            <h2 className="report-card__title"><HandlingIcon />제보 처리</h2>
             <ReportActionPanel
               reportId={connection.reportId}
               assignmentStatus={reportDetail?.myAssignmentStatus ?? null}
               onActionComplete={onActionComplete}
             />
-          </AdminSection>
+          </article>
         </div>
       </div>
     </>
