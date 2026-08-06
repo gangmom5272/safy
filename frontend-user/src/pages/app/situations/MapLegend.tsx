@@ -7,9 +7,9 @@ import { shortRiskLevelLabels, type RiskLevel } from './types'
 const LEGEND_ORDER = ['critical', 'high', 'medium', 'low', 'very_low'] as const satisfies readonly RiskLevel[]
 
 /**
- * 색 5단계 칩. 관리자 위험도 지도처럼 지도 위 오버레이로 얹는다.
- * 하단은 상태 토스트(.situation-map-message)와 클러스터 시트(.situation-map-group)가
- * 쓰고 있어 우측 상단에 둔다. 지도 프레임 안에서만 위치가 잡히므로 SituationMap 이 그린다.
+ * 색 5단계 칩. 관리자 위험도 지도처럼 지도 위 우측 하단 오버레이로 얹는다.
+ * 같은 자리를 쓰는 상태 토스트와는 .situation-map-overlays 스택이 세로로 갈라 준다.
+ * 지도 프레임 안에서만 위치가 잡히므로 SituationMap 이 그린다.
  */
 export function MapLegendScale() {
   return (

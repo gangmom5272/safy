@@ -266,11 +266,16 @@ export function SituationMap({
     <div className="situation-map-frame">
       <div ref={containerRef} className="situation-map" role="application" aria-label="지역 상황 지도" />
 
-      {/* 설명할 지도가 실제로 떠 있을 때만 얹는다. 실패·로딩 중에는 빈 상자 위에 뜬다. */}
-      {isReady && !hasFailed && <MapLegendScale />}
-
-      {hasFailed && <p className="situation-map-message">지도를 불러오지 못했습니다.</p>}
-      {!hasFailed && statusMessage && <p className="situation-map-message">{statusMessage}</p>}
+      {/*
+        하단 오버레이 스택. 토스트와 범례를 세로로 쌓아 서로 가리지 않게 한다. 측위
+        실패·권한 거부 메시지는 사라지지 않고 폭도 거의 꽉 차므로, 겹치게 두면 범례가
+        영구히 안 보인다. 범례는 설명할 지도가 실제로 떠 있을 때만 얹는다.
+      */}
+      <div className="situation-map-overlays">
+        {hasFailed && <p className="situation-map-message">지도를 불러오지 못했습니다.</p>}
+        {!hasFailed && statusMessage && <p className="situation-map-message">{statusMessage}</p>}
+        {isReady && !hasFailed && <MapLegendScale />}
+      </div>
 
       {openGroup && (
         <div className="situation-map-group" role="dialog" aria-label="같은 위치 제보 목록">
