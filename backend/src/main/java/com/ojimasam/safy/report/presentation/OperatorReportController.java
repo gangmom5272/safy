@@ -21,11 +21,13 @@ import com.ojimasam.safy.auth.infrastructure.security.CurrentUser;
 import com.ojimasam.safy.common.api.ApiResponse;
 import com.ojimasam.safy.common.api.PageResponse;
 import com.ojimasam.safy.report.application.dto.OperatorAssignmentResponse;
+import com.ojimasam.safy.report.application.ReportHandlingHistoryService;
 import com.ojimasam.safy.report.application.ReportOperatorAssignmentService;
 import com.ojimasam.safy.report.application.ReportPublicVisibilityService;
 import com.ojimasam.safy.report.application.ReportQueryService;
 import com.ojimasam.safy.report.application.ReportTransferService;
 import com.ojimasam.safy.report.application.dto.ReportDetailView;
+import com.ojimasam.safy.report.application.dto.ReportHandlingHistoryView;
 import com.ojimasam.safy.report.application.dto.ReportTransferResponse;
 import com.ojimasam.safy.report.application.dto.ReportTransferTargetResponse;
 import com.ojimasam.safy.report.presentation.dto.OperatorReportTransferRequest;
@@ -49,14 +51,17 @@ public class OperatorReportController {
 	private final ReportQueryService reportQueryService;
 	private final ReportTransferService transferService;
 	private final ReportPublicVisibilityService publicVisibilityService;
+	private final ReportHandlingHistoryService handlingHistoryService;
 
 	public OperatorReportController(ReportOperatorAssignmentService assignmentService,
 			ReportQueryService reportQueryService, ReportTransferService transferService,
-			ReportPublicVisibilityService publicVisibilityService) {
+			ReportPublicVisibilityService publicVisibilityService,
+			ReportHandlingHistoryService handlingHistoryService) {
 		this.assignmentService = assignmentService;
 		this.reportQueryService = reportQueryService;
 		this.transferService = transferService;
 		this.publicVisibilityService = publicVisibilityService;
+		this.handlingHistoryService = handlingHistoryService;
 	}
 
 	@PostMapping("/{reportId}/withhold")
@@ -86,6 +91,30 @@ public class OperatorReportController {
 		Long operatorId = CurrentUser.id(jwt);
 		assignmentService.markHandling(operatorId, reportId);
 		return ApiResponse.success(reportQueryService.getForOperator(operatorId, reportId));
+	}
+
+	@GetMapping("/{reportId}/handling-history")
+	@Operation(summary = "담당자 제보 처리 이력 조회",
+			description = "이 제보를 거쳐간 모든 담당자의 조치를 시간순으로 반환합니다. "
+					+ "시민용 `/api/v1/reports/{reportId}/status-history` 와 달리 상태를 3단계로 접지 않고, "
+					+ "담당자가 입력한 원본 사유를 그대로 줍니다.\n\n"
+					+ "**events** 는 상태 전이가 아니라 조치 목록입니다. 재배정과 이관은 상태 전이가 서로 "
+					+ "완전히 같아 상태만으로는 구분되지 않으므로, `type` 으로 판별하세요 "
+					+ "(REASSIGNED / TRANSFERRED / AUTO_TRANSFERRED). 관제센터 이름을 문자열로 비교하지 "
+					+ "않아도 됩니다. 이관은 `toControlCenterId` 에 목적지가 함께 담깁니다.\n\n"
+					+ "자동 배정과 시스템 자동 이관은 조치한 사람이 없어 `operatorId` 가 null 입니다.\n\n"
+					+ "**stages** 는 단계 진행 바용 요약입니다. 재배정되면 제보가 처리중과 접수 사이를 "
+					+ "왕복하므로 `firstInProgressAt` 은 **최초** 확인 시각이며, 왕복 횟수는 "
+					+ "`reassignCount`·`transferCount` 로 확인합니다.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "처리 이력 조회 성공")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "해당 제보에 대한 권한 없음", content = @Content)
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "제보를 찾을 수 없음", content = @Content)
+	public ApiResponse<ReportHandlingHistoryView> handlingHistory(
+			@AuthenticationPrincipal Jwt jwt,
+			@PathVariable Long reportId
+	) {
+		return ApiResponse.success(handlingHistoryService.getForOperator(CurrentUser.id(jwt), reportId));
 	}
 
 	@GetMapping("/me")

@@ -116,6 +116,18 @@ public class ReportQueryService {
 		return detail(report, myAssignmentStatus(operatorId, reportId), true);
 	}
 
+	/**
+	 * 지금 이 제보를 맡고 있는 담당자. 재배정 이력이 있으면 배정이 여러 건 남으므로 마지막 건을
+	 * 보되, 그게 CANCELLED 면 놓인 상태(큐 대기·반려)라 담당자가 없는 것으로 본다 —
+	 * 놓고 간 사람을 현재 담당자로 표시하면 화면이 거짓말을 한다.
+	 */
+	private ReportOperatorAssignment currentAssignment(Long reportId) {
+		return assignmentRepository.findAllByReport_IdOrderByAssignedAtAscIdAsc(reportId).stream()
+				.reduce((previous, latest) -> latest)
+				.filter(assignment -> assignment.getStatus() != ReportOperatorAssignmentStatus.CANCELLED)
+				.orElse(null);
+	}
+
 	/** 재배정 이력이 있으면 배정이 여러 건 남으므로 가장 최근 것을 내 처리 결과로 본다. */
 	private ReportOperatorAssignmentStatus myAssignmentStatus(Long operatorId, Long reportId) {
 		return assignmentRepository.findAllByReport_IdAndOperator_Id(reportId, operatorId).stream()
@@ -144,12 +156,16 @@ public class ReportQueryService {
 		ReportStatus visibleStatus = exposeOriginal ? report.getStatus() : citizenCurrentStatus(report);
 		boolean cancellable = visibleStatus == ReportStatus.IN_PROGRESS ? false : report.isCancellable();
 		RecordingView recording = exposeOriginal ? recordingView(report, expiresAt) : RecordingView.EMPTY;
+		// 담당자 실명은 시민에게 내려가면 안 되므로 담당자 조회에서만 채운다.
+		ReportOperatorAssignment assigned = exposeOriginal ? currentAssignment(reportId) : null;
 		return new ReportDetailView(
 				report.getId(), report.getType(), report.getCategory(), report.getSubcategory(),
 				report.getDescription(), report.getLatitude(), report.getLongitude(),
 				report.getAddress(), visibleStatus, cancellable, report.getRoutingStatus(),
 				area == null ? null : area.getId(), area == null ? null : area.getCode(), area == null ? null : area.getName(),
 				assignedCenter,
+				assigned == null ? null : assigned.getOperator().getId(),
+				assigned == null ? null : assigned.getOperator().getDisplayName(),
 				report.getReportedAt(), report.getCreatedAt(), report.getUpdatedAt(), images,
 				myAssignmentStatus,
 				recording.status(), recording.videoUrl(), recording.videoUrlExpiresAt(), recording.videoMimeType()

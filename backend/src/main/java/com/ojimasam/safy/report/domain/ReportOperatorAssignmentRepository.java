@@ -24,6 +24,9 @@ public interface ReportOperatorAssignmentRepository {
 	 */
 	List<ReportOperatorAssignment> findAllByReport_IdAndOperator_Id(Long reportId, Long operatorId);
 
+	/** 담당 이력 타임라인. 재배정·이관을 거친 모든 담당 구간을 시간순으로 준다. */
+	List<ReportOperatorAssignment> findAllByReport_IdOrderByAssignedAtAscIdAsc(Long reportId);
+
 	/** 무응답 담당자의 배정 회수(오프라인 전환·타임아웃)에 사용한다. */
 	List<ReportOperatorAssignment> findAllByOperator_IdAndStatus(Long operatorId, ReportOperatorAssignmentStatus status);
 

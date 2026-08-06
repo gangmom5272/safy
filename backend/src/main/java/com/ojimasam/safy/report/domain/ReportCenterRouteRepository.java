@@ -18,4 +18,10 @@ public interface ReportCenterRouteRepository {
 	Optional<ReportCenterRoute> findByReport_IdAndStatus(Long reportId, ReportCenterRouteStatus status);
 
 	Optional<ReportCenterRoute> findTopByReport_IdOrderByRoutedAtDesc(Long reportId);
+
+	/**
+	 * 담당 이력 타임라인용 라우팅 전체. 자동 이관(FAILOVER)은 제보 상태가 그대로라
+	 * 상태 이력에도 배정에도 남지 않으므로, 여기서만 드러난다.
+	 */
+	java.util.List<ReportCenterRoute> findAllByReport_IdOrderByRoutedAtAscIdAsc(Long reportId);
 }

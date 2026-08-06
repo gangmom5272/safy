@@ -72,6 +72,16 @@ public class ReportOperatorAssignment extends BaseEntity {
 	@Column(name = "cancel_reason", length = 30)
 	private ReportAssignmentCancelReason cancelReason;
 
+	/**
+	 * 담당자가 재배정·이관·반려하며 직접 입력한 사유. 같은 문장이 상태 이력에도 남지만,
+	 * 그쪽은 제보 단위 전이 기록이라 어느 담당 구간에서 나온 사유인지 잇는 키가 없다
+	 * (시각이 같다는 우연에 기대야 한다). 담당 이력 화면이 구간별로 읽어야 하므로
+	 * 배정 쪽에도 보관한다. 자동 회수(타임아웃·오프라인·자리비움)는 사람이 적은 문장이
+	 * 없으므로 null 이고, 사유는 {@link #cancelReason} 이 이미 담고 있다.
+	 */
+	@Column(name = "release_reason", length = 500)
+	private String releaseReason;
+
 	protected ReportOperatorAssignment() {
 	}
 
@@ -132,13 +142,21 @@ public class ReportOperatorAssignment extends BaseEntity {
 		this.completedAt = time;
 	}
 
+	/** 담당자가 적은 사유가 없는 회수(타임아웃·오프라인·자리비움·제보자 취소). */
 	public void cancel(Instant cancelledAt, ReportAssignmentCancelReason cancelReason) {
+		cancel(cancelledAt, cancelReason, null);
+	}
+
+	public void cancel(Instant cancelledAt, ReportAssignmentCancelReason cancelReason, String releaseReason) {
 		if (cancelReason == null) throw new IllegalArgumentException("배정 취소 사유는 필수입니다.");
 		if (status == ReportOperatorAssignmentStatus.COMPLETED
 				|| status == ReportOperatorAssignmentStatus.CANCELLED) return;
 		this.status = ReportOperatorAssignmentStatus.CANCELLED;
 		this.cancelledAt = requireTime(cancelledAt);
 		this.cancelReason = cancelReason;
+		String trimmed = releaseReason == null ? null : releaseReason.trim();
+		this.releaseReason = trimmed == null || trimmed.isBlank() ? null
+				: trimmed.substring(0, Math.min(trimmed.length(), 500));
 	}
 
 	private void requireOperator(Long operatorId) {
@@ -172,4 +190,5 @@ public class ReportOperatorAssignment extends BaseEntity {
 	public Instant getCompletedAt() { return completedAt; }
 	public Instant getCancelledAt() { return cancelledAt; }
 	public ReportAssignmentCancelReason getCancelReason() { return cancelReason; }
+	public String getReleaseReason() { return releaseReason; }
 }
