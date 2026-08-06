@@ -97,9 +97,7 @@ export function SituationsPage() {
           fitToReports={selectedArea?.type === 'area'}
           statusMessage={
             selectedArea
-              ? situation.reports.length === 0 && !situation.isReportsLoading
-                ? '이 지역에 표시할 제보가 없습니다.'
-                : undefined
+              ? undefined
               : geolocation.status === 'success'
                 ? undefined
                 : geolocation.message
