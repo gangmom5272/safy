@@ -4,34 +4,41 @@
 
 :root {
   /* Primary Color */
-  --color-primary: #004AAD;
-  --color-primary-light: #E6F0FF;
-  --color-primary-lighter: #F0F7FF;
+  --color-primary: #2E6FE0;
+  --color-primary-hover: #2560C7;
+  --color-primary-pressed: #1E52AC;
+  --color-primary-soft: #6A9BF0;
+  --color-primary-light: #EBF3FF;
+  --color-primary-lighter: #F6F9FE;
 
   /* Background & Surface */
-  --color-background: #F7F9FC;
+  --color-background: #F3F7FD;
   --color-surface: #FFFFFF;
-  --color-surface-secondary: #F5F7FA;
+  --color-surface-secondary: #FAFCFF;
+  --color-surface-soft: #F6F9FE;
 
   /* Text Colors */
-  --color-text-primary: #111827;
-  --color-text-secondary: #6B7280;
-  --color-text-tertiary: #9CA3AF;
+  --color-text-primary: #16213A;
+  --color-text-secondary: #4A5773;
+  --color-text-tertiary: #8592AE;
   --color-text-inverse: #FFFFFF;
+  --color-disabled-background: #EEF1F6;
+  --color-disabled-text: #A8B2C4;
 
   /* Borders & Dividers */
-  --color-border: #E8EEF7;
-  --color-divider: #E5E7EB;
+  --color-border: #E2E9F4;
+  --color-border-strong: #C9D6EA;
+  --color-divider: #E2E9F4;
 
   /* Status Colors */
-  --color-danger: #EF4444;
-  --color-danger-light: #FEE2E2;
-  --color-warning: #F59E0B;
-  --color-warning-light: #FEF3C7;
-  --color-success: #22C55E;
-  --color-success-light: #DCFCE7;
-  --color-info: #3B82F6;
-  --color-info-light: #DBEAFE;
+  --color-danger: #C63B37;
+  --color-danger-light: #FCEBE9;
+  --color-warning: #B0781A;
+  --color-warning-light: #FBF1DF;
+  --color-success: #3B7F5B;
+  --color-success-light: #E7F4EC;
+  --color-info: #2E6FE0;
+  --color-info-light: #EBF3FF;
 
   /* Congestion Status */
   --color-congestion-very-crowded: #EF4444;
@@ -49,21 +56,30 @@
      Design System - Radius (Border Radius)
      ===================================================== */
 
-  --radius-card: 20px;
+  --radius-sheet: 28px;
+  --radius-card: 24px;
+  --radius-cta: 18px;
   --radius-button: 16px;
   --radius-badge: 999px;
-  --radius-input: 12px;
+  --radius-input: 16px;
   --radius-small: 8px;
 
   /* =====================================================
      Design System - Shadow
      ===================================================== */
 
-  --shadow-xs: 0 1px 2px rgba(16, 32, 51, 0.04);
-  --shadow-sm: 0 2px 4px rgba(16, 32, 51, 0.06);
-  --shadow-md: 0 4px 8px rgba(16, 32, 51, 0.08);
-  --shadow-lg: 0 8px 16px rgba(16, 32, 51, 0.1);
-  --shadow-xl: 0 12px 24px rgba(16, 32, 51, 0.12);
+  --shadow-xs: 0 1px 2px rgba(22, 33, 58, 0.04);
+  --shadow-sm: 0 2px 4px rgba(22, 33, 58, 0.06);
+  --shadow-md: 0 4px 8px rgba(22, 33, 58, 0.08);
+  --shadow-lg: 0 8px 16px rgba(22, 33, 58, 0.1);
+  --shadow-xl: 0 12px 24px rgba(22, 33, 58, 0.12);
+
+  --shadow-card: 0 2px 8px rgba(22, 33, 58, 0.06);
+  --shadow-fab: 0 8px 20px rgba(46, 111, 224, 0.28);
+  --shadow-sheet: 0 -8px 28px rgba(22, 33, 58, 0.10);
+  --shadow-modal: 0 12px 32px rgba(22, 33, 58, 0.14);
+  --ring-selected: 0 0 0 4px rgba(46, 111, 224, 0.14);
+  --ring-focus: 0 0 0 3px rgba(46, 111, 224, 0.35);
 
   /* =====================================================
      Design System - Typography
@@ -121,6 +137,14 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* =====================================================
+     Design System - Motion (safy-user-v1)
+     ===================================================== */
+
+  --motion-tap: 140ms ease-out;
+  --motion-sheet: 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-toast: 200ms ease-out;
 }
 
 /* =====================================================

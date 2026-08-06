@@ -28,7 +28,7 @@ export function SituationHeader() {
 
   return (
     <>
-      <PageHeader title="상황 확인" onBack={handleBack} />
+      <PageHeader title="실시간 지도" onBack={handleBack} />
       <section className="situation-intro">
         <p>지도에서 지역 상황과 제보를 확인하세요</p>
       </section>

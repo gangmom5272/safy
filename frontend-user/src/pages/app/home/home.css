@@ -1,28 +1,29 @@
-.landing-home { position: relative; display: grid; min-height: 100dvh; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); place-items: center; overflow: hidden; background: #f8fbff; }
-.home-quick-access { position: absolute; top: max(26px, calc(env(safe-area-inset-top) + 6px)); right: max(24px, env(safe-area-inset-right)); z-index: 2; display: flex; gap: 2px; opacity: 0; visibility: hidden; transform: translateY(-8px); pointer-events: none; transition: opacity 500ms ease-out 220ms, transform 500ms ease-out 220ms, visibility 0s linear 720ms; }
+.landing-home { position: relative; display: grid; min-height: 100dvh; padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); place-items: center; overflow: hidden; background: var(--color-background); }
+.home-quick-access { position: absolute; top: max(26px, calc(env(safe-area-inset-top) + 6px)); right: max(24px, env(safe-area-inset-right)); z-index: 2; display: flex; gap: 4px; opacity: 0; visibility: hidden; transform: translateY(-8px); pointer-events: none; transition: opacity 500ms ease-out 220ms, transform 500ms ease-out 220ms, visibility 0s linear 720ms; }
 .home-quick-access--visible { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; transition-delay: 220ms, 220ms, 0ms; }
-.home-quick-access button { position: relative; display: grid; width: 44px; height: 44px; padding: 0; place-items: center; border: 0; border-radius: 14px; color: #004aad; background: transparent; cursor: pointer; transition: transform .15s ease, background-color .15s ease; }
+.home-quick-access button { position: relative; display: grid; width: 56px; height: 56px; padding: 0; place-items: center; border: 0; border-radius: 14px; color: var(--color-primary); background: transparent; cursor: pointer; transition: transform var(--motion-tap), background-color var(--motion-tap); }
 .home-quick-access svg { width: 20px; height: 20px; }
-.home-quick-access button:hover { background: rgba(0, 74, 173, .055); }
+.home-quick-access button:hover { background: rgba(46, 111, 224, .055); }
 .home-quick-access button:active { transform: scale(.96); }
 .landing-home__content { display: grid; width: min(100%, 290px); gap: clamp(48px, 6.5vh, 60px); transform: translateY(-2vh); }
 .home-identity { display: flex; flex-direction: column; align-items: center; text-align: center; transform: translateY(0); transition: transform 650ms cubic-bezier(.22, 1, .36, 1); }
-.home-logo { width: clamp(82px, 23vw, 104px); color: #004aad; filter: drop-shadow(0 9px 16px rgba(0, 74, 173, .14)); transition: width 650ms cubic-bezier(.22, 1, .36, 1); }
-.home-logo svg { display: block; width: 100%; height: auto; }
-.home-identity h1 { margin: 12px 0 0; color: #004aad; font-size: clamp(45px, 14vw, 62px); line-height: .92; letter-spacing: -.055em; transition: font-size 650ms cubic-bezier(.22, 1, .36, 1); }
-.home-identity p { margin: 12px 0 0; color: #6b7280; font-size: clamp(13px, 3.8vw, 17px); letter-spacing: .12em; }
+.home-logo { width: clamp(82px, 23vw, 104px); color: var(--color-primary); filter: drop-shadow(0 9px 16px rgba(46, 111, 224, .14)); transition: width 650ms cubic-bezier(.22, 1, .36, 1); }
+.home-logo svg,
+.home-logo img { display: block; width: 100%; height: auto; }
+.home-identity h1 { margin: 12px 0 0; color: var(--color-primary); font-size: clamp(45px, 14vw, 62px); line-height: .92; letter-spacing: -.055em; transition: font-size 650ms cubic-bezier(.22, 1, .36, 1); }
+.home-identity p { margin: 12px 0 0; color: var(--color-text-secondary); font-size: clamp(13px, 3.8vw, 17px); letter-spacing: .12em; }
 .landing-home--intro .home-identity { animation: home-logo-enter 600ms ease-out both; }
 .landing-home--expanded .home-identity { transform: translateY(clamp(-70px, -9vh, -42px)); }
 .landing-home--expanded .home-logo { width: clamp(62px, 18vw, 80px); }
 .home-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; opacity: 0; visibility: hidden; transform: translateY(70px); pointer-events: none; transition: opacity 500ms ease-out 220ms, transform 650ms cubic-bezier(.22, 1, .36, 1), visibility 0s linear 720ms; }
 .landing-home--expanded .home-actions { opacity: 1; visibility: visible; transform: translateY(-35px); pointer-events: auto; transition-delay: 220ms, 0ms, 0ms; }
-.home-action { display: flex; width: 100%; min-width: 0; padding: 15px; aspect-ratio: 1; flex-direction: column; align-items: center; justify-content: center; gap: 14px; border-radius: 26px; color: #004aad; background: #fff; box-shadow: 0 12px 30px rgba(27, 54, 93, .1); font-size: clamp(16px, 4.5vw, 19px); font-weight: 700; cursor: pointer; transition: transform .17s ease, box-shadow .17s ease; }
+.home-action { display: flex; width: 100%; min-width: 0; padding: 16px; aspect-ratio: 1; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border-radius: 26px; color: var(--color-primary); background: #fff; box-shadow: 0 12px 30px rgba(22, 33, 58, .1); font-size: clamp(16px, 4.5vw, 19px); font-weight: 700; cursor: pointer; transition: transform var(--motion-tap), box-shadow var(--motion-tap); }
 .home-action svg { width: clamp(36px, 10.5vw, 46px); height: clamp(36px, 10.5vw, 46px); }
-.home-action--primary { border: 1px solid #004aad; color: #fff; background: #004aad; }
-.home-action--secondary { border: 1px solid #e2e9f3; }
-.home-action:hover { transform: translateY(-2px); box-shadow: 0 15px 32px rgba(27, 54, 93, .14); }
+.home-action--primary { border: 1px solid var(--color-primary); color: #fff; background: var(--color-primary); }
+.home-action--secondary { border: 1px solid var(--color-border); }
+.home-action:hover { transform: translateY(-2px); box-shadow: 0 15px 32px rgba(22, 33, 58, .14); }
 .home-action:active { transform: scale(.98); }
-.landing-home button:focus-visible { outline: 3px solid rgba(0, 74, 173, .28); outline-offset: 3px; }
+.landing-home button:focus-visible { outline: 3px solid rgba(46, 111, 224, .28); outline-offset: 3px; }
 @keyframes home-logo-enter { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-height: 680px) { .landing-home__content { gap: 38px; transform: none; } .landing-home--expanded .home-identity { transform: translateY(-35px); } .landing-home--expanded .home-actions { transform: translateY(-20px); } }
 @media (prefers-reduced-motion: reduce) { .home-identity, .home-logo, .home-actions, .home-quick-access { transition-duration: 1ms; transition-delay: 0ms; animation: none; } }

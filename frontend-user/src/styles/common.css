@@ -82,12 +82,12 @@ body {
 }
 
 .button--primary:hover:not(:disabled) {
-  background-color: #003A83;
+  background-color: var(--color-primary-hover);
   box-shadow: var(--shadow-md);
 }
 
 .button--primary:active:not(:disabled) {
-  background-color: #002855;
+  background-color: var(--color-primary-pressed);
 }
 
 /* Secondary Button */
@@ -218,23 +218,23 @@ body {
 
 /* Congestion Badges */
 .badge--very-crowded {
-  background-color: #FEE2E2;
-  color: #DC2626;
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
 }
 
 .badge--crowded {
-  background-color: #FEF3C7;
-  color: #D97706;
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
 }
 
 .badge--normal {
-  background-color: #FEF08A;
-  color: #CA8A04;
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
 }
 
 .badge--relaxed {
-  background-color: #DCFCE7;
-  color: #15803D;
+  background-color: var(--color-success-light);
+  color: var(--color-success);
 }
 
 /* =====================================================
@@ -254,25 +254,25 @@ body {
 .alert--info {
   background-color: var(--color-info-light);
   color: var(--color-info);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(46, 111, 224, 0.2);
 }
 
 .alert--warning {
   background-color: var(--color-warning-light);
   color: var(--color-warning);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(176, 120, 26, 0.2);
 }
 
 .alert--danger {
   background-color: var(--color-danger-light);
   color: var(--color-danger);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(198, 59, 55, 0.2);
 }
 
 .alert--success {
   background-color: var(--color-success-light);
   color: var(--color-success);
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(59, 127, 91, 0.2);
 }
 
 .alert__icon {
@@ -441,12 +441,12 @@ body {
 }
 
 .link:hover {
-  color: #003A83;
+  color: var(--color-primary-hover);
   text-decoration: underline;
 }
 
 .link:active {
-  color: #002855;
+  color: var(--color-primary-pressed);
 }
 
 /* =====================================================

@@ -105,9 +105,9 @@ export function LocationMap({
           center: new maps.LatLng(bounds.origin.latitude, bounds.origin.longitude),
           radius: bounds.radiusMeters,
           strokeWeight: 2,
-          strokeColor: '#004aad',
+          strokeColor: '#2E6FE0',
           strokeOpacity: 0.6,
-          fillColor: '#004aad',
+          fillColor: '#2E6FE0',
           fillOpacity: 0.06,
         })
         circle.setMap(map)
