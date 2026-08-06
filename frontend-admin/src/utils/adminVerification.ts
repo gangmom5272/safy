@@ -51,6 +51,11 @@ export function isUncheckedReport(report: AdminReport): boolean {
   return resolveVerificationStatus(report) === 'NEW'
 }
 
+function withinWindow(value: string | null | undefined, now: number): boolean {
+  const at = toTimestamp(value)
+  return at !== null && now - at < NEW_HIGHLIGHT_WINDOW_MS
+}
+
 /**
  * 기준 시각을 받는 판정. 테스트에서 고정 시각을 넣기 위한 것이므로 화면 코드는
  * 인자 없는 {@link isNewReport} 를 쓴다. 여기에 기본값을 두면 filter(isNewReport) 처럼
@@ -59,14 +64,16 @@ export function isUncheckedReport(report: AdminReport): boolean {
 export function isNewReportAt(report: AdminReport, now: number): boolean {
   if (!isUncheckedReport(report)) return false
 
-  const assignedAt = toTimestamp(report.assignedAt ?? report.reportedAt)
-  return assignedAt !== null && now - assignedAt < NEW_HIGHLIGHT_WINDOW_MS
+  return withinWindow(report.assignedAt ?? report.reportedAt, now)
+      && withinWindow(report.reportedAt, now)
 }
 
 /**
- * 신규로 강조할 제보. 미확인이어도 배정된 지 30분이 지나면 강조를 내린다.
+ * 신규로 강조할 제보. 배정 시각과 제보 시각이 모두 30분 창 안이어야 강조한다.
+ * 배정 시각만 보면, 확인하지 않아 5분마다 회수·재배정되는 옛 제보가 그때마다 새 배정
+ * 시각을 받아 신규로 되살아난다. 특히 담당자가 오프라인이던 동안 공용 큐에 쌓인 제보는
+ * 재접속 직후 한꺼번에 배정되어 전부 신규로 뜬다.
  * 강조만 내리는 것이라 제보는 지도와 목록에 그대로 남고 미확인 집계에도 계속 들어간다.
- * 기준 시각은 '내게 넘어온 시점'인 배정 시각이며, 재배정되면 그때부터 다시 30분이다.
  * 배정 시각이 없는 응답(담당 이력 등)은 제보 시각으로 대신한다.
  */
 export function isNewReport(report: AdminReport): boolean {
