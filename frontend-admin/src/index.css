@@ -2557,6 +2557,57 @@ textarea.admin-field__control {
   color: #fff;
 }
 
+/* 송출 종료 안내와 '원본 영상 보기'를 프레임 가운데에 세로로 쌓는다.
+   .featured-live-status 처럼 절대 배치하면 두 요소가 겹친다. */
+.featured-live-ended {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.featured-recording-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.featured-recording-link:hover {
+  color: #93c5fd;
+}
+
+.featured-recording-hint {
+  font-size: 13px;
+}
+
+/* 프레임 안에서는 라이브 화면과 같은 cover 로 채운다. 다만 녹화 배율이 프레임과 다르면
+   가장자리가 잘리므로, 전체화면에서는 잘라내지 않고 원본 전체를 보여준다. */
+.featured-recording-video:fullscreen {
+  object-fit: contain;
+}
+
+.featured-recording-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(11, 23, 36, 0.78);
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.featured-recording-close:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
 .live-message-history {
   display: grid;
   gap: 8px;

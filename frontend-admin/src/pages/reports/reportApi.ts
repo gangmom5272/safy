@@ -142,6 +142,8 @@ export interface ReportImage {
   previewUrl: string | null
 }
 
+export type RecordingStatus = 'STARTING' | 'ACTIVE' | 'COMPLETED' | 'FAILED' | 'ABORTED'
+
 export interface OperatorReportDetail {
   reportId: number
   reportType: 'IMAGE' | 'LIVE'
@@ -162,6 +164,10 @@ export interface OperatorReportDetail {
   images: ReportImage[]
   // 조회한 담당자 본인의 최신 배정 상태. SUPER_ADMIN 은 null.
   myAssignmentStatus: AssignmentStatus | null
+  // LIVE 제보의 원본 녹화 상태. 라이브가 아니거나 녹화 시도가 없으면 null 이다.
+  recordingStatus: RecordingStatus | null
+  // 최신 COMPLETED 녹화의 presigned URL. 아직 준비되지 않았거나 실패했으면 null 이다.
+  originalVideoUrl: string | null
 }
 
 /**
