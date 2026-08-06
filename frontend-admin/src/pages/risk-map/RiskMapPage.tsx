@@ -38,7 +38,7 @@ import {
   type PublicFeedReport,
 } from './publicFeedApi'
 import { GridTrendChart } from './GridTrendChart'
-import { isNewReport } from '../../utils/adminVerification'
+import { isUncheckedReport } from '../../utils/adminVerification'
 
 const allValue = 'all'
 const unsetValue = ''
@@ -448,7 +448,7 @@ export function RiskMapPage() {
       matchesRiskLevel(report.riskLevel, appliedFilters.riskLevel, report.riskScore))
   ))
   const plottableReports = filteredReports.filter(hasCoordinates)
-  const uncheckedReportCount = plottableReports.filter(isNewReport).length
+  const uncheckedReportCount = plottableReports.filter(isUncheckedReport).length
   const checkedReportCount = plottableReports.length - uncheckedReportCount
 
   const gridStats = useMemo(() => {
