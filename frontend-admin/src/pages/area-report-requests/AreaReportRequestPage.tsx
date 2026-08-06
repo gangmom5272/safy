@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { AdminSection } from '../../components/admin/AdminSection'
 import {
   createAreaReportRequest,
   getRequestPlaces,
@@ -11,6 +10,15 @@ import './areaReportRequest.css'
 // 서버 제약과 같은 값이다. 글자 수 표시에도 쓴다.
 const TITLE_MAX_LENGTH = 120
 const CONTENT_MAX_LENGTH = 500
+
+function NoticeIcon() {
+  return (
+    <svg className="area-request-page__description-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5M12 8h.01" />
+    </svg>
+  )
+}
 
 export function AreaReportRequestPage() {
   const [places, setPlaces] = useState<RequestPlace[]>([])
@@ -50,10 +58,14 @@ export function AreaReportRequestPage() {
 
   return (
     <section className="page-stack area-request-page">
-      <AdminSection title="현장 제보 요청">
-        <p className="area-request-page__description">
-          최근 10분 안에 이 구역에서 위치가 확인되고, 최근 5분 안에 접속한 동의 사용자에게 알림을 보냅니다.
-        </p>
+      {/* 페이지 제목은 공통 헤더가 이미 보여주므로 본문에서는 반복하지 않고, 그 자리를
+          안내 블록이 대신한다. 입력 폼 카드 안에는 다시 넣지 않는다. */}
+      <p className="area-request-page__description">
+        <NoticeIcon />
+        최근 10분 안에 이 구역에서 위치가 확인되고, 최근 5분 안에 접속한 동의 사용자에게 알림을 보냅니다.
+      </p>
+
+      <div className="admin-card">
         <form className="area-request-form" onSubmit={(event) => void submit(event)}>
           {/* 구역과 유효 시간은 짧은 값이라 한 줄에 두고, 제목·내용은 전체 너비를 쓴다.
               필드 골격은 모달과 같은 .admin-field 를 재사용한다. */}
@@ -123,7 +135,7 @@ export function AreaReportRequestPage() {
             </button>
           </div>
         </form>
-      </AdminSection>
+      </div>
     </section>
   )
 }

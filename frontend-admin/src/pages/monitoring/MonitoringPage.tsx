@@ -28,7 +28,6 @@ import { LiveViewer } from './LiveViewer'
 const allValue = 'all'
 const unsetValue = ''
 const gridOptions = [2, 3, 5] as const
-const dismissedEndedReportsKey = 'safy-admin-dismissed-ended-reports'
 
 type MediaTypeFilter = 'image' | 'live' | typeof allValue
 
@@ -67,13 +66,11 @@ function ClearIcon() {
   )
 }
 
-function HideIcon() {
+function PinIcon() {
   return (
-    <svg className="monitoring-tile__dismiss-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="M3 3l18 18" />
-      <path d="M10.6 5.2A9 9 0 0 1 12 5c5 0 9 5 9 7a12 12 0 0 1-2.2 2.9" />
-      <path d="M6.3 7.4C3.9 9 2 11.4 2 12c0 2 4 7 10 7a9.7 9.7 0 0 0 4-.8" />
-      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    <svg className="monitoring-report-card__pin" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11Z" />
+      <circle cx="12" cy="10" r="2.6" />
     </svg>
   )
 }
@@ -87,19 +84,6 @@ const realtimeNoticeMessages: Partial<Record<RealtimeEventType, { tone: Monitori
   LIVE_RECONNECTED: { tone: 'success', text: '제보자의 라이브 연결이 복구되었습니다.' },
   LIVE_ENDED: { tone: 'warning', text: '제보자가 라이브 송출을 종료했습니다.' },
   REPORT_CANCELLED: { tone: 'warning', text: '제보자가 제보를 취소했습니다.' },
-}
-
-function readDismissedEndedReports() {
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(dismissedEndedReportsKey) ?? '[]') as unknown
-    return new Set(Array.isArray(parsed) ? parsed.filter((value): value is number => Number.isInteger(value)) : [])
-  } catch {
-    return new Set<number>()
-  }
-}
-
-function persistDismissedEndedReports(reportIds: Set<number>) {
-  window.localStorage.setItem(dismissedEndedReportsKey, JSON.stringify([...reportIds]))
 }
 
 function toLiveConnection(report: AdminReport): WebRTCConnection | null {
@@ -140,7 +124,6 @@ export function MonitoringPage() {
   // 대시보드 타일에는 위험도가 없어 제보별 AI 분석 결과를 따로 모은다. 카드 테두리 색의 근거다.
   const [analyses, setAnalyses] = useState<Record<number, ReportAnalysis>>({})
   const requestedAnalysisIds = useRef(new Set<number>())
-  const [dismissedEndedReports, setDismissedEndedReports] = useState(readDismissedEndedReports)
   const [notice, setNotice] = useState<MonitoringNotice | null>(null)
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -196,18 +179,6 @@ export function MonitoringPage() {
         })
       }
 
-      if (event.eventType === 'LIVE_READY'
-        || event.eventType === 'LIVE_ACTIVE'
-        || event.eventType === 'LIVE_RECONNECTED') {
-        setDismissedEndedReports((current) => {
-          if (!current.has(reportId)) return current
-          const next = new Set(current)
-          next.delete(reportId)
-          persistDismissedEndedReports(next)
-          return next
-        })
-      }
-
       if (event.eventType === 'RISK_ASSESSMENT_UPDATED') void loadAnalysis(reportId)
 
       if (event.eventType !== 'REPORT_MESSAGE') void loadReports()
@@ -243,20 +214,8 @@ export function MonitoringPage() {
     clearRegion()
   }
 
-  const dismissEndedReport = (reportId: number) => {
-    setDismissedEndedReports((current) => {
-      const next = new Set(current)
-      next.add(reportId)
-      persistDismissedEndedReports(next)
-      return next
-    })
-  }
-
   const filteredReports = useMemo(
     () => reports.filter((report) => {
-      const connection = toLiveConnection(report)
-      if (connection?.connectionStatus === 'ended' && dismissedEndedReports.has(report.id)) return false
-
       const analysis = analyses[report.id]
       const matchesRegion = keywordFromUrl.length === 0
         || report.location.toLowerCase().includes(keywordFromUrl.toLowerCase())
@@ -270,7 +229,7 @@ export function MonitoringPage() {
         )
       return matchesRegion && matchesType && matchesRisk
     }),
-    [analyses, dismissedEndedReports, filters, keywordFromUrl, reports],
+    [analyses, filters, keywordFromUrl, reports],
   )
 
   const openReport = (report: AdminReport) => {
@@ -381,7 +340,6 @@ export function MonitoringPage() {
               reports={filteredReports}
               analyses={analyses}
               onSelect={openReport}
-              onDismissEnded={dismissEndedReport}
             />
           )}
         </>
@@ -395,10 +353,9 @@ interface MonitoringGridProps {
   reports: AdminReport[]
   analyses: Record<number, ReportAnalysis>
   onSelect: (report: AdminReport) => void
-  onDismissEnded: (reportId: number) => void
 }
 
-function MonitoringGrid({ columns, reports, analyses, onSelect, onDismissEnded }: MonitoringGridProps) {
+function MonitoringGrid({ columns, reports, analyses, onSelect }: MonitoringGridProps) {
   return (
     <article className="admin-card monitoring-grid-card">
       {reports.length > 0 ? (
@@ -409,7 +366,6 @@ function MonitoringGrid({ columns, reports, analyses, onSelect, onDismissEnded }
               report={report}
               analysis={analyses[report.id] ?? null}
               onSelect={() => onSelect(report)}
-              onDismissEnded={() => onDismissEnded(report.id)}
             />
           ))}
         </div>
@@ -424,10 +380,9 @@ interface MonitoringReportCardProps {
   report: AdminReport
   analysis: ReportAnalysis | null
   onSelect: () => void
-  onDismissEnded: () => void
 }
 
-function MonitoringReportCard({ report, analysis, onSelect, onDismissEnded }: MonitoringReportCardProps) {
+function MonitoringReportCard({ report, analysis, onSelect }: MonitoringReportCardProps) {
   // 이미지 URL 은 presigned 라 만료될 수 있다. 실패하면 깨진 아이콘 대신 안내로 바꿔
   // 프레임 크기를 그대로 유지한다.
   const [imageFailed, setImageFailed] = useState(false)
@@ -439,72 +394,52 @@ function MonitoringReportCard({ report, analysis, onSelect, onDismissEnded }: Mo
   const riskConfig = getRiskConfig(riskLevel, riskScore)
 
   return (
-    <div className="monitoring-tile">
-      <button
-        type="button"
-        className={`video-card monitoring-report-card${riskConfig ? ' monitoring-report-card--risk' : ''}`}
-        style={riskConfig ? { borderColor: riskConfig.markerColor } : undefined}
-        onClick={onSelect}
-      >
-        {/* 미디어 프레임이 유형 배지의 기준 요소다. 배지를 프레임 밖(카드 직계 자식)에 두면
-            이미지 크기·위치에 따라 배지가 프레임에서 떨어져 보인다. 라이브·이미지·대기 상태가
-            모두 이 프레임 하나를 쓰므로 카드 골격이 유형에 따라 갈라지지 않는다. */}
-        <span className="video-card__stream">
-          <span className={`media-type-badge ${report.isLive ? 'media-type-badge--live' : 'media-type-badge--image'}`}>
-            {report.isLive ? 'LIVE' : 'IMAGE'}
-          </span>
-          {report.isLive ? (
-            !connection ? (
-              <span className="video-card__status">라이브 룸 준비 중...</span>
-            ) : isEnded ? (
-              <span className="video-card__status">라이브 종료됨</span>
-            ) : (
-              <LiveViewer connection={connection} compact />
-            )
-          ) : report.imageUrl && !imageFailed ? (
-            <img
-              className="video-card__video"
-              src={report.imageUrl}
-              alt={`제보 #${report.id} 대표 이미지`}
-              loading="lazy"
-              decoding="async"
-              onError={() => setImageFailed(true)}
-            />
+    <button
+      type="button"
+      className={`video-card monitoring-report-card${riskConfig ? ' monitoring-report-card--risk' : ''}`}
+      style={riskConfig ? { borderColor: riskConfig.markerColor } : undefined}
+      onClick={onSelect}
+    >
+      {/* 미디어 프레임이 유형 배지의 기준 요소다. 배지를 프레임 밖(카드 직계 자식)에 두면
+          이미지 크기·위치에 따라 배지가 프레임에서 떨어져 보인다. 라이브·이미지·대기 상태가
+          모두 이 프레임 하나를 쓰므로 카드 골격이 유형에 따라 갈라지지 않는다. */}
+      <span className="video-card__stream">
+        <span className={`media-type-badge ${report.isLive ? 'media-type-badge--live' : 'media-type-badge--image'}`}>
+          {report.isLive ? 'LIVE' : 'IMAGE'}
+        </span>
+        {report.isLive ? (
+          !connection ? (
+            <span className="video-card__status">라이브 룸 준비 중...</span>
+          ) : isEnded ? (
+            <span className="video-card__status">라이브 종료됨</span>
           ) : (
-            <span className="video-card__status">
-              {report.imageUrl ? '이미지를 불러오지 못했습니다.' : '이미지 업로드 대기 중...'}
-            </span>
-          )}
-        </span>
-        <span className="monitoring-report-card__info">
-          <strong>{report.location || '위치 정보 없음'}</strong>
-          <RiskBadge value={riskLevel} score={riskScore} />
-          <span>{report.isLive
-            ? `상태 ${connection ? connectionStatusLabels[connection.connectionStatus] : '준비 중'}`
-            : `첨부 이미지 ${report.imageCount ?? 0}장`}</span>
-          <span>{reportTypeLabels[report.type]} · 제보 #{report.id}</span>
-          <span className="monitoring-report-card__description">{report.aiSummary || '상세 내용 없음'}</span>
-        </span>
-      </button>
-      {/* 액션 영역은 모든 카드에 같은 높이로 둔다. 종료된 라이브에만 있으면 그 카드만
-          키가 커져 같은 행의 다른 카드와 하단선이 어긋난다. 실제로 누를 수 있는 건
-          라이브가 종료된 카드뿐이라 나머지는 비활성으로 자리만 지킨다.
-          동작은 서버 상태 변경이 아니라 이 브라우저의 관제 화면에서만 감추는 것이다
-          (localStorage 저장, 다시 송출되면 자동 복귀). 그래서 문구도 '숨기기'로 둔다. */}
-      <button
-        type="button"
-        className="monitoring-tile__dismiss"
-        disabled={!isEnded}
-        onClick={onDismissEnded}
-        title={isEnded
-          ? '관제 화면에서만 숨깁니다. 다시 송출되면 되돌아옵니다.'
-          : '라이브가 종료된 제보만 숨길 수 있습니다.'}
-      >
-        <HideIcon />
-        <span className="monitoring-tile__dismiss-full">관제에서 숨기기</span>
-        <span className="monitoring-tile__dismiss-short">숨기기</span>
-      </button>
-    </div>
+            <LiveViewer connection={connection} compact />
+          )
+        ) : report.imageUrl && !imageFailed ? (
+          <img
+            className="video-card__video"
+            src={report.imageUrl}
+            alt={`제보 #${report.id} 대표 이미지`}
+            loading="lazy"
+            decoding="async"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <span className="video-card__status">
+            {report.imageUrl ? '이미지를 불러오지 못했습니다.' : '이미지 업로드 대기 중...'}
+          </span>
+        )}
+      </span>
+      <span className="monitoring-report-card__info">
+        <strong>
+          <PinIcon />
+          {report.location || '위치 정보 없음'}
+        </strong>
+        <RiskBadge value={riskLevel} score={riskScore} />
+        <span>제보 #{report.id} · {reportTypeLabels[report.type]}</span>
+        <span className="monitoring-report-card__description">{report.aiSummary || '상세 내용 없음'}</span>
+      </span>
+    </button>
   )
 }
 
