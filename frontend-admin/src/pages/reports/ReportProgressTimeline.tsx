@@ -12,7 +12,8 @@ interface ReportProgressTimelineProps {
  */
 export function ReportProgressTimeline({ steps }: ReportProgressTimelineProps) {
   return (
-    <ol className="status-timeline" aria-label="처리 이력">
+    // 카드 안에서 스크롤되는 영역이라 키보드로도 훑을 수 있게 초점을 받는다.
+    <ol className="status-timeline" aria-label="처리 이력" tabIndex={0}>
       {steps.map((step) => {
         const state = step.isFailed ? 'failed' : step.isCurrent ? 'current' : 'complete'
         return (

@@ -19,7 +19,12 @@ export function RiskLevelIndicator({ level, score }: RiskLevelIndicatorProps) {
     <div className="risk-indicator" aria-label={`현재 위험도 ${getRiskLabel(level, score)}${hasScore ? `, 위험 점수 ${score}점` : ''}`}>
       <div className="risk-indicator__score">
         <span>현재 위험 점수</span>
-        <strong>{hasScore ? `${score}점` : '-'}</strong>
+        {/* 점수도 아래 척도와 같은 등급 색을 쓴다. 막대는 markerColor(밝은 색)지만
+            흰 배경 위 글자에는 대비가 모자라는 등급이 있어(보통=노랑) 같은 계열의
+            글자용 색인 textColor 를 쓴다. 등급을 모르면 CSS 기본값(파랑)이 남는다. */}
+        <strong style={currentConfig ? { color: currentConfig.textColor } : undefined}>
+          {hasScore ? `${score}점` : '-'}
+        </strong>
       </div>
 
       <ol className="risk-indicator__levels">

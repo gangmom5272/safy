@@ -72,18 +72,8 @@ function ReportHandlingIcon() {
 function ReportHistoryIcon() {
   return (
     <svg className="report-card__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
-      <path d="M3.5 4.5V10H9" />
-      <path d="M12 7.5V12l3 1.8" />
-    </svg>
-  )
-}
-
-function ZoomIcon() {
-  return (
-    <svg className="report-image-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <circle cx="11" cy="11" r="6.5" />
-      <path d="M11 8.5v5M8.5 11h5M20 20l-4.4-4.4" />
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.2V12l3.4 2" />
     </svg>
   )
 }
@@ -126,7 +116,7 @@ export function ReportDetailPage() {
   const [myAssignmentStatus, setMyAssignmentStatus] = useState<AssignmentStatus | null>(null)
   const [assignedOperatorName, setAssignedOperatorName] = useState<string | null>(null)
   const [handlingHistory, setHandlingHistory] = useState<ReportHandlingHistory | null>(null)
-  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null)
+  const [isImageOpen, setIsImageOpen] = useState(false)
   const [imageIndex, setImageIndex] = useState(0)
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(isValidReportId)
@@ -210,54 +200,60 @@ export function ReportDetailPage() {
         <DetailCard className="report-detail-layout__image" title="제보 이미지" icon={<ReportImageIcon />}>
           {currentImage ? (
             <>
-              {/* 한 장씩 원래 크기로 보여주고 좌우 버튼과 아래 썸네일로 넘긴다. */}
+              {/* 한 장씩 원래 크기로 보여주고 좌우 버튼과 아래 썸네일로 넘긴다.
+                  이미지를 누르면 확대되고, 확대 상태에서도 좌우로 넘길 수 있다. */}
               <div className="report-image-frame">
-                <img className="report-image" src={currentImage.url} alt={currentImageAlt} />
-                <button
-                  type="button"
-                  className="report-image-action report-image-action--zoom"
-                  aria-label={`${currentImageAlt} 크게 보기`}
-                  onClick={() => setLightboxImage({ src: currentImage.url, alt: currentImageAlt })}
-                >
-                  <ZoomIcon />
-                </button>
+                {/* 좌우 버튼의 기준. 썸네일 줄을 뺀 이미지 영역이라 버튼이 이미지
+                    한가운데 높이에 놓인다. */}
+                <div className="report-image-stage">
+                  <button
+                    type="button"
+                    className="report-image-open"
+                    aria-label={`${currentImageAlt} 크게 보기`}
+                    onClick={() => setIsImageOpen(true)}
+                  >
+                    <img className="report-image" src={currentImage.url} alt={currentImageAlt} />
+                  </button>
+                  {previewImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        className="report-image-action report-image-action--prev"
+                        aria-label="이전 이미지 보기"
+                        onClick={() => moveImage(-1)}
+                      >
+                        <ChevronIcon direction="prev" />
+                      </button>
+                      <button
+                        type="button"
+                        className="report-image-action report-image-action--next"
+                        aria-label="다음 이미지 보기"
+                        onClick={() => moveImage(1)}
+                      >
+                        <ChevronIcon direction="next" />
+                      </button>
+                    </>
+                  )}
+                </div>
+                {/* 썸네일도 회색 프레임 안에 둔다. 카드 흰 배경에 두면 이미지 영역과
+                    분리돼 보인다. */}
                 {previewImages.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      className="report-image-action report-image-action--prev"
-                      aria-label="이전 이미지 보기"
-                      onClick={() => moveImage(-1)}
-                    >
-                      <ChevronIcon direction="prev" />
-                    </button>
-                    <button
-                      type="button"
-                      className="report-image-action report-image-action--next"
-                      aria-label="다음 이미지 보기"
-                      onClick={() => moveImage(1)}
-                    >
-                      <ChevronIcon direction="next" />
-                    </button>
-                  </>
+                  <div className="report-image-thumbs">
+                    {previewImages.map((image, index) => (
+                      <button
+                        key={image.id}
+                        type="button"
+                        className={index === currentIndex ? 'report-image-thumb is-active' : 'report-image-thumb'}
+                        aria-label={`${index + 1}번째 이미지 보기`}
+                        aria-current={index === currentIndex ? 'true' : undefined}
+                        onClick={() => setImageIndex(index)}
+                      >
+                        <img src={image.url} alt="" />
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
-              {previewImages.length > 1 && (
-                <div className="report-image-thumbs">
-                  {previewImages.map((image, index) => (
-                    <button
-                      key={image.id}
-                      type="button"
-                      className={index === currentIndex ? 'report-image-thumb is-active' : 'report-image-thumb'}
-                      aria-label={`${index + 1}번째 이미지 보기`}
-                      aria-current={index === currentIndex ? 'true' : undefined}
-                      onClick={() => setImageIndex(index)}
-                    >
-                      <img src={image.url} alt="" />
-                    </button>
-                  ))}
-                </div>
-              )}
             </>
           ) : (
             <div className="report-image-placeholder" role="img" aria-label={`제보 #${report.id} 이미지 없음`}>
@@ -301,32 +297,47 @@ export function ReportDetailPage() {
           <RiskLevelIndicator level={riskLevel} score={riskScore} />
         </DetailCard>
 
-        <DetailCard className="report-detail-layout__process" title="제보 처리" icon={<ReportHandlingIcon />}>
-          <ReportActionPanel
-            reportId={numericReportId}
-            assignmentStatus={myAssignmentStatus}
-            onActionComplete={() => navigate(ROUTE_PATHS.REPORTS, { replace: true })}
-          />
-        </DetailCard>
+        {/* 오른쪽 열은 격자 행에 묶지 않고 한 덩어리로 쌓는다. 종결된 제보라 처리
+            버튼이 사라져도 아래 '처리 정보'가 그만큼 자동으로 늘어난다. */}
+        <div className="report-detail-layout__side">
+          <DetailCard className="report-detail-side__process" title="제보 처리" icon={<ReportHandlingIcon />}>
+            <ReportActionPanel
+              reportId={numericReportId}
+              assignmentStatus={myAssignmentStatus}
+              onActionComplete={() => navigate(ROUTE_PATHS.REPORTS, { replace: true })}
+            />
+          </DetailCard>
 
-        <DetailCard className="report-detail-layout__handling" title="처리 정보" icon={<ReportHistoryIcon />}>
-          {/* 현재 상태와 처리 결과는 아래 타임라인이 이미 보여주므로 넣지 않는다. */}
-          <dl className="report-info report-info--summary">
-            <div><dt>소속</dt><dd>{report.controlCenterName || '-'}</dd></div>
-            <div><dt>담당자</dt><dd>{assignedOperatorName || '-'}</dd></div>
-          </dl>
+          <DetailCard className="report-detail-side__handling" title="처리 정보" icon={<ReportHistoryIcon />}>
+            {/* 현재 상태와 처리 결과는 아래 타임라인이 이미 보여주므로 넣지 않는다. */}
+            <dl className="report-info report-info--summary">
+              <div><dt>소속</dt><dd>{report.controlCenterName || '-'}</dd></div>
+              <div><dt>담당자</dt><dd>{assignedOperatorName || '-'}</dd></div>
+            </dl>
 
-          {progressSteps.length > 0
-            ? <ReportProgressTimeline steps={progressSteps} />
-            : <p className="empty-state" role="status">처리 이력을 불러오지 못했습니다.</p>}
-        </DetailCard>
+            {/* 이력은 이 칸 안에서만 스크롤한다. 칸 자체가 카드 높이를 밀지 않아야
+                가운데 열(위험도까지)의 높이가 그대로 유지된다. */}
+            <div className="report-history-scroll">
+              {progressSteps.length > 0
+                ? <ReportProgressTimeline steps={progressSteps} />
+                : <p className="empty-state" role="status">처리 이력을 불러오지 못했습니다.</p>}
+            </div>
+          </DetailCard>
+        </div>
       </div>
 
-      {lightboxImage && (
+      {/* 확대 보기도 카드와 같은 currentIndex 를 쓴다. 확대 상태에서 넘긴 장이
+          닫은 뒤 카드에도 그대로 남는다. */}
+      {isImageOpen && currentImage && (
         <ImageLightbox
-          src={lightboxImage.src}
-          alt={lightboxImage.alt}
-          onClose={() => setLightboxImage(null)}
+          src={currentImage.url}
+          alt={currentImageAlt}
+          onClose={() => setIsImageOpen(false)}
+          onPrev={previewImages.length > 1 ? () => moveImage(-1) : undefined}
+          onNext={previewImages.length > 1 ? () => moveImage(1) : undefined}
+          counter={previewImages.length > 1
+            ? `${currentIndex + 1} / ${previewImages.length}`
+            : undefined}
         />
       )}
     </section>
