@@ -11,7 +11,8 @@ import {
 import { ReportMap } from '../../components/admin/ReportMap'
 import { hasCoordinates } from '../../utils/reportGeo'
 import { createReportDetailPath } from '../../router/paths'
-import { formatAdminDate } from '../../utils/adminDate'
+import { formatAdminDate, formatLastUpdated } from '../../utils/adminDate'
+import { getSubcategoryLabel } from '../../utils/reportLabels'
 import { getDashboardReports } from '../reports/reportApi'
 import type { KakaoCustomOverlay, KakaoMap, KakaoMaps, KakaoPolygon } from '../../services/kakaoMap'
 import {
@@ -30,6 +31,12 @@ import {
   type CulturalEvent,
   type PlaceCongestion,
 } from './publicDataApi'
+import {
+  formatRemainingPublic,
+  getPublicFeedReports,
+  remainingPublicMs,
+  type PublicFeedReport,
+} from './publicFeedApi'
 import { GridTrendChart } from './GridTrendChart'
 import { isNewReport } from '../../utils/adminVerification'
 
@@ -37,6 +44,11 @@ const allValue = 'all'
 const unsetValue = ''
 // 지도 이동·줌마다 바로 조회하면 드래그 중 요청이 쏟아진다. 계약 권고값(200~300ms).
 const VIEWPORT_DEBOUNCE_MS = 250
+// 시민 공개 집합은 제보 시각 기준 롤링 30분 창이라 관리자가 아무것도 하지 않아도 바뀐다.
+// 다시 받지 않으면 이미 시민 지도에서 사라진 제보가 '공개 중'으로 남는다.
+const PUBLIC_REFRESH_MS = 30_000
+// '갱신 N초 전' 라벨용. formatLastUpdated 의 최소 단위(10초)에 맞춘다.
+const NOW_TICK_MS = 10_000
 
 interface MapFilters {
   region: string
@@ -71,6 +83,7 @@ export function RiskMapPage() {
   const [showReportLayer, setShowReportLayer] = useState(true)
   const [showCongestionLayer, setShowCongestionLayer] = useState(true)
   const [showEventLayer, setShowEventLayer] = useState(false)
+  const [showPublicLayer, setShowPublicLayer] = useState(false)
   const [reports, setReports] = useState<AdminReport[]>([])
 
   const [gridRisks, setGridRisks] = useState<GridRisk[]>([])
@@ -84,13 +97,21 @@ export function RiskMapPage() {
   const [selectedPlace, setSelectedPlace] = useState<PlaceCongestion | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<CulturalEvent | null>(null)
 
+  const [publicReports, setPublicReports] = useState<PublicFeedReport[]>([])
+  const [publicFetchedAt, setPublicFetchedAt] = useState<number | null>(null)
+  const [publicError, setPublicError] = useState('')
+  const [selectedPublic, setSelectedPublic] = useState<PublicFeedReport | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
   const [isMapReady, setIsMapReady] = useState(false)
   const mapApiRef = useRef<{ map: KakaoMap; maps: KakaoMaps } | null>(null)
   const polygonsRef = useRef<KakaoPolygon[]>([])
   const congestionOverlaysRef = useRef<KakaoCustomOverlay[]>([])
   const eventOverlaysRef = useRef<KakaoCustomOverlay[]>([])
+  const publicOverlaysRef = useRef<KakaoCustomOverlay[]>([])
   const debounceTimerRef = useRef<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const publicAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     let active = true
@@ -164,19 +185,72 @@ export function RiskMapPage() {
   useEffect(() => () => {
     if (debounceTimerRef.current !== null) window.clearTimeout(debounceTimerRef.current)
     abortRef.current?.abort()
+    publicAbortRef.current?.abort()
     polygonsRef.current.forEach((polygon) => polygon.setMap(null))
     polygonsRef.current = []
     congestionOverlaysRef.current.forEach((overlay) => overlay.setMap(null))
     congestionOverlaysRef.current = []
     eventOverlaysRef.current.forEach((overlay) => overlay.setMap(null))
     eventOverlaysRef.current = []
+    publicOverlaysRef.current.forEach((overlay) => overlay.setMap(null))
+    publicOverlaysRef.current = []
     mapApiRef.current = null
   }, [])
+
+  const loadPublicReports = useCallback(async () => {
+    publicAbortRef.current?.abort()
+    const controller = new AbortController()
+    publicAbortRef.current = controller
+
+    try {
+      const loaded = await getPublicFeedReports(controller.signal)
+      if (controller.signal.aborted) return
+      setPublicReports(loaded)
+      // 조회 성공 시각을 함께 남긴다. '갱신 N초 전'이 없으면 화면이 언제 참이었는지 알 수 없다.
+      setPublicFetchedAt(Date.now())
+      setNow(Date.now())
+      setPublicError('')
+    } catch (error) {
+      if (controller.signal.aborted) return
+      setPublicError(error instanceof Error ? error.message : '시민 공개 제보를 불러오지 못했습니다.')
+    }
+  }, [])
+
+  const togglePublicLayer = () => {
+    const next = !showPublicLayer
+    setShowPublicLayer(next)
+    setSelectedPublic(null)
+    // 에러는 이 레이어에 속한 것이다. 껐는데 남아 있으면 무엇이 실패했는지 알 수 없고,
+    // 켤 때 남아 있으면 새 조회가 끝나기 전에 지난 실패를 보여준다.
+    setPublicError('')
+    // 지난 목록을 남기면 다시 켤 때 옛 제보가 '공개 중'으로 뜬다. 새 조회가 실패하면
+    // 30분 창을 한참 넘긴 제보가 계속 남는다. 없는 것은 없다고 보여주는 게 맞다.
+    setPublicReports([])
+    setPublicFetchedAt(null)
+    // 켜는 순간 바로 받는다. 주기 갱신에만 맡기면 첫 30초 동안 빈 지도가 된다.
+    if (next) void loadPublicReports()
+  }
+
+  // 레이어를 켜 둔 동안만 주기 갱신한다. 껐을 때도 돌면 보지 않는 화면 때문에 요청이 나간다.
+  // 첫 조회는 토글 시점에 이미 끝나 있다.
+  useEffect(() => {
+    if (!showPublicLayer) return
+
+    const refreshTimer = window.setInterval(() => { void loadPublicReports() }, PUBLIC_REFRESH_MS)
+    const tickTimer = window.setInterval(() => setNow(Date.now()), NOW_TICK_MS)
+
+    return () => {
+      window.clearInterval(refreshTimer)
+      window.clearInterval(tickTimer)
+      publicAbortRef.current?.abort()
+    }
+  }, [loadPublicReports, showPublicLayer])
 
   const openTrend = useCallback((cell: GridRisk) => {
     setSelectedCell(cell)
     setSelectedPlace(null)
     setSelectedEvent(null)
+    setSelectedPublic(null)
     setTrend(null)
     setTrendError('')
     getGridRiskTrend(cell.gridCode)
@@ -190,6 +264,7 @@ export function RiskMapPage() {
     setSelectedCell(null)
     setSelectedPlace(null)
     setSelectedEvent(null)
+    setSelectedPublic(null)
     setTrend(null)
     setTrendError('')
   }, [])
@@ -259,6 +334,7 @@ export function RiskMapPage() {
         setSelectedPlace(place)
         setSelectedCell(null)
         setSelectedEvent(null)
+        setSelectedPublic(null)
       })
 
       const overlay = new maps.CustomOverlay({
@@ -297,6 +373,7 @@ export function RiskMapPage() {
         setSelectedEvent(event)
         setSelectedCell(null)
         setSelectedPlace(null)
+        setSelectedPublic(null)
       })
 
       const overlay = new maps.CustomOverlay({
@@ -311,6 +388,48 @@ export function RiskMapPage() {
     })
   }, [events, isMapReady, showEventLayer])
 
+  // 시민 공개 레이어: 시민 앱이 지금 보고 있는 공개 제보. 담당 중 제보 핀(보라·파랑)과는
+  // 배타적인 집합이므로 같은 제보가 두 번 찍히지 않는다. 위험 등급이 아니라 공개 상태를
+  // 나타내므로 물방울 핀이 아닌 별도 라벨 마커로 구분한다.
+  useEffect(() => {
+    const mapApi = mapApiRef.current
+    if (!isMapReady || !mapApi) return
+
+    publicOverlaysRef.current.forEach((overlay) => overlay.setMap(null))
+    publicOverlaysRef.current = []
+
+    if (!showPublicLayer) return
+
+    const { map, maps } = mapApi
+    publicReports.forEach((report) => {
+      if (report.latitude === null || report.longitude === null) return
+
+      const label = getSubcategoryLabel(report.subcategory) ?? '기타'
+      const marker = document.createElement('button')
+      marker.type = 'button'
+      marker.className = 'public-feed-marker'
+      marker.innerHTML = `<i aria-hidden="true"></i><span></span>`
+      marker.querySelector('span')!.textContent = label
+      marker.setAttribute('aria-label', `시민 공개 중 ${label} 상세 보기`)
+      marker.addEventListener('click', () => {
+        setSelectedPublic(report)
+        setSelectedCell(null)
+        setSelectedPlace(null)
+        setSelectedEvent(null)
+      })
+
+      const overlay = new maps.CustomOverlay({
+        position: new maps.LatLng(report.latitude, report.longitude),
+        content: marker,
+        map,
+        yAnchor: 1,
+        zIndex: 6,
+        clickable: true,
+      })
+      publicOverlaysRef.current.push(overlay)
+    })
+  }, [isMapReady, publicReports, showPublicLayer])
+
   const resetFilters = () => {
     setDraftFilters(initialMapFilters)
     setAppliedFilters(initialMapFilters)
@@ -318,6 +437,8 @@ export function RiskMapPage() {
     setShowReportLayer(true)
     setShowCongestionLayer(true)
     setShowEventLayer(false)
+    setShowPublicLayer(false)
+    setSelectedPublic(null)
   }
 
   const filteredReports = reports.filter((report) => (
@@ -420,6 +541,14 @@ export function RiskMapPage() {
             />
             행사 ({events.length})
           </label>
+          <label title="서버가 공개 중이라고 판단하는 제보 전체입니다. 시민 앱 지도는 이 중 최근 20건만 표시합니다.">
+            <input
+              type="checkbox"
+              checked={showPublicLayer}
+              onChange={togglePublicLayer}
+            />
+            시민 공개 ({publicReports.length})
+          </label>
         </fieldset>
       </form>
 
@@ -441,6 +570,17 @@ export function RiskMapPage() {
               ))}
             </div>
           </div>
+          {showPublicLayer && (
+            <p className="public-feed-status">
+              <span>
+                시민 공개 {publicReports.length}건 · {formatLastUpdated(publicFetchedAt, now)}
+              </span>
+              <button type="button" className="text-button" onClick={() => { void loadPublicReports() }}>
+                다시 불러오기
+              </button>
+            </p>
+          )}
+          {publicError && <p className="empty-state" role="alert">{publicError}</p>}
           {gridError && <p className="empty-state" role="alert">{gridError}</p>}
         </article>
 
@@ -529,6 +669,33 @@ export function RiskMapPage() {
                 <p role="status">추이를 불러오는 중입니다...</p>
               ) : (
                 <GridTrendChart points={trend} />
+              )}
+            </article>
+          ) : selectedPublic ? (
+            <article className="admin-card grid-trend-card">
+              <div className="grid-trend-card__heading">
+                <div>
+                  <span>시민 공개 중 · 제보 #{selectedPublic.reportId}</span>
+                  <strong>{getSubcategoryLabel(selectedPublic.subcategory) ?? '기타'}</strong>
+                </div>
+                <button type="button" className="text-button" onClick={clearSelection}>닫기</button>
+              </div>
+              <dl className="grid-trend-card__meta">
+                <div>
+                  <dt>위치</dt>
+                  <dd className="break-text">
+                    {selectedPublic.address ?? selectedPublic.areaName ?? '정보 없음'}
+                  </dd>
+                </div>
+                <div><dt>제보 시각</dt><dd>{formatAdminDate(selectedPublic.reportedAt)}</dd></div>
+                <div>
+                  <dt>공개 종료까지</dt>
+                  <dd>{formatRemainingPublic(remainingPublicMs(selectedPublic.reportedAt, now))}</dd>
+                </div>
+              </dl>
+              {/* 시민이 실제로 읽는 설명이다. 이 레이어의 목적이라 그대로 보여준다. */}
+              {selectedPublic.description && (
+                <p className="congestion-message break-text">{selectedPublic.description}</p>
               )}
             </article>
           ) : (

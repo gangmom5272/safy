@@ -3627,9 +3627,10 @@ textarea.admin-field__control {
   text-align: center;
 }
 
-/* 위험도 지도: 혼잡도(서울시 121장소)·행사 마커 */
+/* 위험도 지도: 혼잡도(서울시 121장소)·행사·시민 공개 마커 */
 .congestion-place-marker,
-.event-place-marker {
+.event-place-marker,
+.public-feed-marker {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -3647,7 +3648,8 @@ textarea.admin-field__control {
 }
 
 .congestion-place-marker span,
-.event-place-marker span {
+.event-place-marker span,
+.public-feed-marker span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -3672,6 +3674,35 @@ textarea.admin-field__control {
   height: 9px;
   border-radius: 2px;
   background: #9333ea;
+}
+
+/*
+ * 시민 공개 마커. 위험 등급(빨강·주황·노랑·초록·파랑)과 담당 핀(보라·파랑)에 쓰이지 않은
+ * teal 계열을 쓰고, 30분 뒤 사라지는 임시 상태라는 뜻으로 점선 테두리를 준다.
+ */
+.public-feed-marker {
+  border-color: #5eead4;
+  border-style: dashed;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.public-feed-marker i {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #0d9488;
+  border-radius: 50%;
+}
+
+.public-feed-status {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .congestion-level-badge {

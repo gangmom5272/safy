@@ -331,6 +331,19 @@
   padding: 16px;
 }
 
+/* 색 칩은 지도 위 오버레이(.map-legend-scale)에 있고, 여기는 그 설명 문장만 둔다. */
+.map-legend-notes {
+  display: grid;
+  gap: 4px;
+}
+
+.map-legend-notes p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .situation-toolbar {
   display: flex;
   align-items: center;

@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router'
 import { AreaStatusSummary } from './AreaStatusSummary'
 import { LocationSearchBar } from './LocationSearchBar'
+import { MapLegendNotes } from './MapLegend'
 import { ReportFilterSheet } from './ReportFilterSheet'
 import { SelectedAreaHeader } from './SelectedAreaHeader'
 import { SituationHeader } from './SituationHeader'
@@ -106,6 +107,7 @@ export function SituationsPage() {
           }
           onSelectReport={openReportDetail}
         />
+        <MapLegendNotes />
       </section>
 
       {selectedArea ? (
