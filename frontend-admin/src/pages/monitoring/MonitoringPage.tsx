@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
-import {
-  connectionStatusLabels,
-  reportTypeLabels,
-} from '../../mocks/adminMockData'
+import { reportTypeLabels } from '../../mocks/adminMockData'
 import type { AdminReport, RiskLevel, WebRTCConnection, WebRTCConnectionStatus } from '../../types/admin'
 import { AdminSection } from '../../components/admin/AdminSection'
 import { RiskBadge } from '../../components/admin/RiskBadge'
-import { getRiskConfig, getRiskLabel, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
+import { getRiskConfig, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
 import { ROUTE_PATHS, createMonitoringDetailPath, createReportDetailPath } from '../../router/paths'
 import { useAuth } from '../../auth/useAuth'
 import { getReportMessages, sendAdminLiveMessage, type ReportMessage } from '../../services/adminLiveMessage'
@@ -576,27 +573,42 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
         </article>
 
         <div className="monitoring-detail-sidebar">
-          <aside className="admin-card monitor-detail">
-            <h2>제보 상세 정보</h2>
+          {/* 제목을 카드 밖으로 뺀다. 아래 '제보 처리'와 같은 AdminSection 골격이라
+              두 블록의 제목 높이와 카드 시작 위치가 맞는다. */}
+          <AdminSection title="제보 상세 정보" cardClassName="monitor-detail">
             {detailError && <p className="login-error" role="alert">{detailError}</p>}
-            <dl>
-              <div><dt>제보 ID</dt><dd>#{connection.reportId}</dd></div>
-              <div><dt>카테고리</dt><dd>{reportTypeLabels[detailReport.type]}</dd></div>
-              <div><dt>세부 유형</dt><dd>{getSubcategoryLabel(reportDetail?.subcategory) ?? '정보 없음'}</dd></div>
-              <div><dt>제보 내용</dt><dd className="break-text">{reportDetail?.description ?? detailReport.aiSummary}</dd></div>
-              <div><dt>위치</dt><dd>{detailReport.location}</dd></div>
-              <div><dt>제보 시간</dt><dd>{formatAdminDate(detailReport.reportedAt)}</dd></div>
-              <div><dt>관제센터</dt><dd>{detailReport.controlCenterName ?? '정보 없음'}</dd></div>
-              <div><dt>연결 상태</dt><dd>{connectionStatusLabels[connection.connectionStatus]}</dd></div>
-              <div><dt>위험도</dt><dd>{getRiskLabel(analysis?.riskLevel ?? connection.riskLevel, analysis?.riskScore ?? connection.riskScore)}</dd></div>
+            <dl className="monitor-detail__list">
+              <div className="monitor-detail__row"><dt>제보 ID</dt><dd>#{connection.reportId}</dd></div>
+              {/* 카테고리와 세부 유형은 한 값으로 묶고, 짧은 위험도와 한 줄을 나눠 쓴다. */}
+              <div>
+                <dt>카테고리</dt>
+                <dd>{[reportTypeLabels[detailReport.type], getSubcategoryLabel(reportDetail?.subcategory)]
+                  .filter(Boolean)
+                  .join(' · ')}</dd>
+              </div>
+              <div>
+                <dt>위험도</dt>
+                <dd>
+                  <RiskBadge
+                    value={analysis?.riskLevel ?? connection.riskLevel}
+                    score={analysis?.riskScore ?? connection.riskScore}
+                  />
+                </dd>
+              </div>
+              <div className="monitor-detail__row"><dt>제보 시간</dt><dd>{formatAdminDate(detailReport.reportedAt)}</dd></div>
+              <div className="monitor-detail__row"><dt>위치</dt><dd>{detailReport.location}</dd></div>
               {/* 'AI 분석 결과' 항목을 뺐다. 이 화면은 라이브(WebRTC) 제보 전용이고,
                   값으로 쓰던 connection.aiAnalysisResult 는 toLiveConnection 에서
-                  report.aiSummary(제보자가 쓴 제보 내용)를 그대로 넣은 것이라 위 '제보 내용'
-                  과 같은 문장이 두 번 보였다. 위험도는 바로 위 항목이 이미 보여준다.
+                  report.aiSummary(제보자가 쓴 제보 내용)를 그대로 넣은 것이라 아래 '제보 내용'
+                  과 같은 문장이 두 번 보였다. 위험도는 위 항목이 이미 보여준다.
                   WebRTCConnection.aiAnalysisResult 필드와 API 는 그대로 두고 표시만 뺀다.
                   사진 제보 상세(ReportDetailPage)의 분석 표시는 건드리지 않았다. */}
+              <div className="monitor-detail__row monitor-detail__description">
+                <dt>제보 내용</dt>
+                <dd className="break-text">{reportDetail?.description ?? detailReport.aiSummary}</dd>
+              </div>
             </dl>
-          </aside>
+          </AdminSection>
 
           <AdminSection title="제보 처리">
             <ReportActionPanel

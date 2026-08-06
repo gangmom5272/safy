@@ -531,15 +531,30 @@ button:disabled {
   }
 }
 
-.monitor-detail dl {
+/* 카테고리와 위험도는 짧아서 한 줄을 나눠 쓰고, 나머지는 한 줄을 다 쓴다.
+   카드가 옆 영상 높이에 맞춰 늘어나면 행 사이가 고르게 벌어진다. */
+.monitor-detail__list {
   display: grid;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: space-between;
+  gap: 12px 16px;
   margin: 0;
 }
 
-.monitor-detail dl div {
+.monitor-detail__list > div {
+  min-width: 0;
   display: grid;
-  gap: 2px;
+  align-content: start;
+  gap: 3px;
+}
+
+.monitor-detail__row {
+  grid-column: 1 / -1;
+}
+
+/* 제보 내용은 길어질 수 있어 남는 높이를 받아 채운다. */
+.monitor-detail__description {
+  align-content: start;
 }
 
 .monitor-detail dt {
@@ -550,6 +565,7 @@ button:disabled {
 .monitor-detail dd {
   margin: 0;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .admin-workspace {
@@ -2451,27 +2467,28 @@ textarea.admin-field__control {
   font-weight: 800;
 }
 
-.monitor-detail {
-  align-self: start;
-}
-
 .monitor-detail dt {
   color: var(--text-muted);
 }
 
+/* 영상 열과 사이드바 열의 위아래 길이를 맞춘다. 두 열 모두 stretch 라 행 높이(둘 중
+   큰 쪽)를 그대로 채우고, 각 열 안에서 늘어날 자리는 아래 1fr 이 정한다. */
 .monitoring-detail-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(340px, 0.8fr);
+  align-items: stretch;
   gap: 14px;
 }
 
+/* 첫 행(영상 프레임)이 남는 높이를 갖고, 입력창과 메시지 이력은 내용 높이를 지킨다. */
 .monitoring-featured-video {
-  align-self: start;
+  grid-template-rows: 1fr;
+  grid-auto-rows: auto;
 }
 
 .monitoring-detail-sidebar {
   display: grid;
-  align-content: start;
+  grid-template-rows: 1fr auto;
   gap: 14px;
 }
 
