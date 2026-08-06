@@ -84,7 +84,9 @@ export function AdminHeader({ reports, onCheckReport }: AdminHeaderProps) {
         {isOperator && (
           <button
             type="button"
-            className="emergency-alert-button"
+            className={dangerReports.length > 0
+              ? 'emergency-alert-button'
+              : 'emergency-alert-button emergency-alert-button--idle'}
             onClick={() => setIsEmergencyOpen(true)}
             aria-label={`긴급 위험 알림 ${dangerReports.length}건 확인`}
           >
@@ -98,11 +100,7 @@ export function AdminHeader({ reports, onCheckReport }: AdminHeaderProps) {
         open={isEmergencyOpen}
         title={`긴급 위험 알림 ${dangerReports.length}건`}
         onClose={() => setIsEmergencyOpen(false)}
-        footer={
-          <button type="button" className="primary-button" onClick={() => setIsEmergencyOpen(false)}>
-            닫기
-          </button>
-        }
+        closeLabel="긴급 위험 알림 닫기"
       >
         <p className="emergency-alert-message">
           AI가 위험 또는 매우 위험으로 판정한 미확인 제보입니다.
