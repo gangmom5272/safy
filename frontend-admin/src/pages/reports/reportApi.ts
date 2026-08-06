@@ -13,7 +13,7 @@ import { resolveRiskLevel } from '../../utils/adminRisk'
 import { verificationFromAssignmentStatus } from '../../utils/adminVerification'
 
 type BackendReportStatus =
-  | 'RECEIVED' | 'ASSIGNED' | 'ACCEPTED' | 'IN_PROGRESS' | 'CLOSED' | 'REJECTED' | 'CANCELLED'
+  | 'RECEIVED' | 'ASSIGNED' | 'ACCEPTED' | 'IN_PROGRESS' | 'CONFIRMED' | 'CLOSED' | 'REJECTED' | 'CANCELLED'
 
 type BackendCategory =
   | 'CROWD_CONGESTION' | 'ACCIDENT_RISK' | 'FLOOD_WEATHER' | 'FACILITY_ROAD' | 'OTHER'
@@ -96,6 +96,7 @@ function toUiStatus(status: BackendReportStatus): ReportStatus {
   if (status === 'RECEIVED') return 'received'
   if (status === 'ASSIGNED' || status === 'ACCEPTED') return 'checking'
   if (status === 'IN_PROGRESS') return 'in_progress'
+  if (status === 'CONFIRMED') return 'confirmed'
   if (status === 'REJECTED') return 'rejected'
   if (status === 'CANCELLED') return 'cancelled'
   return 'completed'
@@ -176,7 +177,7 @@ export interface OperatorReportDetail {
  * 서로 완전히 같아 상태만으로는 구분되지 않으므로 반드시 이 값으로 판별한다.
  */
 export type ReportHandlingEventType =
-  | 'AUTO_ASSIGNED' | 'CLAIMED' | 'VIEWED' | 'COMPLETED' | 'REJECTED'
+  | 'AUTO_ASSIGNED' | 'CLAIMED' | 'VIEWED' | 'CONFIRMED' | 'COMPLETED' | 'REJECTED'
   | 'REASSIGNED' | 'TRANSFERRED' | 'AUTO_TRANSFERRED'
   | 'ASSIGNMENT_TIMEOUT' | 'OPERATOR_OFFLINE' | 'OPERATOR_AWAY' | 'REPORTER_CANCELLED'
 
@@ -375,6 +376,14 @@ export function markReportChecked(reportId: number): Promise<void> {
   return Promise.resolve()
 }
 
+/** 제보를 진짜 상황으로 승인해 시민 지도(마커·격자)에 반영한다. 배정·라이브는 유지된다. */
+export async function confirmReport(reportId: number) {
+  if (USE_MOCK_API) return mockResponse(undefined)
+
+  await apiClient.patch(`/operator/reports/${reportId}/confirm`)
+}
+
+/** 대응을 마치고 상황을 종료한다. 지도 반영(공개)은 confirmReport 의 몫이다. */
 export async function completeReport(reportId: number) {
   if (USE_MOCK_API) return mockResponse(undefined)
 

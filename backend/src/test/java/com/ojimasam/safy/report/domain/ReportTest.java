@@ -113,35 +113,99 @@ class ReportTest {
 		assertThat(report.isCancellable()).isFalse();
 	}
 
+	/**
+	 * 승인된 제보가 재배정으로 RECEIVED 로 돌아와도 시민이 취소할 수 없어야 한다.
+	 * 상태만 보면 미확인 제보와 같아 보이지만 이미 지도에 떠 있는 제보다.
+	 */
 	@Test
-	void completingWorkPublishesToCitizenFeed() {
+	void publishedReportCannotBeCancelledAfterReassignment() {
+		Report report = handledReport();
+		report.confirm(actionAt(report));
+		report.releaseForReassignment();
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.RECEIVED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.PUBLISHED);
+		assertThat(report.isCancellable()).isFalse();
+		assertThatThrownBy(report::cancel).isInstanceOf(IllegalStateException.class);
+	}
+
+	@Test
+	void confirmingPublishesToCitizenFeed() {
 		Report report = handledReport();
 
-		report.completeWork(closedAt(report));
+		report.confirm(actionAt(report));
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.CONFIRMED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.PUBLISHED);
+		assertThat(report.getConfirmedAt()).isEqualTo(actionAt(report));
+		assertThat(report.getClosedAt()).isNull();
+	}
+
+	/** 승인 없이 종료한 제보는 공개되지 않는다 — 공개는 승인의 몫이다. */
+	@Test
+	void completingWorkDoesNotPublish() {
+		Report report = handledReport();
+
+		report.completeWork(actionAt(report));
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.CLOSED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.PENDING);
+		assertThat(report.getConfirmedAt()).isNull();
+	}
+
+	@Test
+	void completingWorkAfterConfirmKeepsPublished() {
+		Report report = handledReport();
+		report.confirm(actionAt(report));
+
+		report.completeWork(actionAt(report).plusSeconds(60));
 
 		assertThat(report.getStatus()).isEqualTo(ReportStatus.CLOSED);
 		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.PUBLISHED);
+		assertThat(report.getConfirmedAt()).isEqualTo(actionAt(report));
+		assertThat(report.getClosedAt()).isEqualTo(actionAt(report).plusSeconds(60));
 	}
 
 	@Test
 	void rejectingWithholdsFromCitizenFeed() {
 		Report report = handledReport();
 
-		report.reject(closedAt(report));
+		report.reject(actionAt(report));
 
 		assertThat(report.getStatus()).isEqualTo(ReportStatus.REJECTED);
 		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.WITHHELD);
 	}
 
-	/** 내려둔 제보를 담당자가 종료해도 다시 공개되지 않고, 종료 자체는 막히지 않는다. */
+	/** 승인이 오판이었으면 반려로 회수하고, withhold 가 지도에서도 내린다. */
 	@Test
-	void completingWorkKeepsWithheldReportHidden() {
+	void rejectingConfirmedReportWithholdsIt() {
+		Report report = handledReport();
+		report.confirm(actionAt(report));
+
+		report.reject(actionAt(report).plusSeconds(60));
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.REJECTED);
+		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.WITHHELD);
+	}
+
+	@Test
+	void cannotConfirmClosedReport() {
+		Report report = handledReport();
+		report.completeWork(actionAt(report));
+
+		assertThatThrownBy(() -> report.confirm(actionAt(report).plusSeconds(60)))
+				.isInstanceOf(IllegalStateException.class);
+	}
+
+	/** 내려둔 제보를 담당자가 승인해도 다시 공개되지 않고, 승인 자체는 막히지 않는다. */
+	@Test
+	void confirmingKeepsWithheldReportHidden() {
 		Report report = handledReport();
 		report.withhold();
 
-		report.completeWork(closedAt(report));
+		report.confirm(actionAt(report));
 
-		assertThat(report.getStatus()).isEqualTo(ReportStatus.CLOSED);
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.CONFIRMED);
 		assertThat(report.getPublicVisibility()).isEqualTo(ReportPublicVisibility.WITHHELD);
 	}
 
@@ -223,8 +287,8 @@ class ReportTest {
 		return report;
 	}
 
-	/** reportedAt 은 생성 시각(now)이라 고정 상수를 쓰면 종료 시각 검증에 걸린다. */
-	private Instant closedAt(Report report) {
+	/** reportedAt 은 생성 시각(now)이라 고정 상수를 쓰면 처리 시각 검증에 걸린다. */
+	private Instant actionAt(Report report) {
 		return report.getReportedAt().plusSeconds(60);
 	}
 }

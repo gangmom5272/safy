@@ -127,6 +127,10 @@ public class Report extends BaseEntity {
 	@Column(name = "reported_at", nullable = false, columnDefinition = "timestamp(6) with time zone")
 	private Instant reportedAt;
 
+	/** 담당자가 진짜 제보로 승인(공개)한 시각. 종결 시각({@code closedAt})과 구분한다. */
+	@Column(name = "confirmed_at", columnDefinition = "timestamp(6) with time zone")
+	private Instant confirmedAt;
+
 	@Column(name = "closed_at", columnDefinition = "timestamp(6) with time zone")
 	private Instant closedAt;
 
@@ -236,8 +240,13 @@ public class Report extends BaseEntity {
 	/**
 	 * 제보자가 취소할 수 있는 상태인지. 담당자가 확인(IN_PROGRESS)하기 전까지만 허용한다.
 	 * 취소 버튼 노출 조건이 프론트에 중복되지 않도록 조회 응답(cancellable)에도 그대로 내려준다.
+	 *
+	 * <p>이미 공개된 제보는 상태와 무관하게 취소할 수 없다. 승인(CONFIRMED)된 제보가
+	 * 재배정·이관·무응답 회수로 RECEIVED 로 되돌아가면 상태만 보고는 미확인 제보와 구분되지
+	 * 않는데, 그때 취소를 허용하면 담당자가 검증해 지도에 띄운 제보가 시민 조작으로 내려간다.
 	 */
 	public boolean isCancellable() {
+		if (publicVisibility == ReportPublicVisibility.PUBLISHED) return false;
 		return status == ReportStatus.RECEIVED || status == ReportStatus.ASSIGNED;
 	}
 
@@ -268,27 +277,43 @@ public class Report extends BaseEntity {
 		this.status = ReportStatus.IN_PROGRESS;
 	}
 
-	public void completeWork(Instant closedAt) {
+	/**
+	 * 담당자가 진짜 제보로 승인해 시민 지도에 반영한다. 종결이 아니다 — 배정·라이브·라우팅은
+	 * 그대로 유지되고, 대응이 끝나면 별도로 {@link #completeWork}를 호출한다.
+	 */
+	public void confirm(Instant confirmedAt) {
 		requireHandling();
-		this.status = ReportStatus.CLOSED;
-		this.closedAt = requireClosedAt(closedAt);
+		this.status = ReportStatus.CONFIRMED;
+		this.confirmedAt = requireAfterReported(confirmedAt);
 		publish();
 	}
 
 	/**
+	 * 담당자가 대응을 마치고 상황을 종료한다. 공개는 승인({@link #confirm})의 몫이라 여기서
+	 * 하지 않는다 — 승인 없이 종료한 제보는 시민 지도에 반영되지 않은 채 종결된다.
+	 */
+	public void completeWork(Instant closedAt) {
+		requireActive();
+		this.status = ReportStatus.CLOSED;
+		this.closedAt = requireAfterReported(closedAt);
+	}
+
+	/**
 	 * 담당자가 무효 제보로 반려. 종결(terminal) 상태이며 CLOSED와 구분한다.
+	 * 승인(CONFIRMED) 후 오판으로 밝혀진 제보도 반려로 회수하며, 이때 withhold 가
+	 * 시민 지도에서도 내린다.
 	 */
 	public void reject(Instant closedAt) {
-		requireHandling();
+		requireActive();
 		this.status = ReportStatus.REJECTED;
-		this.closedAt = requireClosedAt(closedAt);
+		this.closedAt = requireAfterReported(closedAt);
 		withhold();
 	}
 
 	/**
-	 * 담당자가 업무를 종료(채택)하며 시민 피드에 공개한다.
+	 * 시민 피드에 공개한다. 승인(confirm) 경로에서만 호출된다.
 	 * 이미 내려진(WITHHELD) 제보는 다시 올리지 않는다 — 내림이 나중 판단이므로 우선한다.
-	 * 내려진 제보 때문에 업무 종료 자체가 막히면 안 되므로 예외 대신 조용히 반환한다.
+	 * 내려진 제보 때문에 승인 자체가 막히면 안 되므로 예외 대신 조용히 반환한다.
 	 */
 	public void publish() {
 		if (publicVisibility == ReportPublicVisibility.WITHHELD) return;
@@ -315,22 +340,32 @@ public class Report extends BaseEntity {
 	/**
 	 * 담당자가 처리를 놓아 다른 담당자에게 재배정되도록 접수 상태로 되돌린다.
 	 * routingStatus(ROUTED)는 유지되어 미배정 재시도 스케줄러가 다시 배정한다.
+	 * 승인된 제보도 담당자 교대·무응답 회수로 넘어갈 수 있다. 공개 여부는
+	 * publicVisibility 가 따로 들고 있어 재배정으로 지도에서 내려가지 않는다.
 	 */
 	public void releaseForReassignment() {
-		requireHandling();
+		requireActive();
 		this.status = ReportStatus.RECEIVED;
 	}
 
-	private Instant requireClosedAt(Instant closedAt) {
-		if (closedAt == null || closedAt.isBefore(reportedAt)) {
-			throw new IllegalArgumentException("종료 시각이 올바르지 않습니다.");
+	private Instant requireAfterReported(Instant at) {
+		if (at == null || at.isBefore(reportedAt)) {
+			throw new IllegalArgumentException("처리 시각이 올바르지 않습니다.");
 		}
-		return closedAt;
+		return at;
 	}
 
 	private void requireHandling() {
 		if (status != ReportStatus.ASSIGNED && status != ReportStatus.IN_PROGRESS) {
 			throw new IllegalStateException("배정 또는 처리중 상태의 제보만 처리할 수 있습니다.");
+		}
+	}
+
+	/** 종결 전(배정·처리중·승인됨) 상태인지. 종료·반려·재배정은 승인 후에도 가능하다. */
+	private void requireActive() {
+		if (status != ReportStatus.ASSIGNED && status != ReportStatus.IN_PROGRESS
+				&& status != ReportStatus.CONFIRMED) {
+			throw new IllegalStateException("이미 종결된 제보는 처리할 수 없습니다.");
 		}
 	}
 
@@ -449,6 +484,10 @@ public class Report extends BaseEntity {
 
 	public Instant getReportedAt() {
 		return reportedAt;
+	}
+
+	public Instant getConfirmedAt() {
+		return confirmedAt;
 	}
 
 	public Instant getClosedAt() {

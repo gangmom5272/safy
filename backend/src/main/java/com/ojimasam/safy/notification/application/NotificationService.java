@@ -110,7 +110,8 @@ public class NotificationService {
 				case LIVE_DISCONNECTED -> report("라이브 연결이 끊어졌습니다", "제보자의 재연결을 기다리고 있습니다.");
 				case LIVE_RECONNECTED -> report("라이브 연결이 복구되었습니다", "제보자의 실시간 현장 영상이 다시 연결되었습니다.");
 				case LIVE_ENDED -> report("라이브 송출이 종료되었습니다", "제보의 현재 처리 상태를 확인해 주세요.");
-				case REPORT_CLOSED -> report("제보 처리가 완료되었습니다", "등록한 제보의 처리 결과를 확인해 주세요.");
+				case REPORT_CONFIRMED -> report("제보가 반영되었습니다", "등록한 제보가 지도에 표시되어 주변 시민에게 공유됩니다.");
+				case REPORT_CLOSED -> report("상황이 종료되었습니다", "제보하신 상황의 대응이 마무리되었습니다.");
 				case REPORT_REJECTED -> report("제보가 반려되었습니다", "반려 사유와 제보 처리 내용을 확인해 주세요.");
 				case REPORT_CANCELLED -> report("제보가 취소되었습니다", "담당하던 제보가 제보자에 의해 취소되었습니다.");
 				case REPORT_REASSIGNED -> null;

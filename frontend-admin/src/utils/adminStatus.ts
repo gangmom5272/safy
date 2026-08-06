@@ -20,6 +20,7 @@ const reportToneMap: Record<ReportStatus, StatusTone> = {
   received: 'neutral',
   checking: 'primary',
   in_progress: 'warning',
+  confirmed: 'success',
   completed: 'success',
   rejected: 'danger',
   cancelled: 'neutral',

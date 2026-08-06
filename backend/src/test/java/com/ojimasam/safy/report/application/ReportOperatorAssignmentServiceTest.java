@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -105,6 +106,67 @@ class ReportOperatorAssignmentServiceTest {
 		assertThat(report.getStatus()).isEqualTo(ReportStatus.CLOSED);
 		verify(route).close(NOW);
 		verify(fixture.realtimeNotifier).reportClosed(10L, report.getReporterId());
+		verify(fixture.eventPublisher).publishEvent(any(ReportTerminatedEvent.class));
+	}
+
+	/** 승인은 지도 반영일 뿐 종결이 아니다 — 배정·라우팅·라이브가 그대로 유지되어야 한다. */
+	@Test
+	void confirmPublishesReportButKeepsAssignmentActive() {
+		Fixture fixture = new Fixture();
+		Report report = report(10L);
+		ReflectionTestUtils.setField(report, "reportedAt", NOW.minusSeconds(60));
+		ControlCenter center = center(20L);
+		ReportCenterRoute route = route(center);
+		User operator = operator(30L, "담당자");
+		ReportOperatorAssignment assignment = ReportOperatorAssignment.automatic(report, route, operator, NOW);
+		AdminCenterMembership membership = activeMembership(operator, center);
+		report.assign();
+		when(fixture.reportRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(report));
+		when(fixture.assignmentRepository.findByReport_IdAndStatusIn(any(), any()))
+				.thenReturn(Optional.of(assignment));
+		when(fixture.membershipRepository.findByUserIdAndIsPrimaryTrue(30L))
+				.thenReturn(Optional.of(membership));
+		when(fixture.historyRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+		fixture.service.confirm(30L, 10L);
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.CONFIRMED);
+		assertThat(report.getPublicVisibility())
+				.isEqualTo(com.ojimasam.safy.report.domain.type.ReportPublicVisibility.PUBLISHED);
+		assertThat(assignment.getStatus()).isEqualTo(ReportOperatorAssignmentStatus.ASSIGNED);
+		verify(route, never()).close(any());
+		verify(fixture.realtimeNotifier).reportConfirmed(10L, report.getReporterId());
+		// 라이브 세션을 끊는 종결 이벤트는 승인에서 나가면 안 된다.
+		verify(fixture.eventPublisher, never()).publishEvent(any(ReportTerminatedEvent.class));
+	}
+
+	/** 승인된 제보의 대응이 끝나면 종료할 수 있고, 종료해도 공개 상태는 유지된다. */
+	@Test
+	void confirmedReportCanBeCompleted() {
+		Fixture fixture = new Fixture();
+		Report report = report(10L);
+		ReflectionTestUtils.setField(report, "reportedAt", NOW.minusSeconds(60));
+		ControlCenter center = center(20L);
+		ReportCenterRoute route = route(center);
+		User operator = operator(30L, "담당자");
+		ReportOperatorAssignment assignment = ReportOperatorAssignment.automatic(report, route, operator, NOW);
+		AdminCenterMembership membership = activeMembership(operator, center);
+		report.assign();
+		when(fixture.reportRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(report));
+		when(fixture.assignmentRepository.findByReport_IdAndStatusIn(any(), any()))
+				.thenReturn(Optional.of(assignment));
+		when(fixture.membershipRepository.findByUserIdAndIsPrimaryTrue(30L))
+				.thenReturn(Optional.of(membership));
+		when(fixture.historyRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+		fixture.service.confirm(30L, 10L);
+		fixture.service.complete(30L, 10L);
+
+		assertThat(report.getStatus()).isEqualTo(ReportStatus.CLOSED);
+		assertThat(report.getPublicVisibility())
+				.isEqualTo(com.ojimasam.safy.report.domain.type.ReportPublicVisibility.PUBLISHED);
+		assertThat(assignment.getStatus()).isEqualTo(ReportOperatorAssignmentStatus.COMPLETED);
+		verify(route).close(NOW);
 		verify(fixture.eventPublisher).publishEvent(any(ReportTerminatedEvent.class));
 	}
 

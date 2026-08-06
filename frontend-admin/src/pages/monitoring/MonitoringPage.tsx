@@ -17,7 +17,7 @@ import {
   type RecordingStatus,
   type ReportAnalysis,
 } from '../reports/reportApi'
-import { ReportActionPanel } from '../reports/ReportActionPanel'
+import { ReportActionPanel, type OperatorAction } from '../reports/ReportActionPanel'
 import { formatAdminDate } from '../../utils/adminDate'
 import { getSubcategoryLabel } from '../../utils/reportLabels'
 import { LiveViewer } from './LiveViewer'
@@ -264,7 +264,12 @@ export function MonitoringPage() {
     else navigate(createReportDetailPath(report.id))
   }
 
-  const completeLiveAction = () => {
+  const completeLiveAction = (action: OperatorAction) => {
+    // 승인은 종결이 아니다 — 라이브 화면에 남아 계속 모니터링하고 목록만 갱신한다.
+    if (action === 'confirm') {
+      void loadReports()
+      return
+    }
     void loadReports().finally(() => navigate(ROUTE_PATHS.MONITORING, { replace: true }))
   }
 
@@ -474,7 +479,7 @@ interface MonitoringDetailViewProps {
   report: AdminReport
   analysis: ReportAnalysis | null
   onBack: () => void
-  onActionComplete: () => void
+  onActionComplete: (action: OperatorAction) => void
 }
 
 function MonitoringDetailView({ connection, report, analysis, onBack, onActionComplete }: MonitoringDetailViewProps) {
@@ -490,6 +495,9 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
   const [isRecordingOpen, setIsRecordingOpen] = useState(false)
   const [recordingError, setRecordingError] = useState('')
 
+  // 승인 후 상세를 다시 읽어 상태(승인 버튼 숨김)를 맞춘다.
+  const [detailRefreshKey, setDetailRefreshKey] = useState(0)
+
   useEffect(() => {
     let active = true
     void getOperatorReportDetail(connection.reportId)
@@ -500,7 +508,7 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
         if (active) setDetailError(error instanceof Error ? error.message : '제보 상세를 불러오지 못했습니다.')
       })
     return () => { active = false }
-  }, [connection.reportId])
+  }, [connection.reportId, detailRefreshKey])
 
   useEffect(() => {
     let active = true
@@ -687,7 +695,12 @@ function MonitoringDetailView({ connection, report, analysis, onBack, onActionCo
             <ReportActionPanel
               reportId={connection.reportId}
               assignmentStatus={reportDetail?.myAssignmentStatus ?? null}
-              onActionComplete={onActionComplete}
+              isConfirmed={reportDetail?.status === 'CONFIRMED'}
+              onActionComplete={(action) => {
+                // 승인은 라이브 모니터링을 이어가므로 화면에 남고 상세만 갱신한다.
+                if (action === 'confirm') setDetailRefreshKey((key) => key + 1)
+                onActionComplete(action)
+              }}
             />
           </article>
         </div>

@@ -18,6 +18,7 @@ import com.ojimasam.safy.grid.domain.GridCell;
 import com.ojimasam.safy.grid.domain.GridCellRepository;
 import com.ojimasam.safy.report.domain.Report;
 import com.ojimasam.safy.report.domain.ReportRepository;
+import com.ojimasam.safy.report.domain.type.ReportPublicVisibility;
 
 /**
  * 격자 셀별 제보 관측. 격자 위험도 계산의 두 입력 중 하나다.
@@ -49,14 +50,19 @@ public class GridReportReader {
 	/**
 	 * 시간 창 안 제보를 셀별로 묶는다. 제보가 없는 셀은 키가 없다.
 	 *
+	 * <p>담당자가 승인해 공개(PUBLISHED)한 제보만 담는다. 시민 지도 마커와 같은 기준이라
+	 * 마커에 보이는 제보와 격자에 반영되는 제보가 어긋나지 않고, 반려·취소되거나 수동으로
+	 * 내려진 제보는 다음 계산 주기에 격자에서도 빠진다.
+	 *
 	 * <p>위험도가 아직 평가되지 않은 제보도 담는다. {@code finalRisk} 가 null 로 들어가고
 	 * {@code GridRiskAssessor} 가 계산에서 제외한다 — 여기서 버리면 "제보는 있었지만
 	 * 분석하지 못했다"는 사실이 사라진다.
 	 */
 	@Transactional(readOnly = true)
 	public Map<Long, List<GridObservation>> observationsByGridCell(Instant windowStart, Instant windowEnd) {
-		List<Report> reports =
-				reportRepository.findByGridCellCodeIsNotNullAndReportedAtBetween(windowStart, windowEnd);
+		List<Report> reports = reportRepository
+				.findByGridCellCodeIsNotNullAndPublicVisibilityAndReportedAtBetween(
+						ReportPublicVisibility.PUBLISHED, windowStart, windowEnd);
 		if (reports.isEmpty()) {
 			return Map.of();
 		}

@@ -342,7 +342,7 @@ class ReportQueryServiceTest {
 		assertThat(result).extracting(item -> item.toStatus())
 				.containsExactly(ReportStatus.RECEIVED, ReportStatus.IN_PROGRESS, ReportStatus.CLOSED);
 		assertThat(result).extracting(item -> item.reason())
-				.containsExactly("제보가 접수되었습니다.", "제보 내용을 확인하고 있습니다.", "제보 처리가 완료되었습니다.");
+				.containsExactly("제보가 접수되었습니다.", "제보 내용을 확인하고 있습니다.", "상황 대응이 종료되었습니다.");
 	}
 
 	@Test

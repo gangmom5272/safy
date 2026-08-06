@@ -33,7 +33,9 @@ public class ReportFeedQueryService {
 	public static final List<ReportStatus> VISIBLE_STATUSES = Arrays.asList(
 			ReportStatus.RECEIVED,
 			ReportStatus.ASSIGNED,
-			ReportStatus.IN_PROGRESS
+			ReportStatus.IN_PROGRESS,
+			// 승인은 종결이 아니라 지도 반영이다. 대응은 계속 진행 중이므로 목록에 남는다.
+			ReportStatus.CONFIRMED
 	);
 
 	private static final Instant MAX_CURSOR = Instant.parse("9999-12-31T23:59:59.999999Z");

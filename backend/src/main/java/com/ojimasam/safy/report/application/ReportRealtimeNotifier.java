@@ -67,6 +67,11 @@ public class ReportRealtimeNotifier {
 		eventService.record(reporterId, RealtimeEventType.LIVE_ENDED, reportId, null, null);
 	}
 
+	/** 담당자가 제보를 승인(CONFIRMED)해 시민 지도에 반영 → 제보자에게 알림. */
+	public void reportConfirmed(Long reportId, Long reporterId) {
+		eventService.record(reporterId, RealtimeEventType.REPORT_CONFIRMED, reportId, null, null);
+	}
+
 	/** 담당자가 제보를 종료(CLOSED) → 제보자에게 알림. */
 	public void reportClosed(Long reportId, Long reporterId) {
 		eventService.record(reporterId, RealtimeEventType.REPORT_CLOSED, reportId, null, null);

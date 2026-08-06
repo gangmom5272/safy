@@ -10,6 +10,8 @@ public enum RealtimeEventType {
 	LIVE_DISCONNECTED,
 	LIVE_RECONNECTED,
 	LIVE_ENDED,
+	/** 담당자가 진짜 제보로 승인해 시민 지도에 반영됨. 대응은 계속 진행 중이다. */
+	REPORT_CONFIRMED,
 	REPORT_CLOSED,
 	REPORT_REJECTED,
 	REPORT_CANCELLED,

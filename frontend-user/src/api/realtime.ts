@@ -13,6 +13,8 @@ export type RealtimeEventType =
   | 'LIVE_DISCONNECTED'
   | 'LIVE_RECONNECTED'
   | 'LIVE_ENDED'
+  // 담당자가 진짜 제보로 승인해 지도에 반영됨. 종결 아님.
+  | 'REPORT_CONFIRMED'
   | 'REPORT_CLOSED'
   | 'REPORT_REJECTED'
   | 'REPORT_CANCELLED'

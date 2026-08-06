@@ -77,6 +77,9 @@ public class ReportHandlingHistoryService {
 				events.add(autoTransferEvent(route));
 			}
 		}
+		if (report.getConfirmedAt() != null) {
+			events.add(confirmedEvent(report));
+		}
 		// 안정 정렬이라 같은 시각이면 넣은 순서가 유지된다. 배정을 시간순으로 훑으며
 		// 놓음을 먼저 넣으므로 "김담당이 놓음 → 박담당이 받음"의 순서가 뒤집히지 않는다.
 		events.sort(Comparator.comparing(ReportHandlingEventView::occurredAt));
@@ -124,6 +127,19 @@ public class ReportHandlingHistoryService {
 				.findFirst()
 				.map(ReportCenterRoute::getControlCenter)
 				.orElse(null);
+	}
+
+	/**
+	 * 승인은 배정이 아니라 제보에 기록된다({@code reports.confirmed_at}). 배정 시각에서
+	 * 사건을 만드는 다른 항목과 달리 여기서 따로 만드는 이유다.
+	 *
+	 * <p>담당자를 채우지 않는다. 제보에는 승인 시각만 남고 누가 눌렀는지는 들어 있지 않다.
+	 * 배정 이력에서 시각으로 역추적할 수는 있으나, 재배정으로 배정이 여러 개면 추측이 되므로
+	 * 시스템 사건(AUTO_TRANSFERRED)처럼 담당자 없이 남긴다.
+	 */
+	private ReportHandlingEventView confirmedEvent(Report report) {
+		return event(ReportHandlingEventType.CONFIRMED, report.getConfirmedAt(),
+				null, null, null, null);
 	}
 
 	private ReportHandlingEventView autoTransferEvent(ReportCenterRoute route) {
