@@ -362,6 +362,61 @@ class ReportQueryServiceTest {
 		assertThat(result.cancellable()).isFalse();
 	}
 
+	@Test
+	void exposesAssignedOperatorNameToOperatorButNotToCitizen() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = imageReport(42L);
+		// 배정과 mock 은 스터빙 밖에서 만든다(스터빙 인자 안에서 mock 을 만들면 UnfinishedStubbing).
+		var assigned = assignment(report, operator(30L, "김담당"), now, false);
+		when(reportRepository.findOneById(42L)).thenReturn(Optional.of(report));
+		when(reportRepository.findByIdAndReporterId(42L, 1L)).thenReturn(Optional.of(report));
+		when(assignmentRepository.findAllByReport_IdOrderByAssignedAtAscIdAsc(42L))
+				.thenReturn(List.of(assigned));
+
+		assertThat(service(now).getForOperator(30L, 42L).assignedOperatorName()).isEqualTo("김담당");
+		// 담당자 실명은 제보자에게 내려가면 안 된다.
+		assertThat(service(now).getMine(1L, 42L).assignedOperatorName()).isNull();
+	}
+
+	/** 재배정으로 놓여 큐에 있는 제보는 담당자가 없다. 놓고 간 사람을 현재 담당자로 보여주면 안 된다. */
+	@Test
+	void hasNoAssignedOperatorWhenLatestAssignmentWasReleased() {
+		Instant now = Instant.parse("2026-07-21T04:00:00Z");
+		Report report = imageReport(42L);
+		// 놓인 배정은 담당자를 읽기 전에 걸러지므로 이름을 스터빙하지 않는다(strict stubs).
+		var released = assignment(report,
+				org.mockito.Mockito.mock(com.ojimasam.safy.user.domain.User.class), now, true);
+		when(reportRepository.findOneById(42L)).thenReturn(Optional.of(report));
+		when(assignmentRepository.findAllByReport_IdOrderByAssignedAtAscIdAsc(42L))
+				.thenReturn(List.of(released));
+
+		ReportDetailView result = service(now).getForOperator(30L, 42L);
+
+		assertThat(result.assignedOperatorId()).isNull();
+		assertThat(result.assignedOperatorName()).isNull();
+	}
+
+	private com.ojimasam.safy.user.domain.User operator(Long id, String displayName) {
+		com.ojimasam.safy.user.domain.User user =
+				org.mockito.Mockito.mock(com.ojimasam.safy.user.domain.User.class);
+		when(user.getId()).thenReturn(id);
+		when(user.getDisplayName()).thenReturn(displayName);
+		return user;
+	}
+
+	private com.ojimasam.safy.report.domain.ReportOperatorAssignment assignment(Report report,
+			com.ojimasam.safy.user.domain.User operator, Instant assignedAt, boolean released) {
+		ControlCenter center = org.mockito.Mockito.mock(ControlCenter.class);
+		ReportCenterRoute route = ReportCenterRoute.createInitial(report, center, 1, "AUTO", assignedAt);
+		var assignment = com.ojimasam.safy.report.domain.ReportOperatorAssignment
+				.automatic(report, route, operator, assignedAt);
+		if (released) {
+			assignment.cancel(assignedAt, com.ojimasam.safy.report.domain.type
+					.ReportAssignmentCancelReason.REASSIGN_REQUESTED, "다른 건 처리 중");
+		}
+		return assignment;
+	}
+
 	private ReportQueryService service(Instant now) {
 		return new ReportQueryService(reportRepository, reportImageRepository, mediaObjectStorage,
 				routeRepository, historyRepository, operatorAccessService, assignmentRepository,

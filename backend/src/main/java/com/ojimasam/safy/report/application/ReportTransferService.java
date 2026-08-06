@@ -186,7 +186,7 @@ public class ReportTransferService {
 		ReportStatus previous = report.getStatus();
 		try {
 			report.releaseForReassignment();
-			assignment.cancel(now, ReportAssignmentCancelReason.TRANSFERRED);
+			assignment.cancel(now, ReportAssignmentCancelReason.TRANSFERRED, reason);
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
 		}

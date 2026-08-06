@@ -29,6 +29,14 @@ public record ReportDetailView(
 		String administrativeAreaCode,
 		String administrativeAreaName,
 		AssignedControlCenterView assignedControlCenter,
+		/**
+		 * 지금 이 제보를 맡고 있는(또는 종료한) 담당자. 담당자 조회에서만 채워지고 시민 조회에서는
+		 * 항상 null 이다. 재배정·반려로 놓여 담당자가 없거나 공용 큐에 있으면 null 이며, 그때
+		 * "누가 놓았는지"는 처리 이력 API 가 답한다. assignedControlCenter.name 은 관제센터
+		 * 이름이지 담당자 이름이 아니므로 담당자 표시에 쓰면 안 된다.
+		 */
+		Long assignedOperatorId,
+		String assignedOperatorName,
 		Instant reportedAt,
 		Instant createdAt,
 		Instant updatedAt,

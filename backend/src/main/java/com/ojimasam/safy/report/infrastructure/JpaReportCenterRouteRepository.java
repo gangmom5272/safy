@@ -17,4 +17,10 @@ public interface JpaReportCenterRouteRepository
 	@Override
 	@org.springframework.data.jpa.repository.EntityGraph(attributePaths = "controlCenter")
 	java.util.Optional<ReportCenterRoute> findTopByReport_IdOrderByRoutedAtDesc(Long reportId);
+
+	// 이관 사건은 "어디서 어디로"가 한 줄이라 이전 라우트의 센터까지 함께 읽는다.
+	@Override
+	@org.springframework.data.jpa.repository.EntityGraph(
+			attributePaths = {"controlCenter", "previousRoute", "previousRoute.controlCenter"})
+	java.util.List<ReportCenterRoute> findAllByReport_IdOrderByRoutedAtAscIdAsc(Long reportId);
 }

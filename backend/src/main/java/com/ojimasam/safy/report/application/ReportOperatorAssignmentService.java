@@ -268,7 +268,7 @@ public class ReportOperatorAssignmentService {
 		Instant now = clock.instant();
 		ReportStatus previous = report.getStatus();
 		try {
-			assignment.cancel(now, ReportAssignmentCancelReason.REPORT_REJECTED);
+			assignment.cancel(now, ReportAssignmentCancelReason.REPORT_REJECTED, reason);
 			report.reject(now);
 			assignment.getRoute().close(now);
 		} catch (IllegalArgumentException | IllegalStateException exception) {
@@ -296,7 +296,7 @@ public class ReportOperatorAssignmentService {
 		Instant now = clock.instant();
 		ReportStatus previous = report.getStatus();
 		try {
-			assignment.cancel(now, ReportAssignmentCancelReason.REASSIGN_REQUESTED);
+			assignment.cancel(now, ReportAssignmentCancelReason.REASSIGN_REQUESTED, reason);
 			report.releaseForReassignment();
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			throw new BusinessException(CommonErrorCode.CONFLICT, exception.getMessage());
