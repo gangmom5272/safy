@@ -647,22 +647,27 @@
   gap: 8px;
 }
 
+/*
+ * 56px 원은 옆의 제목 블록('상황 요약' 20px + 갱신 시각 13px, 약 44px)보다 커서
+ * 제목보다 버튼이 먼저 눈에 들어왔다. 제목 블록 높이에 맞춰 44px 로 줄인다.
+ * 더 줄이면 글자에는 맞지만 모바일 최소 터치 영역(44px)을 밑돈다.
+ */
 .section-title-row .refresh-icon-button {
   display: inline-grid;
   place-items: center;
   box-sizing: border-box;
   flex: none;
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
-  min-height: 56px;
-  max-width: 56px;
-  max-height: 56px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 44px;
+  max-height: 44px;
   aspect-ratio: 1 / 1;
   padding: 0;
   border-radius: 50%;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
 }
 

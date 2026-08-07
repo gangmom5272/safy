@@ -3,9 +3,24 @@ import { formatRelativeTime } from '../../../utils/dateTime'
 import { ErrorState, LoadingSkeleton } from './SituationStates'
 import { congestionLevelLabels, congestionLevelTones, type CongestionInfo, type AreaStatus } from './types'
 
+/** 8.0천처럼 뜻 없는 소수점은 떼고 7.5천은 남긴다. */
+function trimTrailingZero(value: number) {
+  return value.toFixed(1).replace(/\.0$/, '')
+}
+
+/** 자릿수를 세지 않아도 규모를 알 수 있게 만·천 단위로 줄인다. */
+function scalePopulation(value: number) {
+  if (value >= 10000) return { amount: trimTrailingZero(value / 10000), unit: '만' }
+  if (value >= 1000) return { amount: trimTrailingZero(value / 1000), unit: '천' }
+  return { amount: value.toLocaleString('ko-KR'), unit: '' }
+}
+
 /**
- * 서울시 실시간 도시데이터의 추정 인원 범위. 만 단위가 넘으면 자릿수를 세지 않아도
- * 규모를 알 수 있게 '4.2만~5.0만'으로 줄인다.
+ * 서울시 실시간 도시데이터의 추정 인원 범위.
+ *
+ * <p>세 칸짜리 요약 타일은 폭이 좁아 '7,500~8,000명'처럼 긴 값이 숫자 중간에서 잘린다.
+ * 만·천으로 줄이고, 두 값의 단위가 같으면 단위를 뒤에 한 번만 붙여 더 짧게 만든다
+ * ('7.5~8천명', '6.4~6.6만명'). 단위가 갈리면 각각 붙인다('9천~1.1만명').
  */
 function formatPopulationRange(congestion: CongestionInfo) {
   const { populationMin, populationMax } = congestion
@@ -14,16 +29,17 @@ function formatPopulationRange(congestion: CongestionInfo) {
     return '정보 없음'
   }
 
-  const format = (value: number) =>
-    value >= 10000 ? `${(value / 10000).toFixed(1)}만` : value.toLocaleString('ko-KR')
-
-  if (populationMin === undefined || populationMax === undefined) {
-    return `${format(populationMin ?? populationMax!)}명`
+  if (populationMin === undefined || populationMax === undefined || populationMin === populationMax) {
+    const { amount, unit } = scalePopulation(populationMin ?? populationMax!)
+    return `${amount}${unit}명`
   }
 
-  return populationMin === populationMax
-    ? `${format(populationMin)}명`
-    : `${format(populationMin)}~${format(populationMax)}명`
+  const min = scalePopulation(populationMin)
+  const max = scalePopulation(populationMax)
+
+  return min.unit === max.unit
+    ? `${min.amount}~${max.amount}${max.unit}명`
+    : `${min.amount}${min.unit}~${max.amount}${max.unit}명`
 }
 
 function formatRadius(meters: number) {
