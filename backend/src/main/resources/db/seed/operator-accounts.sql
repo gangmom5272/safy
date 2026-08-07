@@ -15,7 +15,7 @@
 --
 -- 계정 규칙:
 --   로그인 ID : op{관제센터ID 2자리}{a|b}   예) 강남구(23) -> op23a, op23b
---   비밀번호  : Operator1234!               (전 계정 공통, 개발 전용)
+--   비밀번호  : operator1234!               (전 계정 공통, 개발 전용)
 --   표시 이름 : {자치구} 담당자 A / B
 --
 -- 주의: 운영 환경에서 실행하지 마세요. 비밀번호가 공개된 계정 50개가 생깁니다.
@@ -38,7 +38,7 @@ WHERE NOT EXISTS (
     SELECT 1 FROM users u WHERE u.display_name = s.display_name AND u.role = 'OPERATOR'
 );
 
--- 2) 로그인 자격증명 생성 (BCrypt cost 12, 평문 Operator1234!)
+-- 2) 로그인 자격증명 생성 (BCrypt cost 12, 평문 operator1234!)
 WITH seed AS (
     SELECT
         cc.id AS center_id,

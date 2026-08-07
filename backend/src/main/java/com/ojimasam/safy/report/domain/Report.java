@@ -89,7 +89,7 @@ public class Report extends BaseEntity {
 	 * 바꿀 때 백필할 근거가 사라진다.
 	 *
 	 * <p>기존 행 때문에 nullable 이다. {@code ddl-auto: update} 는 값이 있는 테이블에
-	 * NOT NULL 컬럼을 추가하지 못한다. 백필은 db/seed/report-grid-cell-code.sql 에 있다.
+	 * NOT NULL 컬럼을 추가하지 못한다.
 	 */
 	@Column(name = "grid_cell_code", length = 24)
 	private String gridCellCode;
