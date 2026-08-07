@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router'
 import type { AdminReport, RiskLevel } from '../../types/admin'
 import {
   getRiskConfig,
+  isAlertRisk,
   matchesRiskLevel,
   RISK_LEVEL_CONFIG,
   RISK_LEVEL_OPTIONS,
   RISK_LEVEL_ORDER,
 } from '../../utils/adminRisk'
+import { playRiskAlert } from '../../utils/riskAlertSound'
 import { ReportMap } from '../../components/admin/ReportMap'
 import { hasCoordinates } from '../../utils/reportGeo'
 import { createReportDetailPath } from '../../router/paths'
@@ -110,6 +112,11 @@ export function RiskMapPage() {
   const [isMapReady, setIsMapReady] = useState(false)
   const mapApiRef = useRef<{ map: KakaoMap; maps: KakaoMaps } | null>(null)
   const polygonsRef = useRef<KakaoPolygon[]>([])
+  // 깜빡일 위험 격자만 따로 들고 있는다. 원래 채우기 투명도를 같이 보관해야
+  // 깜빡임을 멈출 때 등급별 농도로 되돌릴 수 있다.
+  const alertPolygonsRef = useRef<{ polygon: KakaoPolygon; fillOpacity: number }[]>([])
+  // 경보음을 이미 울린 격자. 같은 격자로 반복해 울리지 않게 한다.
+  const alertedGridCodesRef = useRef(new Set<string>())
   const congestionOverlaysRef = useRef<KakaoCustomOverlay[]>([])
   const eventOverlaysRef = useRef<KakaoCustomOverlay[]>([])
   const publicOverlaysRef = useRef<KakaoCustomOverlay[]>([])
@@ -290,6 +297,7 @@ export function RiskMapPage() {
 
     polygonsRef.current.forEach((polygon) => polygon.setMap(null))
     polygonsRef.current = []
+    alertPolygonsRef.current = []
 
     if (!showGridLayer) return
 
@@ -297,6 +305,9 @@ export function RiskMapPage() {
     gridRisks.forEach((risk) => {
       const config = getRiskConfig(risk.congestionLevel, risk.score)
       if (!config) return
+
+      // 깜빡임을 멈출 때 되돌릴 값이라 폴리곤 옵션과 같은 변수를 쓴다.
+      const fillOpacity = fillOpacityForScore(risk.score)
 
       // 경계 좌표를 그대로 쓴다. gridCode 를 파싱해 역산하면 산식이 어긋났을 때
       // 조용히 다른 칸을 그리게 된다.
@@ -312,13 +323,60 @@ export function RiskMapPage() {
         strokeColor: config.markerColor,
         strokeOpacity: 0.7,
         fillColor: config.markerColor,
-        fillOpacity: fillOpacityForScore(risk.score),
+        fillOpacity,
         zIndex: 1,
       })
       maps.event.addListener(polygon, 'click', () => openTrend(risk))
       polygonsRef.current.push(polygon)
+      if (isAlertRisk(risk.congestionLevel, risk.score)) {
+        alertPolygonsRef.current.push({ polygon, fillOpacity })
+      }
     })
   }, [gridRisks, isMapReady, openTrend, showGridLayer])
+
+  // 위험 격자 깜빡임. 폴리곤은 DOM 요소가 아니라 CSS 애니메이션을 걸 수 없어 옵션을
+  // 주기적으로 토글한다. 500ms 마다 뒤집으므로 한 주기가 1초(1Hz)이고, WCAG 2.3.1 의
+  // '초당 3회 이하' 상한 아래다. 위 렌더 효과가 폴리곤을 다시 만들면 이 효과도 다시
+  // 걸려야 하므로 의존성을 맞춘다.
+  useEffect(() => {
+    if (!isMapReady || !showGridLayer) return undefined
+    // 움직임을 줄이도록 설정한 사용자에게는 깜빡이지 않는다. 등급 색은 그대로 남는다.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+
+    const targets = alertPolygonsRef.current
+    if (targets.length === 0) return undefined
+
+    let dimmed = false
+    const timer = window.setInterval(() => {
+      dimmed = !dimmed
+      targets.forEach(({ polygon, fillOpacity }) => {
+        polygon.setOptions({
+          fillOpacity: dimmed ? 0.08 : fillOpacity,
+          strokeOpacity: dimmed ? 0.25 : 0.7,
+        })
+      })
+    }, 500)
+
+    return () => {
+      window.clearInterval(timer)
+      // 흐려진 상태에서 멈추면 격자가 옅은 채로 남는다. 등급별 농도로 되돌린다.
+      targets.forEach(({ polygon, fillOpacity }) => {
+        polygon.setOptions({ fillOpacity, strokeOpacity: 0.7 })
+      })
+    }
+  }, [gridRisks, isMapReady, showGridLayer])
+
+  // 위험도 '높음' 이상 격자가 새로 나타나면 경보음을 한 번 울린다. 화면에 남아 있는 동안은
+  // 다시 울리지 않는다. 지도를 옮겨 목록에서 빠진 격자는 잊으므로 되돌아오면 다시 알린다.
+  useEffect(() => {
+    const alertCodes = gridRisks
+      .filter((risk) => isAlertRisk(risk.congestionLevel, risk.score))
+      .map((risk) => risk.gridCode)
+
+    const hasNewAlert = alertCodes.some((code) => !alertedGridCodesRef.current.has(code))
+    alertedGridCodesRef.current = new Set(alertCodes)
+    if (hasNewAlert) playRiskAlert()
+  }, [gridRisks])
 
   // 혼잡도 레이어: 서울시 121장소를 장소명 라벨 마커로 보여준다. 좌표 없는 항목은 건너뛴다.
   useEffect(() => {

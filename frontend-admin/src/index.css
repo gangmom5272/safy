@@ -1159,6 +1159,29 @@ button:disabled {
   border-width: 3px;
 }
 
+/* 위험도 '높음' 이상 카드는 테두리 색을 깜빡여, 카드가 많아 색만으로는 묻히는 상황에서도
+   관제사 눈에 띄게 한다. 0%·100% 키프레임을 비워두면 그 시점에는 요소의 계산값
+   (인라인으로 넣는 등급 색)이 그대로 쓰이므로, 등급별 색을 여기서 다시 정의하지 않아도 된다.
+   두께는 건드리지 않는다 — 위 규칙대로 3px 를 유지해야 카드 높이가 어긋나지 않는다.
+   1초 주기(1Hz)는 WCAG 2.3.1 의 '초당 3회 이하' 상한 아래다. */
+@keyframes monitoring-risk-blink {
+  50% {
+    border-color: transparent;
+  }
+}
+
+.monitoring-report-card--alert {
+  animation: monitoring-risk-blink 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monitoring-report-card--alert {
+    /* 움직임을 끈 사용자에게도 위험 카드는 구분돼야 한다. 깜빡임 대신 외곽 그림자로 강조한다. */
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.3);
+  }
+}
+
 .monitoring-report-card__info {
   display: grid;
   align-content: start;

@@ -125,3 +125,15 @@ export function isHighRisk(value: RiskLevelValue | null): boolean {
   const legacyValue = value as LegacyRiskLevel
   return normalized === 'very_high' || normalized === 'high' || legacyValue === 'danger' || legacyValue === 'warning'
 }
+
+/**
+ * 관제 경보(깜빡임·경보음) 기준. '높음' 이상이면 참이다.
+ *
+ * 판정 결과는 isEmergencyRisk·isHighRisk 와 같지만 점수를 함께 본다. 등급 문자열이
+ * 비어 있고 점수만 있는 제보·격자가 있어서, 등급만 보면 그런 항목이 경보에서 통째로
+ * 빠진다(resolveRiskLevel 이 점수로 등급을 정해준다).
+ */
+export function isAlertRisk(value: unknown, score?: unknown): boolean {
+  const order = getRiskConfig(value, score)?.order
+  return order !== undefined && order >= RISK_LEVEL_CONFIG.high.order
+}

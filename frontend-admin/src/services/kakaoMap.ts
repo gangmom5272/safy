@@ -28,6 +28,14 @@ export interface KakaoCustomOverlay {
 
 export interface KakaoPolygon {
   setMap: (map: KakaoMap | null) => void
+  // 폴리곤은 DOM 요소가 아니라 CSS 애니메이션을 걸 수 없다. 위험 격자를 깜빡이려면
+  // 그린 뒤 옵션을 주기적으로 다시 줘야 한다.
+  setOptions: (options: {
+    strokeColor?: string
+    strokeOpacity?: number
+    fillColor?: string
+    fillOpacity?: number
+  }) => void
 }
 
 export interface KakaoMaps {
