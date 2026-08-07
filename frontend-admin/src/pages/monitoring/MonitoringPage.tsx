@@ -3,7 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { reportTypeLabels } from '../../mocks/adminMockData'
 import type { AdminReport, RiskLevel, WebRTCConnection, WebRTCConnectionStatus } from '../../types/admin'
 import { RiskBadge } from '../../components/admin/RiskBadge'
-import { getRiskConfig, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
+import { getRiskConfig, isAlertRisk, matchesRiskLevel, RISK_LEVEL_OPTIONS } from '../../utils/adminRisk'
+import { playRiskAlert } from '../../utils/riskAlertSound'
 import { ROUTE_PATHS, createMonitoringDetailPath, createReportDetailPath } from '../../router/paths'
 import { useAuth } from '../../auth/useAuth'
 import { getReportMessages, sendAdminLiveMessage, type ReportMessage } from '../../services/adminLiveMessage'
@@ -139,6 +140,8 @@ export function MonitoringPage() {
   // 대시보드 타일에는 위험도가 없어 제보별 AI 분석 결과를 따로 모은다. 카드 테두리 색의 근거다.
   const [analyses, setAnalyses] = useState<Record<number, ReportAnalysis>>({})
   const requestedAnalysisIds = useRef(new Set<number>())
+  // 경보음을 이미 울린 제보. 같은 제보로 반복해 울리지 않게 한다.
+  const alertedReportIds = useRef(new Set<number>())
   const [notice, setNotice] = useState<MonitoringNotice | null>(null)
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -246,6 +249,25 @@ export function MonitoringPage() {
     }),
     [analyses, filters, keywordFromUrl, reports],
   )
+
+  // 위험도 '높음' 이상 제보가 새로 보이기 시작하면 경보음을 한 번 울린다. 목록에 남아 있는
+  // 동안은 다시 울리지 않는다 — 계속 울리면 관제사가 소리 자체를 무시하게 된다.
+  // 화면에서 사라진 제보는 잊으므로, 필터를 되돌리거나 다시 위험해지면 그때 다시 알린다.
+  useEffect(() => {
+    const alertIds = filteredReports
+      .filter((report) => {
+        const analysis = analyses[report.id]
+        return isAlertRisk(
+          analysis?.riskLevel ?? report.riskLevel,
+          analysis?.riskScore ?? report.riskScore,
+        )
+      })
+      .map((report) => report.id)
+
+    const hasNewAlert = alertIds.some((id) => !alertedReportIds.current.has(id))
+    alertedReportIds.current = new Set(alertIds)
+    if (hasNewAlert) playRiskAlert()
+  }, [analyses, filteredReports])
 
   const openReport = (report: AdminReport) => {
     const connection = toLiveConnection(report)
@@ -412,11 +434,14 @@ function MonitoringReportCard({ report, analysis, onSelect }: MonitoringReportCa
   const riskLevel = analysis?.riskLevel ?? report.riskLevel
   const riskScore = analysis?.riskScore ?? report.riskScore
   const riskConfig = getRiskConfig(riskLevel, riskScore)
+  // 카드가 많아지면 테두리 색만으로는 묻힌다. '높음' 이상은 깜빡임을 더해 눈에 띄게 한다.
+  const riskClassName = riskConfig ? ' monitoring-report-card--risk' : ''
+  const alertClassName = isAlertRisk(riskLevel, riskScore) ? ' monitoring-report-card--alert' : ''
 
   return (
     <button
       type="button"
-      className={`video-card monitoring-report-card${riskConfig ? ' monitoring-report-card--risk' : ''}`}
+      className={`video-card monitoring-report-card${riskClassName}${alertClassName}`}
       style={riskConfig ? { borderColor: riskConfig.markerColor } : undefined}
       onClick={onSelect}
     >
