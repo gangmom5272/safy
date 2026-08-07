@@ -137,15 +137,19 @@ export function AreaStatusSummary({ status, isLoading, error, onRefresh }: AreaS
             />
             <StatusItem label="최근 제보" value={`${status.recentReportCount}건`} />
           </div>
-          {/* 어느 장소 기준인지, 언제 관측된 값인지 밝혀야 한다. 자치구 전체 인구가 아니라
-              한 장소의 값이고, 위의 '마지막 갱신'은 조회 시각이라 관측 시각과 다르다. */}
-          <p className="area-status-source">{congestionSourceText(status)}</p>
-          {/* 좌표 기준 조회는 혼잡도(한 장소)와 최근 제보(반경)의 범위가 달라 따로 밝힌다. */}
-          {status.reportRadiusMeters ? (
-            <p className="area-status-source">
-              최근 제보는 이 지점 반경 {formatRadius(status.reportRadiusMeters)} 기준입니다.
-            </p>
-          ) : null}
+          {/* 두 문장 모두 값의 출처를 밝히는 같은 성격의 각주라 한 묶음으로 붙여 둔다.
+              카드의 grid gap(16px)으로 벌어지면 서로 다른 안내처럼 읽힌다. */}
+          <div className="area-status-sources">
+            {/* 어느 장소 기준인지, 언제 관측된 값인지 밝혀야 한다. 자치구 전체 인구가 아니라
+                한 장소의 값이고, 위의 '마지막 갱신'은 조회 시각이라 관측 시각과 다르다. */}
+            <p className="area-status-source">{congestionSourceText(status)}</p>
+            {/* 좌표 기준 조회는 혼잡도(한 장소)와 최근 제보(반경)의 범위가 달라 따로 밝힌다. */}
+            {status.reportRadiusMeters ? (
+              <p className="area-status-source">
+                최근 제보는 이 지점 반경 {formatRadius(status.reportRadiusMeters)} 기준입니다.
+              </p>
+            ) : null}
+          </div>
         </> : null}
       </div>
     </section>

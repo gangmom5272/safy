@@ -539,9 +539,9 @@
 }
 
 /*
- * 촬영 길이 안내. 아래 안전 안내와 같은 알약이되 붉은 계열로만 등급을 올린다.
- * 어두운 카메라 화면 위라 '진한 빨강 글자'만으로는 읽히지 않으므로, 연한 붉은
- * 배경을 깔고 그 위에 진한 빨강을 얹어 대비를 확보한다(약 5.6:1).
+ * 촬영 길이 안내. 아래 안전 안내와 같은 알약이되 색으로 등급을 올린다.
+ * 위험도 배지와 같은 danger 를 꽉 채워 깔고 흰 글자를 얹는다 — 어두운 카메라
+ * 화면 위에서 대비(약 5.2:1)와 눈에 띄는 정도를 함께 얻는다.
  * 그리드 칸을 다 채우면 알약이 화면 폭까지 늘어나므로 내용 너비만 차지하게 둔다.
  */
 .report-live-duration {
@@ -552,10 +552,10 @@
   max-width: 100%;
   margin: 0;
   padding: 8px 12px;
-  border: 1px solid rgba(198, 59, 55, 0.55);
+  border: 1px solid var(--color-danger);
   border-radius: var(--radius-badge);
-  background: rgba(252, 235, 233, 0.94);
-  color: var(--color-danger);
+  background: var(--color-danger);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 800;
   line-height: 1.3;
@@ -1519,19 +1519,20 @@ button:focus-visible,
 
 /*
  * 테두리를 border 가 아니라 inset 링으로 그린다. border 는 네 변을 따로 그리고
- * 모서리에서 이어 붙이는데, 이 버튼처럼 작고 둥근 알약에서는 그 이음매가 흰 배경에
- * 비쳐 왼쪽 아래 곡선만 얇게 보였다. box-shadow 는 링을 한 번에 그려 굵기가 고르다.
- * 6배 확대 렌더로 border 방식과 비교해 확인했다.
+ * 모서리에서 이어 붙이는데, 이 버튼처럼 작고 둥근 알약에서는 그 이음매가 배경에
+ * 비쳐 곡선 일부만 얇게 보였다. box-shadow 는 링을 한 번에 그려 굵기가 고르다.
+ * 1px 로는 그래도 끊겨 보인다는 지적이 있어 2px 로 올리고, 흰 배경 대신 연한
+ * 파랑을 깔아 테두리와 면이 함께 형태를 잡게 했다.
  */
 .report-type-page .report-location-status .report-secondary-button {
   grid-column: 1;
   grid-row: auto;
   justify-self: end;
   min-height: 28px;
-  padding: 0 8px;
-  box-shadow: inset 0 0 0 1px var(--color-primary);
+  padding: 0 10px;
+  box-shadow: inset 0 0 0 2px var(--color-primary-soft);
   color: var(--color-primary-hover);
-  background: #ffffff;
+  background: var(--color-primary-light);
   font-size: 10px;
 }
 

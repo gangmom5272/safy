@@ -696,8 +696,14 @@
   background: var(--color-surface-soft);
 }
 
+/* 각주 두 줄은 한 묶음이다. 카드 gap(16px) 대신 문장 사이 간격만 준다. */
+.area-status-sources {
+  display: grid;
+  gap: 6px;
+}
+
 .area-status-source {
-  margin: 10px 0 0;
+  margin: 0;
   color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.4;

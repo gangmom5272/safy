@@ -85,10 +85,19 @@ export function SituationsPage() {
 
       {selectedArea ? <SelectedAreaHeader area={selectedArea} /> : null}
 
-      <section className="situation-content-section" aria-labelledby="risk-map-section-title">
-        <h2 id="risk-map-section-title" className="situation-section-title">
-          {selectedArea ? `${selectedArea.name} 제보 지도` : '내 주변 지도'}
-        </h2>
+      {/*
+        지역을 고르면 바로 위 SelectedAreaHeader 가 이미 지역명을 크게 보여준다.
+        같은 이름을 '○○ 제보 지도'로 한 번 더 쓰면 긴 장소명일수록 화면만 밀리므로
+        검색 전 화면에서만 제목을 둔다. 제목이 없는 동안에는 aria-label 이 이름을 준다.
+      */}
+      <section
+        className="situation-content-section"
+        aria-labelledby={selectedArea ? undefined : 'risk-map-section-title'}
+        aria-label={selectedArea ? `${selectedArea.name} 제보 지도` : undefined}
+      >
+        {selectedArea ? null : (
+          <h2 id="risk-map-section-title" className="situation-section-title">내 주변 지도</h2>
+        )}
         <SituationMap
           center={mapCenter}
           reports={situation.reports}
