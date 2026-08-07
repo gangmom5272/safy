@@ -39,7 +39,13 @@ public class SocialAccount extends BaseEntity {
 	private String providerUserId;
 
 	private String email;
+	// 닉네임과 프로필 이미지 URL 은 제공자가 길이를 보장하지 않는다. JPA 기본값 255 로는
+	// 긴 값을 가진 계정이 신규 가입 INSERT 에서 통째로 실패해 콜백이 500 으로 끝난다
+	// (2026-08-07 운영 실측: value too long for type character varying(255)).
+	// ddl-auto: update 는 기존 컬럼의 길이를 넓혀주지 않으므로 운영 DB 는 ALTER 로 맞춘다.
+	@Column(length = 512)
 	private String providerNickname;
+	@Column(length = 2048)
 	private String providerProfileImageUrl;
 	@Column(nullable = false, columnDefinition = "timestamp(6) with time zone")
 	private Instant lastLoginAt;
