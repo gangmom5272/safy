@@ -441,7 +441,6 @@ export function LiveReportPage({
     }
   }, [cleanupCamera, startCamera, stopTimer])
 
-  const locationText = formData.location ? '현재 위치' : '위치 정보 없음'
   const categoryLabel = formData.category ? REPORT_CATEGORY_LABELS[formData.category] : '선택 없음'
   const cameraMessage = getCameraMessage(cameraStatus)
   const canStart = cameraStatus === 'ready' && !isReporting && !isStarting
@@ -494,14 +493,14 @@ export function LiveReportPage({
         {/* 송출이 시작되면 사전 안내는 감추고 현장 화면과 담당자 안내에 집중시킨다. */}
         {!isReporting ? (
           <>
-            <ul className="report-live-summary" aria-label="제보 정보">
-              <li>
-                <span><LiveInfoIcon name="location" />{locationText}</span>
-              </li>
-              <li>
-                <span><LiveInfoIcon name="warning" />{categoryLabel}</span>
-              </li>
-            </ul>
+            {/*
+              위치·분류는 이미 상단 배지와 직전 화면에서 확인한 내용이라 촬영 직전에
+              다시 읽을 이유가 없다. 그 자리에 정작 지키지 않으면 제보가 무의미해지는
+              촬영 길이 조건을 둔다. 색만으로 중요도를 주지 않도록 아이콘도 함께 쓴다.
+            */}
+            <p className="report-live-duration" role="note">
+              <LiveInfoIcon name="timer" />최소 30초 이상 촬영해주세요.
+            </p>
             <ul className="report-live-safety" aria-label="안전 안내">
               <li><LiveInfoIcon name="camera" />현장 상황만 촬영해주세요.</li>
               <li><LiveInfoIcon name="shield" />안전한 장소에서 제보해주세요.</li>
@@ -539,10 +538,9 @@ export function LiveReportPage({
   )
 }
 
-function LiveInfoIcon({ name }: { name: 'location' | 'warning' | 'camera' | 'shield' }) {
+function LiveInfoIcon({ name }: { name: 'timer' | 'camera' | 'shield' }) {
   const paths = {
-    location: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
-    warning: <><path d="M12 3 2.8 20h18.4L12 3Z" /><path d="M12 9v4M12 17h.01" /></>,
+    timer: <><circle cx="12" cy="13" r="8" /><path d="M12 9.5V13l2.5 1.5M9.5 2h5" /></>,
     camera: <><path d="M8 6 9.5 4h5L16 6h3a2 2 0 0 1 2 2v10H3V8a2 2 0 0 1 2-2h3Z" /><circle cx="12" cy="12" r="3" /></>,
     shield: <><path d="M12 3 20 6v5c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6l8-3Z" /><path d="m8.5 12 2.2 2.2 4.8-5" /></>,
   }

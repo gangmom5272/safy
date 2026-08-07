@@ -104,6 +104,19 @@
   letter-spacing: 0;
 }
 
+/*
+ * .report-section-label 바로 아래 붙는 보조 문구. 라벨(14px/900)과 크기·굵기·색을
+ * 모두 벌려 무엇이 제목이고 무엇이 설명인지 한눈에 갈리게 한다. 색은 본문 대비를
+ * 잃지 않는 secondary 까지만 내린다 — tertiary 는 이 크기에서 대비가 모자란다.
+ */
+.report-section-hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
 .report-method-button,
 .report-category-button,
 .report-tag-button,
@@ -411,12 +424,17 @@
   background: linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
 }
 
+/*
+ * 어두운 카메라 화면 위라 본문용 잉크색(--color-text-primary)은 배경에 묻힌다.
+ * 아래 CTA 와 같은 파랑을 써서 눌러야 할 요소로 읽히게 한다. 흰색까지 올리면
+ * 현장 화면보다 뒤로가기가 먼저 눈에 들어온다.
+ */
 .report-live-back {
   min-width: 56px;
   min-height: 56px;
   border: 0;
   border-radius: 0;
-  color: var(--color-text-primary);
+  color: var(--color-primary);
   background: transparent;
   cursor: pointer;
 }
@@ -486,7 +504,6 @@
   background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.82) 18%);
 }
 
-.report-live-summary,
 .report-live-safety {
   display: flex;
   flex-wrap: wrap;
@@ -496,7 +513,6 @@
   list-style: none;
 }
 
-.report-live-summary span,
 .report-live-safety li {
   display: inline-flex;
   align-items: center;
@@ -515,11 +531,34 @@
   font-weight: 700;
 }
 
-.report-live-summary svg,
+.report-live-duration svg,
 .report-live-safety svg {
   flex: 0 0 15px;
   width: 15px;
   height: 15px;
+}
+
+/*
+ * 촬영 길이 안내. 아래 안전 안내와 같은 알약이되 붉은 계열로만 등급을 올린다.
+ * 어두운 카메라 화면 위라 '진한 빨강 글자'만으로는 읽히지 않으므로, 연한 붉은
+ * 배경을 깔고 그 위에 진한 빨강을 얹어 대비를 확보한다(약 5.6:1).
+ * 그리드 칸을 다 채우면 알약이 화면 폭까지 늘어나므로 내용 너비만 차지하게 둔다.
+ */
+.report-live-duration {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(198, 59, 55, 0.55);
+  border-radius: var(--radius-badge);
+  background: rgba(252, 235, 233, 0.94);
+  color: var(--color-danger);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.3;
 }
 
 .report-live-control {
@@ -1291,7 +1330,6 @@ button:focus-visible,
   padding: 16px;
 }
 
-.report-type-page .report-location-card,
 .report-type-page .report-classification-card,
 .report-type-page .report-content-card {
   min-width: 0;
@@ -1299,6 +1337,18 @@ button:focus-visible,
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+}
+
+/*
+ * 현재 위치는 지도 자체가 이미 경계를 가지므로 흰 카드로 한 번 더 감싸면 테두리가
+ * 두 겹이 되고 지도만 좁아진다. 껍데기만 벗기고 지도-주소-버튼을 한 덩어리로 둔다.
+ * 좌우 여백은 카드 padding 이 아니라 페이지 padding 을 따라 다른 섹션과 맞는다.
+ */
+.report-type-page .report-location-card {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .report-type-page .report-classification-card,
@@ -1365,13 +1415,14 @@ button:focus-visible,
   font-size: 14px;
 }
 
+/* 카드를 걷어낸 뒤에는 이 안쪽 블록까지 색을 깔면 카드가 하나 더 있는 것처럼 보인다. */
 .report-type-page .report-map-placeholder {
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
   gap: 8px;
   min-height: 0;
-  padding: 8px;
-  background: var(--color-surface-soft);
+  padding: 0;
+  background: transparent;
 }
 
 .report-type-page .report-location-map-frame {
@@ -1420,7 +1471,7 @@ button:focus-visible,
   align-items: center;
   align-content: center;
   gap: 4px;
-  padding: 4px 4px;
+  padding: 0;
   background: transparent;
 }
 
@@ -1520,8 +1571,10 @@ button:focus-visible,
   color: var(--color-primary-hover);
 }
 
+/* 세부 상황은 카테고리를 좁히는 같은 성격의 선택지다. 글자색도 카테고리와 맞춘다. */
 .report-type-page .report-tag-button {
   min-height: 34px;
+  color: var(--color-text-secondary);
 }
 
 .report-type-page .report-tag-button.selected {
