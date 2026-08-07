@@ -5,10 +5,10 @@ import { useNotificationUnreadCount } from '../notifications/notificationUnread'
 import './home.css'
 
 const HOME_INTRO_KEY = 'safy-home-intro-completed'
-// 로고가 등장(600ms)하고 하이라이트가 방패와 글자를 지나가는(600~2000ms) 동안은
+// 로고가 등장(600ms)하고 하이라이트가 방패와 글자를 지나가는(600~1700ms) 동안은
 // 로고만 남겨 둔다. 하이라이트가 끝나기 전에 펼치면 로고가 움직이고 작아지는 통에
 // 빛이 가려 보이지 않는다. home.css 의 home-logo-shine 타이밍과 함께 조정한다.
-const INTRO_HOLD_DURATION = 2100
+const INTRO_HOLD_DURATION = 1800
 
 type HomeActionButtonProps = {
   label: string
