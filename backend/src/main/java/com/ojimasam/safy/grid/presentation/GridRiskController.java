@@ -32,10 +32,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "격자 위험도", description = "100m 격자 단위 위험도 조회 (인증 불필요)")
 public class GridRiskController {
 	/**
-	 * 격자 위험도는 스케줄러가 3분마다 다시 계산한다. 그보다 짧게 캐시해도 새 값이 없다.
-	 * 지도를 확대·축소하며 같은 범위를 오갈 때 네트워크를 타지 않게 한다.
+	 * 격자는 스케줄러 주기마다 다시 계산되지만, 캐시를 그 주기만큼 잡으면 계산 지연과 캐시
+	 * 지연이 더해져 새 제보가 6분 넘게 안 보인다. 게다가 만료 시점이 URL 마다 달라 같은
+	 * 화면을 드래그로 오갈 때 색이 나타났다 사라진다 — 프론트가 bbox 를 격자 경계로 스냅해
+	 * URL 이 정확히 재현되기 때문이다. 확대·축소를 연타할 때 요청이 몰리는 것만 막으면 되므로
+	 * 짧게 둔다.
 	 */
-	private static final Duration CACHE_TTL = Duration.ofMinutes(3);
+	private static final Duration CACHE_TTL = Duration.ofSeconds(20);
 
 	/** 기본 6시간. 이력이 값 변화 시점에만 쌓여 점 개수는 이 창보다 훨씬 적다. */
 	private static final Duration DEFAULT_TREND_LOOKBACK = Duration.ofHours(6);
@@ -66,7 +69,7 @@ public class GridRiskController {
 					등급으로 색을 정하고 점수로 농도를 나누십시오.
 
 					뷰포트는 격자 경계로 스냅해서 조회하므로 같은 칸 범위를 보는 동안
-					응답이 같습니다. 3분간 캐시됩니다.
+					응답이 같습니다. 20초간 캐시됩니다.
 					"""
 	)
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")

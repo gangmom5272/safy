@@ -94,7 +94,7 @@ export function SituationMap({
   const [openGroup, setOpenGroup] = useState<ReportMarkerGroup | null>(null)
   const [gridRisks, setGridRisks] = useState<GridRisk[]>([])
 
-  // 뷰포트 안 격자 위험도를 받아온다. bbox 는 격자 경계로 스냅해 3분 캐시가 듣게 한다.
+  // 뷰포트 안 격자 위험도를 받아온다. bbox 는 격자 경계로 스냅해 응답 캐시가 듣게 한다.
   const loadGridRisks = useCallback(async () => {
     const map = mapRef.current
     if (!map) return

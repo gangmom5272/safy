@@ -47,6 +47,10 @@ const VIEWPORT_DEBOUNCE_MS = 250
 // 처리 완료 제보 집합은 제보 시각 기준 롤링 30분 창이라 관리자가 아무것도 하지 않아도 바뀐다.
 // 다시 받지 않으면 이미 시민 지도에서 사라진 제보가 남는다.
 const PUBLIC_REFRESH_MS = 30_000
+// 격자도 서버 스케줄러가 주기적으로 다시 계산하므로 관리자가 지도를 건드리지 않아도 값이
+// 바뀐다. idle 갱신에만 맡기면 화면을 고정해 둔 관제 중에는 첫 조회 값이 그대로 남아,
+// 제보를 승인해도 색이 따라오지 않는다.
+const GRID_REFRESH_MS = 30_000
 // '갱신 N초 전' 라벨용. formatLastUpdated 의 최소 단위(10초)에 맞춘다.
 const NOW_TICK_MS = 10_000
 
@@ -139,7 +143,7 @@ export function RiskMapPage() {
     const southWest = bounds.getSouthWest()
     const northEast = bounds.getNorthEast()
     const resolution = resolutionForLevel(mapApi.map.getLevel())
-    // bbox 를 격자 경계로 스냅해야 같은 칸 범위를 보는 동안 URL 이 같아져 3분 캐시가 듣는다.
+    // bbox 를 격자 경계로 스냅해야 같은 칸 범위를 보는 동안 URL 이 같아져 캐시가 듣는다.
     const snapped = snapBounds(
       {
         minLat: southWest.getLat(),
@@ -245,6 +249,15 @@ export function RiskMapPage() {
       publicAbortRef.current?.abort()
     }
   }, [loadPublicReports, showPublicLayer])
+
+  // 레이어를 켜 둔 동안만 주기 갱신한다. 껐을 때도 돌면 보지 않는 화면 때문에 요청이 나간다.
+  // 첫 조회는 handleMapReady 에서 이미 끝나 있다.
+  useEffect(() => {
+    if (!isMapReady || !showGridLayer) return
+
+    const timer = window.setInterval(() => { void loadGridRisks() }, GRID_REFRESH_MS)
+    return () => window.clearInterval(timer)
+  }, [isMapReady, loadGridRisks, showGridLayer])
 
   const openTrend = useCallback((cell: GridRisk) => {
     setSelectedCell(cell)
