@@ -73,16 +73,21 @@ public class GridRiskAssessmentService {
 	/**
 	 * {@link GridRiskAssessor#WINDOW_MINUTES} 창으로 계산한다. 값이 바뀐 격자 수를 돌려준다.
 	 *
-	 * <p>창 끝을 분 단위로 자른다. 같은 분에 두 번 돌면 같은 행을 갱신하므로
-	 * {@code UNIQUE(grid_cell_id, window_ended_at)} 와 충돌하지 않는다.
+	 * <p>이력에 저장할 창 끝은 분 단위로 자른다. 같은 분에 두 번 돌면 같은 행을 갱신하므로
+	 * {@code UNIQUE(grid_cell_id, window_ended_at)} 와 충돌하지 않는다. 제보 조회 상한은
+	 * 자르지 않은 현재 시각이다.
 	 */
 	@Transactional
 	public int refresh() {
-		Instant windowEnd = clock.instant().truncatedTo(ChronoUnit.MINUTES);
+		Instant now = clock.instant();
+		Instant windowEnd = now.truncatedTo(ChronoUnit.MINUTES);
 		Instant windowStart = windowEnd.minus(Duration.ofMinutes(GridRiskAssessor.WINDOW_MINUTES));
 
+		// 제보는 자르지 않은 '지금'까지 읽는다. 상한을 windowEnd 로 두면 이번 분에 접수·승인된
+		// 제보가 통째로 빠져 다음 회차까지 최대 한 주기를 더 기다린다. 절삭은 저장 키를
+		// 안정시키려는 것이지 조회 범위를 좁히려는 것이 아니다.
 		Map<Long, List<GridObservation>> reportsByCell =
-				gridReportReader.observationsByGridCell(windowStart, windowEnd);
+				gridReportReader.observationsByGridCell(windowStart, now);
 		Map<Long, CongestionLevel> congestionByCell =
 				gridCongestionReader.latestByGridCell(windowStart);
 

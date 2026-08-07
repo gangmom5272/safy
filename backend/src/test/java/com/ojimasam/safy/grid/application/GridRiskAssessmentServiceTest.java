@@ -76,15 +76,17 @@ class GridRiskAssessmentServiceTest {
 	}
 
 	@Test
-	@DisplayName("창 끝을 분 단위로 자른다")
-	void truncatesWindowEndToMinute() {
+	@DisplayName("저장 창 끝은 분 단위로 자르되 제보는 현재 시각까지 읽는다")
+	void truncatesStoredWindowEndButReadsReportsUntilNow() {
 		givenReports(Map.of());
 		givenCongestion(Map.of(8L, CongestionLevel.NORMAL));
 		givenNoHistory();
 
 		service.refresh();
 
-		verify(reportReader).observationsByGridCell(WINDOW_START, WINDOW_END);
+		// 절삭된 창 끝으로 제보를 읽으면 이번 분에 들어온 제보가 통째로 빠져
+		// 다음 회차까지 한 주기를 더 기다리게 된다.
+		verify(reportReader).observationsByGridCell(WINDOW_START, NOW);
 		verify(congestionReader).latestByGridCell(WINDOW_START);
 
 		GridRiskHistory saved = captureSaved(1).get(0);

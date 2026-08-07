@@ -55,7 +55,7 @@ function snapUp(value: number, origin: number, step: number) {
   return origin + Math.ceil((value - origin) / step) * step
 }
 
-/** 요청 bbox 를 격자 경계로 스냅해 같은 칸 범위를 보는 동안 URL 이 같아지게 한다(3분 캐시). */
+/** 요청 bbox 를 격자 경계로 스냅해 같은 칸 범위를 보는 동안 URL 이 같아지게 한다(응답 캐시). */
 export function snapBounds(bounds: GridBounds, resolution: number): GridBounds {
   const latStep = STEP_LATITUDE * resolution
   const lngStep = STEP_LONGITUDE * resolution
