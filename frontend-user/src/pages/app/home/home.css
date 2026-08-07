@@ -3,27 +3,73 @@
 .home-quick-access--visible { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; transition-delay: 220ms, 220ms, 0ms; }
 .home-quick-access button { position: relative; display: grid; width: 56px; height: 56px; padding: 0; place-items: center; border: 0; border-radius: 14px; color: var(--color-primary); background: transparent; cursor: pointer; transition: transform var(--motion-tap), background-color var(--motion-tap); }
 .home-quick-access svg { width: 20px; height: 20px; }
+/* 56px 버튼 안에 20px 아이콘이 가운데 있어 아이콘 오른쪽 위 모서리가 (18px, 18px)다.
+   배지를 그 자리에 걸쳐 종 바로 옆에 붙인다. 버튼 모서리에 두면 종과 18px 넘게 뜬다. */
+.home-quick-access .notification-unread-badge { top: 11px; right: 11px; }
 .home-quick-access button:hover { background: rgba(46, 111, 224, .055); }
 .home-quick-access button:active { transform: scale(.96); }
 .landing-home__content { display: grid; width: min(100%, 290px); gap: clamp(48px, 6.5vh, 60px); transform: translateY(-2vh); }
-.home-identity { display: flex; flex-direction: column; align-items: center; text-align: center; transform: translateY(0); transition: transform 650ms cubic-bezier(.22, 1, .36, 1); }
-.home-logo { width: clamp(82px, 23vw, 104px); color: var(--color-primary); filter: drop-shadow(0 9px 16px rgba(46, 111, 224, .14)); transition: width 650ms cubic-bezier(.22, 1, .36, 1); }
+/* 인트로에서 홈으로 넘어가는 동작. 이전 곡선(easeOutQuint)은 시작이 급해 로고가
+   튀어 오르듯 보였다. 시작을 눌러 주는 곡선으로 바꾸고 850ms 로 늘려, 로고가
+   스스로 자리를 옮기는 것처럼 읽히게 한다. 아래 버튼과 같은 곡선을 쓴다. */
+.home-identity { display: flex; flex-direction: column; align-items: center; text-align: center; transform: translateY(0); transition: transform 850ms cubic-bezier(.4, 0, .2, 1); }
+.home-logo { position: relative; width: clamp(82px, 23vw, 104px); color: var(--color-primary); filter: drop-shadow(0 9px 16px rgba(46, 111, 224, .14)); transition: width 850ms cubic-bezier(.4, 0, .2, 1); }
+/* 방패 위를 한 번 훑고 지나가는 하이라이트. 로고와 같은 PNG 의 알파로 마스크해
+   빛이 방패 밖으로 새지 않는다. 반복하면 장식이 아니라 로딩 중인 것처럼 읽히므로
+   홈에 들어올 때 1회만 재생하고 멈춘다.
+
+   1.1s ease-out 은 시작이 너무 빨라 눈에 걸리기 전에 지나갔다. linear 로 바꿔
+   방패를 건너는 동안 속도가 일정하게 하고 띠도 조금 넓고 밝게 해 알아볼 수 있게
+   한다. 로고 등장(600ms)이 끝나는 지점에서 시작해, 로고가 커다랗게 멈춰 있는
+   인트로 동안 전부 끝나도록 INTRO_HOLD_DURATION 을 맞췄다 — 로고가 올라가고
+   작아지는 중에 겹치면 그 움직임에 가려 또 못 알아본다. SAFY 글자도 같은
+   타이밍으로 훑어 빛 하나가 로고 뭉치를 지나가는 것처럼 보이게 한다. */
+.home-logo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .85) 50%, transparent 60%) 110% 0 / 260% 100% no-repeat; -webkit-mask: url('../../../assets/safy-logo.png') center / 100% 100% no-repeat; mask: url('../../../assets/safy-logo.png') center / 100% 100% no-repeat; pointer-events: none; animation: home-logo-shine 1.4s linear 600ms 1 both; }
 .home-logo svg,
 .home-logo img { display: block; width: 100%; height: auto; }
-.home-identity h1 { margin: 12px 0 0; color: var(--color-primary); font-size: clamp(45px, 14vw, 62px); line-height: .92; letter-spacing: -.055em; transition: font-size 650ms cubic-bezier(.22, 1, .36, 1); }
+.home-identity h1 { margin: 12px 0 0; color: var(--color-primary); font-size: clamp(45px, 14vw, 62px); line-height: .92; letter-spacing: -.055em; transition: font-size 850ms cubic-bezier(.4, 0, .2, 1), letter-spacing 850ms cubic-bezier(.4, 0, .2, 1); }
+/* 방패는 그라디언트에 입체감까지 있는데 글자만 단색이라 둘이 한 브랜드로 안 묶였다.
+   방패와 같은 명암 방향(왼쪽 위 밝음 → 오른쪽 아래 깊음)으로 같은 파랑을 흘린다.
+   글자가 transparent 라 text-shadow 는 뒤로 비쳐 지저분해지므로 로고와 같은
+   drop-shadow 를 쓴다. background-clip 을 못 쓰는 곳에서는 단색 그대로 남는다. */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  /* 배경은 요소 박스만큼만 칠해진다. 음수 자간은 마지막 글자 뒤에도 붙어 박스를
+     글자보다 좁게 만들고, 박스를 벗어난 Y 의 오른쪽 획은 칠해지지 않아 잘려 보인다.
+     좌우로 여유를 줘 글자가 항상 박스 안에 들어오게 한다(가운데 정렬은 유지된다).
+
+     배경 두 겹 중 위가 방패와 같은 타이밍으로 지나가는 하이라이트다. 방패와 함께
+     좌→우로 훑어 빛 하나가 로고 뭉치 전체를 지나가는 것처럼 보이게 한다.
+     세기는 방패(.85)보다 훨씬 낮춘다 — 글자는 밝은 배경 위 파란색이라 흰빛을
+     세게 얹으면 그 순간 배경에 묻혀 사라진다. .38 이면 밝아지되 읽힌다.
+     아래 겹은 요소를 꽉 채우므로 background-position 이 움직여도 영향받지 않는다. */
+  .home-identity h1 { padding: 0 .1em; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .38) 50%, transparent 60%) 110% 0 / 260% 100% no-repeat, linear-gradient(135deg, var(--color-primary-soft) 0%, var(--color-primary) 45%, var(--color-primary-pressed) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 10px rgba(46, 111, 224, .18)); animation: home-logo-shine 1.4s linear 600ms 1 both; }
+}
+/* 살짝 벌어진 채 나타나 제자리로 조여진다. 로고가 올라가는 850ms 에 얹어 글자가
+   함께 자리를 잡는 것처럼 보이게 한다. */
+.landing-home--intro .home-identity h1 { letter-spacing: .06em; }
 .home-identity p { margin: 12px 0 0; color: var(--color-text-secondary); font-size: clamp(13px, 3.8vw, 17px); letter-spacing: .12em; }
 .landing-home--intro .home-identity { animation: home-logo-enter 600ms ease-out both; }
 .landing-home--expanded .home-identity { transform: translateY(clamp(-70px, -9vh, -42px)); }
 .landing-home--expanded .home-logo { width: clamp(62px, 18vw, 80px); }
-.home-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; opacity: 0; visibility: hidden; transform: translateY(70px); pointer-events: none; transition: opacity 500ms ease-out 220ms, transform 650ms cubic-bezier(.22, 1, .36, 1), visibility 0s linear 720ms; }
-.landing-home--expanded .home-actions { opacity: 1; visibility: visible; transform: translateY(-35px); pointer-events: auto; transition-delay: 220ms, 0ms, 0ms; }
+/* 버튼은 로고와 동시에 움직이지 않는다. 로고가 먼저 올라가기 시작하고 그 뒤를
+   따라 올라와야 '로고 → 서비스' 순서로 읽힌다. 동시에 움직이면 화면 전체가
+   한 번에 툭 바뀌어 끊긴 느낌이 난다. */
+.home-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; opacity: 0; visibility: hidden; transform: translateY(70px); pointer-events: none; transition: opacity 560ms ease-out 220ms, transform 780ms cubic-bezier(.4, 0, .2, 1), visibility 0s linear 900ms; }
+.landing-home--expanded .home-actions { opacity: 1; visibility: visible; transform: translateY(-35px); pointer-events: auto; transition-delay: 460ms, 340ms, 0ms; }
 .home-action { display: flex; width: 100%; min-width: 0; padding: 16px; aspect-ratio: 1; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border-radius: 26px; color: var(--color-primary); background: #fff; box-shadow: 0 12px 30px rgba(22, 33, 58, .1); font-size: clamp(16px, 4.5vw, 19px); font-weight: 700; cursor: pointer; transition: transform var(--motion-tap), box-shadow var(--motion-tap); }
 .home-action svg { width: clamp(36px, 10.5vw, 46px); height: clamp(36px, 10.5vw, 46px); }
-.home-action--primary { border: 1px solid var(--color-primary); color: #fff; background: var(--color-primary); }
+/* 공통 그림자는 회색이라 파란 면 아래에서는 배경에 묻힌다. 위치·번짐은 그대로 두고
+   색만 --shadow-fab 과 같은 파랑으로 바꿔 두 버튼이 같은 높이로 떠 보이게 한다. */
+.home-action--primary { border: 1px solid var(--color-primary); color: #fff; background: var(--color-primary); box-shadow: 0 12px 30px rgba(46, 111, 224, .3); }
 .home-action--secondary { border: 1px solid var(--color-border); }
 .home-action:hover { transform: translateY(-2px); box-shadow: 0 15px 32px rgba(22, 33, 58, .14); }
+.home-action--primary:hover { box-shadow: 0 15px 32px rgba(46, 111, 224, .36); }
 .home-action:active { transform: scale(.98); }
 .landing-home button:focus-visible { outline: 3px solid rgba(46, 111, 224, .28); outline-offset: 3px; }
 @keyframes home-logo-enter { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+/* 범위가 넓으면 재생 시간 대부분을 방패 밖에서 흘려보낸다(-60%~160% 는 43%만 방패
+   위에 머물렀다). 띠가 방패에 막 닿는 지점부터 막 벗어나는 지점까지로 좁혀 재생
+   시간의 대부분을 실제로 보이는 데 쓴다. 값이 클수록 왼쪽이라 110%→-10% 가 좌→우다. */
+@keyframes home-logo-shine { from { background-position: 110% 0; } to { background-position: -10% 0; } }
 @media (max-height: 680px) { .landing-home__content { gap: 38px; transform: none; } .landing-home--expanded .home-identity { transform: translateY(-35px); } .landing-home--expanded .home-actions { transform: translateY(-20px); } }
-@media (prefers-reduced-motion: reduce) { .home-identity, .home-logo, .home-actions, .home-quick-access { transition-duration: 1ms; transition-delay: 0ms; animation: none; } }
+@media (prefers-reduced-motion: reduce) { .home-identity, .home-identity h1, .home-logo, .home-logo::after, .home-actions, .home-quick-access { transition-duration: 1ms; transition-delay: 0ms; animation: none; } }

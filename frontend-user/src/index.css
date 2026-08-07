@@ -74,7 +74,10 @@ select {
 .app-brand span { margin-top: 5px; color: var(--color-text-secondary); font-size: 9px; letter-spacing: .08em; }
 .app-header__notification { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: var(--color-primary); background: var(--color-primary-light); text-decoration: none; }
 .app-header__notification svg { width: 21px; height: 21px; }
-.notification-unread-badge { position: absolute; top: -5px; right: -7px; display: grid; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; place-items: center; border: 2px solid #fff; border-radius: 10px; color: #fff; background: var(--color-danger); font-size: 10px; font-weight: 800; line-height: 1; }
+/* 기준이 버튼 모서리라 버튼이 아이콘보다 클수록 종에서 멀어진다. 기본값은 헤더
+   버튼(38px 안에 21px 아이콘) 기준으로 종 어깨에 걸치게 두고, 버튼 크기가 다른
+   곳에서는 그쪽에서 offset 을 다시 잡는다. */
+.notification-unread-badge { position: absolute; top: 2px; right: 2px; display: grid; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; place-items: center; border: 2px solid #fff; border-radius: 10px; color: #fff; background: var(--color-danger); font-size: 10px; font-weight: 800; line-height: 1; }
 
 .app-main {
   width: min(100%, 430px);

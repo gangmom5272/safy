@@ -137,7 +137,9 @@ function ReportDetailSummary({ report, imageFailed, onImageError }: ReportDetail
         )}
       </div>
       <div className="report-detail-content-section">
-        <h2 id="report-detail-title" className="report-detail-section-title">{report.locationName || report.title}</h2>
+        {/* 지역명은 바로 아래 주소가 더 정확하게 말해 준다. 이 자리에는 문의·재조회 때
+            쓰는 제보 식별자를 둔다. */}
+        <h2 id="report-detail-title" className="report-detail-id">제보 #{report.id}</h2>
         <div className="report-detail-card report-detail-body">
           <p className="report-category">{reportTypeLabels[report.type]}</p>
           <dl className="report-detail-list">
@@ -196,20 +198,28 @@ function ReportAnalysisPanel({ analysis, isLoading, error, onRetry }: ReportAnal
 
   return (
     <section className="report-detail-card">
-      <div className="analysis-status-row">
-        {analysis.status === 'completed' ? <span className="analysis-complete-badge">{analysisStatusLabels[analysis.status]}</span> : <span />}
-        {analysis.analyzedAt ? <span className="analysis-time">{formatDateTime(analysis.analyzedAt)}</span> : null}
-      </div>
+      {analysis.status === 'completed' ? (
+        <div className="analysis-status-row">
+          <span className="analysis-complete-badge">{analysisStatusLabels[analysis.status]}</span>
+        </div>
+      ) : null}
+      {/* 분석 시각은 위 '제보 시각'과 짝을 이루는 값이라 같은 아이콘·라벨 구조로 둔다. */}
+      <dl className="report-detail-list">
+        <div className="report-date-row">
+          <dt><DetailIcon name="time" />분석 시각</dt>
+          <dd>{analysis.analyzedAt ? formatDateTime(analysis.analyzedAt) : '정보 없음'}</dd>
+        </div>
+      </dl>
       {/* 두 값 모두 이 제보를 분석한 AI 결과다. 지역 단위 서울시 공공데이터는 상황
-          요약이 담당하고 여기에는 섞지 않는다. */}
-      <dl className="report-detail-list analysis-detail-list">
-        <div>
+          요약이 담당하고 여기에는 섞지 않는다. 나란히 둬야 서로 비교되며 읽힌다. */}
+      <dl className="analysis-metric-grid">
+        <div className="analysis-metric">
           <dt><DetailIcon name="congestion" />혼잡도</dt>
           {/* 항목명이 이미 '혼잡도'이므로 값에는 단계만 남긴다. */}
           <dd>{formatCongestionValue(analysis)}</dd>
         </div>
         {/* 인원 추정치는 정확도가 보장되지 않아 노출하지 않는다. 내부 판단 용도로만 쓴다. */}
-        <div>
+        <div className="analysis-metric">
           <dt><DetailIcon name="risk" />위험도</dt>
           <dd>{formatRiskValue(analysis)}</dd>
         </div>
