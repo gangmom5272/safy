@@ -5,13 +5,14 @@ import { reportTypeLabels } from '../../mocks/adminMockData'
 import { ROUTE_PATHS } from '../../router/paths'
 import type { AdminReport } from '../../types/admin'
 import { formatAdminDate } from '../../utils/adminDate'
-import { getSubcategoryLabel } from '../../utils/reportLabels'
+import { getRecordingHint, getSubcategoryLabel } from '../../utils/reportLabels'
 import {
   detailToAdminReport,
   getOperatorReportDetail,
   getReportAnalysis,
   getReportHandlingHistory,
   type AssignmentStatus,
+  type RecordingStatus,
   type ReportHandlingHistory,
   type ReportImage,
   type ReportAnalysis,
@@ -32,15 +33,6 @@ function ReportImageIcon() {
   )
 }
 
-function ReportContentIcon() {
-  return (
-    <svg className="report-card__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="M6 3h8l4 4v14H6z" />
-      <path d="M14 3v5h5M9 13h6M9 17h6" />
-    </svg>
-  )
-}
-
 function ReportInfoIcon() {
   return (
     <svg className="report-card__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
@@ -55,16 +47,6 @@ function ReportRiskIcon() {
     <svg className="report-card__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       <path d="M12 3l7 3v6c0 4.2-2.8 7.9-7 9-4.2-1.1-7-4.8-7-9V6z" />
       <path d="M12 9v4M12 16h.01" />
-    </svg>
-  )
-}
-
-function ReportHandlingIcon() {
-  return (
-    <svg className="report-card__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
-      <path d="M16.5 6.5a3 3 0 0 1 0 5.6M18 19a5.6 5.6 0 0 0-2.2-4.4" />
     </svg>
   )
 }
@@ -90,14 +72,23 @@ interface DetailCardProps {
   title: string
   icon: ReactNode
   className: string
+  /** 제목 오른쪽에 붙는 조작부. 없으면 제목만 그대로 둔다. */
+  action?: ReactNode
   children: ReactNode
 }
 
 /** 상세 화면 카드 골격. 제목을 카드 안에 두어 3열 배치에서 열 높이가 흐트러지지 않게 한다. */
-function DetailCard({ title, icon, className, children }: DetailCardProps) {
+function DetailCard({ title, icon, className, action, children }: DetailCardProps) {
   return (
     <section className={`admin-card report-card ${className}`}>
-      <h2 className="report-card__title">{icon}{title}</h2>
+      {action ? (
+        <div className="report-card__header">
+          <h2 className="report-card__title">{icon}{title}</h2>
+          {action}
+        </div>
+      ) : (
+        <h2 className="report-card__title">{icon}{title}</h2>
+      )}
       {children}
     </section>
   )
@@ -118,6 +109,12 @@ export function ReportDetailPage() {
   const [handlingHistory, setHandlingHistory] = useState<ReportHandlingHistory | null>(null)
   const [isImageOpen, setIsImageOpen] = useState(false)
   const [imageIndex, setImageIndex] = useState(0)
+  // 라이브 제보는 추출된 이미지와 원본 녹화 영상이 둘 다 남는다. 한 칸에서 골라 본다.
+  const [recording, setRecording] = useState<{ status: RecordingStatus | null; url: string | null }>(
+    { status: null, url: null },
+  )
+  const [mediaTab, setMediaTab] = useState<'image' | 'video'>('image')
+  const [videoError, setVideoError] = useState('')
   const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(isValidReportId)
   // 승인 후 상세를 다시 읽어 상태·타임라인을 갱신한다. 승인은 종결이 아니라 화면에 남는다.
@@ -137,6 +134,7 @@ export function ReportDetailPage() {
         setImages(detail.images)
         setMyAssignmentStatus(detail.myAssignmentStatus)
         setAssignedOperatorName(detail.assignedOperatorName)
+        setRecording({ status: detail.recordingStatus, url: detail.originalVideoUrl })
 
         // 분석·처리 이력은 실패해도 상세 화면 자체는 유지한다. 서로 독립이라 함께 받는다.
         const [loadedAnalysis, loadedHistory] = await Promise.all([
@@ -187,6 +185,10 @@ export function ReportDetailPage() {
     (currentIndex + step + previewImages.length) % previewImages.length,
   )
   const progressSteps = handlingHistory ? toReportProgressSteps(handlingHistory) : []
+  // 녹화를 시도한 제보에만 전환 버튼을 둔다. 사진 제보에는 고를 것이 없다.
+  const hasRecording = recording.status !== null || recording.url !== null
+  const recordingHint = getRecordingHint(recording.status, recording.url)
+  const isVideoTab = mediaTab === 'video' && recording.url !== null
 
   return (
     <section className="page-stack report-detail-page">
@@ -196,50 +198,93 @@ export function ReportDetailPage() {
         <strong aria-current="page">제보 아이디 #{report.id}</strong>
       </nav>
 
-      {/* 카드 순서는 좁은 화면에서의 읽기 순서(이미지 → 기본 정보 → 내용 → 위험도 → 처리)에
-          맞추고, 넓은 화면의 3열 배치는 grid-template-areas 가 담당한다. */}
+      {/* 세 열은 각자 내용 높이만 갖는다. 행 높이를 맞추면 가장 긴 카드(대개 처리
+          이력)에 끌려가 이미지 카드 아래에 큰 빈 공간이 생긴다. */}
       <div className="report-detail-layout">
-        <DetailCard className="report-detail-layout__image" title="제보 이미지" icon={<ReportImageIcon />}>
-          {currentImage ? (
-            <>
-              {/* 한 장씩 원래 크기로 보여주고 좌우 버튼과 아래 썸네일로 넘긴다.
-                  이미지를 누르면 확대되고, 확대 상태에서도 좌우로 넘길 수 있다. */}
-              <div className="report-image-frame">
-                {/* 좌우 버튼의 기준. 썸네일 줄을 뺀 이미지 영역이라 버튼이 이미지
-                    한가운데 높이에 놓인다. */}
-                <div className="report-image-stage">
-                  <button
-                    type="button"
-                    className="report-image-open"
-                    aria-label={`${currentImageAlt} 크게 보기`}
-                    onClick={() => setIsImageOpen(true)}
-                  >
-                    <img className="report-image" src={currentImage.url} alt={currentImageAlt} />
-                  </button>
-                  {previewImages.length > 1 && (
-                    <>
-                      <button
-                        type="button"
-                        className="report-image-action report-image-action--prev"
-                        aria-label="이전 이미지 보기"
-                        onClick={() => moveImage(-1)}
-                      >
-                        <ChevronIcon direction="prev" />
-                      </button>
-                      <button
-                        type="button"
-                        className="report-image-action report-image-action--next"
-                        aria-label="다음 이미지 보기"
-                        onClick={() => moveImage(1)}
-                      >
-                        <ChevronIcon direction="next" />
-                      </button>
-                    </>
-                  )}
-                </div>
-                {/* 썸네일도 회색 프레임 안에 둔다. 카드 흰 배경에 두면 이미지 영역과
-                    분리돼 보인다. */}
-                {previewImages.length > 1 && (
+        <DetailCard
+          className="report-detail-layout__image"
+          title="제보 이미지"
+          icon={<ReportImageIcon />}
+          action={hasRecording ? (
+            <div className="report-media-tabs" role="group" aria-label="보기 방식 선택">
+              <button
+                type="button"
+                className={mediaTab === 'image' ? 'is-active' : ''}
+                aria-pressed={mediaTab === 'image'}
+                onClick={() => setMediaTab('image')}
+              >
+                이미지
+              </button>
+              {/* 녹화가 아직 준비되지 않았거나 실패했으면 누를 것이 없다. 이유는 아래에 적는다. */}
+              <button
+                type="button"
+                className={isVideoTab ? 'is-active' : ''}
+                aria-pressed={isVideoTab}
+                disabled={!recording.url}
+                title={recordingHint ?? undefined}
+                onClick={() => { setVideoError(''); setMediaTab('video') }}
+              >
+                원본 영상
+              </button>
+            </div>
+          ) : undefined}
+        >
+          {isVideoTab ? (
+            <div className="report-image-frame">
+              <div className="report-image-stage">
+                {/* presigned URL 이라 만료될 수 있다. 재생에 실패하면 이미지로 되돌리고 알린다. */}
+                <video
+                  className="report-video"
+                  src={recording.url ?? undefined}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  onError={() => {
+                    setMediaTab('image')
+                    setVideoError('원본 영상을 재생하지 못했습니다. 잠시 후 다시 시도해주세요.')
+                  }}
+                />
+              </div>
+            </div>
+          ) : currentImage ? (
+            /* 이미지 칸은 높이를 고정하고 사진은 비율을 지킨 채 그 안에 맞춘다.
+               아래에 이동 버튼·번호·썸네일을 두어 사진 위를 가리지 않는다. */
+            <div className="report-image-frame">
+              <div className="report-image-stage">
+                <button
+                  type="button"
+                  className="report-image-open"
+                  aria-label={`${currentImageAlt} 크게 보기`}
+                  onClick={() => setIsImageOpen(true)}
+                >
+                  <img className="report-image" src={currentImage.url} alt={currentImageAlt} />
+                </button>
+              </div>
+              {previewImages.length > 1 && (
+                <>
+                  <div className="report-image-nav">
+                    <button
+                      type="button"
+                      className="report-image-action"
+                      aria-label="이전 이미지 보기"
+                      onClick={() => moveImage(-1)}
+                    >
+                      <ChevronIcon direction="prev" />
+                    </button>
+                    <span className="report-image-counter" aria-live="polite">
+                      {currentIndex + 1} / {previewImages.length}
+                    </span>
+                    <button
+                      type="button"
+                      className="report-image-action"
+                      aria-label="다음 이미지 보기"
+                      onClick={() => moveImage(1)}
+                    >
+                      <ChevronIcon direction="next" />
+                    </button>
+                  </div>
+                  {/* 썸네일도 회색 프레임 안에 둔다. 카드 흰 배경에 두면 이미지 영역과
+                      분리돼 보인다. */}
                   <div className="report-image-thumbs">
                     {previewImages.map((image, index) => (
                       <button
@@ -254,16 +299,23 @@ export function ReportDetailPage() {
                       </button>
                     ))}
                   </div>
-                )}
-              </div>
-            </>
+                </>
+              )}
+            </div>
           ) : (
             <div className="report-image-placeholder" role="img" aria-label={`제보 #${report.id} 이미지 없음`}>
               <span>{report.isLive ? '라이브 제보입니다.' : '제보 이미지가 없습니다.'}</span>
             </div>
           )}
+          {/* 원본 영상을 왜 볼 수 없는지, 또는 왜 재생이 끊겼는지 알린다. */}
+          {videoError
+            ? <p className="report-media-hint" role="alert">{videoError}</p>
+            : recordingHint && <p className="report-media-hint">{recordingHint}</p>}
         </DetailCard>
 
+        {/* 가운데 열은 두 카드를 쌓는다. 기본 정보만으로는 왼쪽 이미지 높이만큼 아래가
+            비므로, 척도까지 보여주는 위험도 카드를 그 자리에 둔다. */}
+        <div className="report-detail-layout__mid">
         <DetailCard className="report-detail-layout__info" title="기본 정보" icon={<ReportInfoIcon />}>
           {/* 한 dl 로 두어야 카드가 늘어날 때 행이 고르게 벌어진다. */}
           <dl className="report-info">
@@ -289,47 +341,54 @@ export function ReportDetailPage() {
             {/* 담당 관제센터는 처리 정보 카드에서만 보여준다. */}
             <div><dt>주소</dt><dd>{report.location}</dd></div>
           </dl>
-        </DetailCard>
 
-        <DetailCard className="report-detail-layout__content" title="제보 내용" icon={<ReportContentIcon />}>
-          <p className="report-content break-text">{summary || '제보 내용이 없습니다.'}</p>
+          {/* 제보 내용은 dl 의 오른쪽 정렬 값으로 두면 긴 문장이 읽기 어려워, 같은 카드
+              안에서 라벨을 위에 두고 아래로 흘린다. 카드를 따로 두면 그만큼 왼쪽 이미지
+              칸이 늘어나 빈 회색 공간이 생겼다. */}
+          <div className="report-content-block">
+            <span className="report-content-block__label">제보 내용</span>
+            <p className="report-content break-text">{summary || '제보 내용이 없습니다.'}</p>
+          </div>
         </DetailCard>
 
         <DetailCard className="report-detail-layout__risk" title="위험도 지표" icon={<ReportRiskIcon />}>
           <RiskLevelIndicator level={riskLevel} score={riskScore} />
         </DetailCard>
+        </div>
 
-        {/* 오른쪽 열은 격자 행에 묶지 않고 한 덩어리로 쌓는다. 종결된 제보라 처리
-            버튼이 사라져도 아래 '처리 정보'가 그만큼 자동으로 늘어난다. */}
+        {/* 오른쪽 열은 조치 버튼을 맨 위에 두고 그 아래에 이력을 쌓는다. 관제사가
+            이력을 훑어보고 곧바로 위 버튼으로 손이 가는 순서다. */}
         <div className="report-detail-layout__side">
-          <DetailCard className="report-detail-side__process" title="제보 처리" icon={<ReportHandlingIcon />}>
-            <ReportActionPanel
-              reportId={numericReportId}
-              assignmentStatus={myAssignmentStatus}
-              isConfirmed={report.status === 'confirmed'}
-              onActionComplete={(action) => {
-                // 승인은 종결이 아니다 — 담당자는 화면에 남아 계속 모니터링한다.
-                if (action === 'confirm') setRefreshKey((key) => key + 1)
-                else navigate(ROUTE_PATHS.REPORTS, { replace: true })
-              }}
-            />
-          </DetailCard>
+        <section className="admin-card report-detail-actions" aria-label="제보 처리">
+          <ReportActionPanel
+            reportId={numericReportId}
+            assignmentStatus={myAssignmentStatus}
+            isConfirmed={report.status === 'confirmed'}
+            layout="row"
+            onActionComplete={(action) => {
+              // 승인은 종결이 아니다 — 담당자는 화면에 남아 계속 모니터링한다.
+              if (action === 'confirm') setRefreshKey((key) => key + 1)
+              else navigate(ROUTE_PATHS.REPORTS, { replace: true })
+            }}
+          />
+        </section>
 
-          <DetailCard className="report-detail-side__handling" title="처리 정보" icon={<ReportHistoryIcon />}>
-            {/* 현재 상태와 처리 결과는 아래 타임라인이 이미 보여주므로 넣지 않는다. */}
-            <dl className="report-info report-info--summary">
-              <div><dt>소속</dt><dd>{report.controlCenterName || '-'}</dd></div>
-              <div><dt>담당자</dt><dd>{assignedOperatorName || '-'}</dd></div>
-            </dl>
+        <DetailCard className="report-detail-side__handling" title="처리 이력" icon={<ReportHistoryIcon />}>
+          {/* 지금 누가 들고 있는지가 이 카드의 첫 정보다. 스크롤되는 이력과 달리 항상
+              보여야 하므로 스크롤 영역 밖에 둔다. 값이 짧아 한 줄에 나란히 들어간다. */}
+          <dl className="report-assignee">
+            <div><dt>담당 기관</dt><dd>{report.controlCenterName || '-'}</dd></div>
+            <div><dt>담당자</dt><dd>{assignedOperatorName || '-'}</dd></div>
+          </dl>
 
-            {/* 이력은 이 칸 안에서만 스크롤한다. 칸 자체가 카드 높이를 밀지 않아야
-                가운데 열(위험도까지)의 높이가 그대로 유지된다. */}
-            <div className="report-history-scroll">
-              {progressSteps.length > 0
-                ? <ReportProgressTimeline steps={progressSteps} />
-                : <p className="empty-state" role="status">처리 이력을 불러오지 못했습니다.</p>}
-            </div>
-          </DetailCard>
+          {/* 이력만 이 칸 안에서 스크롤한다. 카드 전체가 스크롤되면 위 담당 정보까지
+              밀려 올라가고, 상한이 없으면 이력이 쌓일수록 페이지가 계속 길어진다. */}
+          <div className="report-history-scroll">
+            {progressSteps.length > 0
+              ? <ReportProgressTimeline steps={progressSteps} />
+              : <p className="empty-state" role="status">처리 이력을 불러오지 못했습니다.</p>}
+          </div>
+        </DetailCard>
         </div>
       </div>
 

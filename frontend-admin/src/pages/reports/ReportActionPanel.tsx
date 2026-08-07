@@ -116,9 +116,42 @@ interface ReportActionPanelProps {
   isConfirmed: boolean
   /** 어떤 액션이 끝났는지 알려준다. 승인은 화면에 남아 계속 모니터링하고, 나머지는 목록으로 돌아간다. */
   onActionComplete: (action: OperatorAction) => void
+  /**
+   * 버튼 배치. 'stack' 은 좁은 카드 안에 세로로 쌓는 기본형(모니터링 화면),
+   * 'row' 는 상단 바처럼 가로로 넓은 자리에서 한 줄로 세우는 형태다.
+   */
+  layout?: 'stack' | 'row'
 }
 
 const ACTIONABLE_STATUSES: AssignmentStatus[] = ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS']
+
+/**
+ * 배치별 버튼 순서. CSS order 로 눈에 보이는 순서만 바꾸면 키보드 이동 순서가 화면과
+ * 어긋나므로 DOM 순서 자체를 바꾼다.
+ */
+const ACTION_ORDER: Record<'stack' | 'row', OperatorAction[]> = {
+  // 세로로 쌓을 때는 진행 순서대로 두고, 되돌릴 수 없는 반려를 맨 아래에 둔다.
+  stack: ['confirm', 'complete', 'reassign', 'transfer', 'reject'],
+  // 두 줄 배치. 첫 줄은 이 제보의 성격을 가르는 두 갈래(승인·반려), 둘째 줄은 담당을
+  // 넘기거나 대응을 마치는 조치다.
+  row: ['confirm', 'reject', 'transfer', 'reassign', 'complete'],
+}
+
+function ActionIcon({ action }: { action: OperatorAction }) {
+  if (action === 'confirm') return <ConfirmIcon />
+  if (action === 'complete') return <CompleteIcon />
+  if (action === 'reassign') return <ReassignIcon />
+  if (action === 'transfer') return <TransferIcon />
+  return <RejectIcon />
+}
+
+function actionButtonClass(action: OperatorAction, isConfirmed: boolean) {
+  if (action === 'confirm') return 'primary-button'
+  if (action === 'reject') return 'danger-button'
+  // 이미 승인된 제보에서는 종료가 다음 기본 조치가 된다.
+  if (action === 'complete' && isConfirmed) return 'primary-button'
+  return 'secondary-button'
+}
 
 function targetHint(target: TransferTarget) {
   const role = target.coverageRole === 'PRIMARY' ? '주 담당' : '예비 담당'
@@ -128,7 +161,13 @@ function targetHint(target: TransferTarget) {
   return `${role} · 근무 중`
 }
 
-export function ReportActionPanel({ reportId, assignmentStatus, isConfirmed, onActionComplete }: ReportActionPanelProps) {
+export function ReportActionPanel({
+  reportId,
+  assignmentStatus,
+  isConfirmed,
+  onActionComplete,
+  layout = 'stack',
+}: ReportActionPanelProps) {
   const [action, setAction] = useState<OperatorAction | null>(null)
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -210,7 +249,7 @@ export function ReportActionPanel({ reportId, assignmentStatus, isConfirmed, onA
   // 버튼을 아예 노출하지 않는다.
   if (!assignmentStatus || !ACTIONABLE_STATUSES.includes(assignmentStatus)) {
     return (
-      <p className="report-action-closed" role="status">
+      <p className={`report-action-closed ${layout === 'row' ? 'report-action-closed--row' : ''}`} role="status">
         {assignmentStatus
           ? '이미 대응이 끝난 제보입니다. 더 이상 처리할 수 없습니다.'
           : '이 제보에 배정된 담당자만 처리할 수 있습니다.'}
@@ -218,34 +257,31 @@ export function ReportActionPanel({ reportId, assignmentStatus, isConfirmed, onA
     )
   }
 
+  const visibleActions = ACTION_ORDER[layout].filter(
+    (candidate) => candidate !== 'confirm' || !isConfirmed,
+  )
+
   return (
     <>
       {actionError && <p className="login-error" role="alert">{actionError}</p>}
-      {/* 처리 버튼은 우측 처리 카드 안에서 세로 한 칸씩 쌓아 너비·높이를 맞춘다. */}
-      <div className="report-action-buttons">
-        {/* 승인은 한 번이면 충분하다. 이미 승인된 제보에는 종료가 첫 번째 조치가 된다. */}
-        {!isConfirmed && (
-          <button type="button" className="primary-button" disabled={isSubmitting} onClick={() => selectAction('confirm')}>
-            <ConfirmIcon />{ACTION_LABELS.confirm}
+      {/* stack 은 좁은 카드 안에서 세로로 쌓아 너비·높이를 맞추고, row 는 넓은 자리에서
+          두 줄로 나눈다. 승인은 한 번이면 충분해 이미 승인된 제보에서는 빠진다 —
+          몇 개가 남는지에 따라 줄 나누기가 달라지므로 개수를 CSS 에 넘긴다. */}
+      <div
+        className={`report-action-buttons ${layout === 'row' ? 'report-action-buttons--row' : ''}`}
+        data-count={visibleActions.length}
+      >
+        {visibleActions.map((visibleAction) => (
+          <button
+            key={visibleAction}
+            type="button"
+            className={actionButtonClass(visibleAction, isConfirmed)}
+            disabled={isSubmitting}
+            onClick={() => selectAction(visibleAction)}
+          >
+            <ActionIcon action={visibleAction} />{ACTION_LABELS[visibleAction]}
           </button>
-        )}
-        <button
-          type="button"
-          className={isConfirmed ? 'primary-button' : 'secondary-button'}
-          disabled={isSubmitting}
-          onClick={() => selectAction('complete')}
-        >
-          <CompleteIcon />{ACTION_LABELS.complete}
-        </button>
-        <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => selectAction('reassign')}>
-          <ReassignIcon />{ACTION_LABELS.reassign}
-        </button>
-        <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => selectAction('transfer')}>
-          <TransferIcon />{ACTION_LABELS.transfer}
-        </button>
-        <button type="button" className="danger-button" disabled={isSubmitting} onClick={() => selectAction('reject')}>
-          <RejectIcon />{ACTION_LABELS.reject}
-        </button>
+        ))}
       </div>
 
       <AdminModal

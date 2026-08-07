@@ -24,7 +24,7 @@
    인트로 동안 전부 끝나도록 INTRO_HOLD_DURATION 을 맞췄다 — 로고가 올라가고
    작아지는 중에 겹치면 그 움직임에 가려 또 못 알아본다. SAFY 글자도 같은
    타이밍으로 훑어 빛 하나가 로고 뭉치를 지나가는 것처럼 보이게 한다. */
-.home-logo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .85) 50%, transparent 60%) 110% 0 / 260% 100% no-repeat; -webkit-mask: url('../../../assets/safy-logo.png') center / 100% 100% no-repeat; mask: url('../../../assets/safy-logo.png') center / 100% 100% no-repeat; pointer-events: none; animation: home-logo-shine 1.4s linear 600ms 1 both; }
+.home-logo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .85) 50%, transparent 60%) 110% 0 / 260% 100% no-repeat; -webkit-mask: url('../../../assets/safy-logo.png') center / 100% 100% no-repeat; mask: url('../../../assets/safy-logo.png') center / 100% 100% no-repeat; pointer-events: none; animation: home-logo-shine 1.1s linear 600ms 1 both; }
 .home-logo svg,
 .home-logo img { display: block; width: 100%; height: auto; }
 .home-identity h1 { margin: 12px 0 0; color: var(--color-primary); font-size: clamp(45px, 14vw, 62px); line-height: .92; letter-spacing: -.055em; transition: font-size 850ms cubic-bezier(.4, 0, .2, 1), letter-spacing 850ms cubic-bezier(.4, 0, .2, 1); }
@@ -42,7 +42,7 @@
      세기는 방패(.85)보다 훨씬 낮춘다 — 글자는 밝은 배경 위 파란색이라 흰빛을
      세게 얹으면 그 순간 배경에 묻혀 사라진다. .38 이면 밝아지되 읽힌다.
      아래 겹은 요소를 꽉 채우므로 background-position 이 움직여도 영향받지 않는다. */
-  .home-identity h1 { padding: 0 .1em; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .38) 50%, transparent 60%) 110% 0 / 260% 100% no-repeat, linear-gradient(135deg, var(--color-primary-soft) 0%, var(--color-primary) 45%, var(--color-primary-pressed) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 10px rgba(46, 111, 224, .18)); animation: home-logo-shine 1.4s linear 600ms 1 both; }
+  .home-identity h1 { padding: 0 .1em; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .38) 50%, transparent 60%) 110% 0 / 260% 100% no-repeat, linear-gradient(135deg, var(--color-primary-soft) 0%, var(--color-primary) 45%, var(--color-primary-pressed) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 10px rgba(46, 111, 224, .18)); animation: home-logo-shine 1.1s linear 600ms 1 both; }
 }
 /* 살짝 벌어진 채 나타나 제자리로 조여진다. 로고가 올라가는 850ms 에 얹어 글자가
    함께 자리를 잡는 것처럼 보이게 한다. */
