@@ -275,7 +275,7 @@ export function ReportTypePage({ initialFormData, onStart }: ReportTypePageProps
           {category ? (
             <div className="report-classification-group report-classification-group-separated">
             <h3 className="report-section-label">세부 상황</h3>
-            <p>현장 상황에 가장 가까운 항목 하나를 선택해주세요.</p>
+            <p className="report-section-hint">현장 상황에 가장 가까운 항목 하나를 선택해주세요.</p>
             <div className="report-tag-grid" aria-label="세부 상황">
               {availableTags.map((tag) => {
                 const isSelected = selectedTags.includes(tag)

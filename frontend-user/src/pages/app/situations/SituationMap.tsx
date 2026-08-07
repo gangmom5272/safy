@@ -30,6 +30,10 @@ const DEFAULT_LEVEL = 5
 const FALLBACK_CENTER: Coordinates = { latitude: 37.5665, longitude: 126.978 }
 // 지도 이동·줌마다 바로 조회하지 않도록 계약 권고값(200~300ms)으로 디바운스한다.
 const GRID_DEBOUNCE_MS = 250
+// 현재 위치로 복귀할 때 허용할 배율 범위. 이 밖이면 DEFAULT_LEVEL 로 되돌린다 —
+// 건물 하나만 보이거나 서울 전체가 보이는 상태로 돌아가면 내 위치를 알아볼 수 없다.
+const RECENTER_MIN_LEVEL = 3
+const RECENTER_MAX_LEVEL = 6
 
 /** 같은 등급 안에서 점수로 채움 농도를 나눈다. 등급만 쓰면 45점과 60점이 같은 색이 된다. */
 function gridFillOpacity(score: number) {
@@ -45,6 +49,11 @@ interface SituationMapProps {
   /** 현재 위치 점 표시 여부. 지역 검색 전 화면에서만 켠다. */
   showCurrentLocation: boolean
   /**
+   * 측위로 잡은 사용자 좌표. center 와 달리 지역을 검색해도 바뀌지 않으므로
+   * "현재 위치로 이동" 버튼이 돌아갈 자리로 쓴다. 측위 전에는 null 이다.
+   */
+  currentLocation: Coordinates | null
+  /**
    * 마커가 모두 보이도록 시야를 맞출지 여부. 지역 검색 후에만 켠다 —
    * 검색 전에 켜면 전체 제보 범위로 지도가 튀어 현재 위치 중심이 무너진다.
    */
@@ -57,6 +66,7 @@ export function SituationMap({
   center,
   reports,
   showCurrentLocation,
+  currentLocation,
   fitToReports,
   statusMessage,
   onSelectReport,
@@ -105,6 +115,22 @@ export function SituationMap({
       // 격자 위험도는 배경 정보라 실패해도 지도와 제보 마커는 그대로 보여준다.
     }
   }, [])
+
+  /**
+   * 현재 위치로 지도 중심을 되돌린다. center prop 은 그대로이므로 상태만 바꿔서는
+   * 아무 일도 일어나지 않는다 — 지도 인스턴스에 직접 setCenter 한다. 좌표는 이미
+   * 받아둔 값을 쓰므로 누를 때마다 위치 권한을 다시 묻지 않는다.
+   */
+  const handleRecenter = useCallback(() => {
+    const map = mapRef.current
+    if (!map || !currentLocation) return
+
+    void loadKakaoMaps().then((maps) => {
+      const level = map.getLevel()
+      if (level < RECENTER_MIN_LEVEL || level > RECENTER_MAX_LEVEL) map.setLevel(DEFAULT_LEVEL)
+      map.setCenter(new maps.LatLng(currentLocation.latitude, currentLocation.longitude))
+    })
+  }, [currentLocation])
 
   // 지도 생성은 한 번만 한다.
   useEffect(() => {
@@ -281,6 +307,18 @@ export function SituationMap({
       <div className="situation-map-overlays">
         {hasFailed && <p className="situation-map-message">지도를 불러오지 못했습니다.</p>}
         {!hasFailed && statusMessage && <p className="situation-map-message">{statusMessage}</p>}
+        {isReady && !hasFailed && (
+          <button
+            type="button"
+            className="situation-map-recenter"
+            disabled={!currentLocation}
+            aria-label="현재 위치로 이동"
+            title="현재 위치로 이동"
+            onClick={handleRecenter}
+          >
+            <RecenterIcon />
+          </button>
+        )}
         {isReady && !hasFailed && <MapLegendScale />}
       </div>
 
@@ -312,5 +350,16 @@ export function SituationMap({
         </div>
       )}
     </div>
+  )
+}
+
+/** 네이버·카카오 지도와 같은 조준점 아이콘. 아이콘만 있는 버튼이라 이름은 aria-label 이 준다. */
+function RecenterIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+    </svg>
   )
 }

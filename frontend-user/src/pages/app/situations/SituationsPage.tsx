@@ -93,6 +93,9 @@ export function SituationsPage() {
           center={mapCenter}
           reports={situation.reports}
           showCurrentLocation={!selectedArea}
+          // 지역을 검색해 지도가 그쪽으로 옮겨간 뒤에도 내 위치로 돌아올 수 있어야 하므로
+          // center 와 별개로 측위 좌표를 그대로 넘긴다.
+          currentLocation={geolocation.location}
           // 장소 선택은 마커가 지역 제한 없는 전체 피드다. fitToReports 를 켜면 서울
           // 전역 마커에 맞추려고 지도가 줌아웃돼 "그 장소를 중심으로 본다"가 깨진다.
           fitToReports={selectedArea?.type === 'area'}
