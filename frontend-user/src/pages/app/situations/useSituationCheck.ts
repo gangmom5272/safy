@@ -13,10 +13,18 @@ import {
   getPlaceStatus,
   searchLocations,
 } from './situationApi'
-import { DEFAULT_REPORT_SORT, type LocationSearchResult, type ReportSort, type ReportType } from './types'
+import {
+  DEFAULT_REPORT_SORT,
+  type LiveReportSummary,
+  type LocationSearchResult,
+  type ReportSort,
+  type ReportType,
+} from './types'
 
 const SEARCH_DEBOUNCE_MS = 300
 const MIN_SEARCH_LENGTH = 2
+// 매번 새 빈 배열을 만들면 지도가 참조 변화로 보고 마커를 다시 그린다.
+const EMPTY_REPORTS: LiveReportSummary[] = []
 
 export function useSituationCheck() {
   const navigate = useNavigate()
@@ -198,7 +206,7 @@ export function useSituationCheck() {
     setSelectedTypes,
     sort,
     setSort,
-    reports: isSubmittedEmpty ? [] : (reportsQuery.data ?? []),
+    reports: isSubmittedEmpty ? EMPTY_REPORTS : (reportsQuery.data ?? EMPTY_REPORTS),
     isReportsLoading: submittedLocationQuery.isFetching || reportsQuery.isFetching,
     reportsError: reportsQuery.error,
     areaStatus: activeStatusQuery.data,
