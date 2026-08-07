@@ -10,10 +10,42 @@ interface GeolocationState {
   requestLocation: () => void
 }
 
-const GEOLOCATION_OPTIONS: PositionOptions = {
+interface UseGeolocationOptions {
+  /**
+   * 제보 작성은 핀을 놓을 자리라 정밀 측위가 필요하다(기본값). 지도 중심처럼
+   * 수십 m 오차가 문제되지 않는 곳은 false 로 껐을 때 훨씬 빨리 끝난다.
+   */
+  highAccuracy?: boolean
+}
+
+/** 저정밀 좌표를 재사용할 수 있는 시간. 지도 중심을 잡는 용도라 이 정도 오차는 무해하다. */
+const CACHE_TTL_MS = 5 * 60 * 1000
+
+const HIGH_ACCURACY_OPTIONS: PositionOptions = {
   enableHighAccuracy: true,
   timeout: 10000,
   maximumAge: 60000,
+}
+
+const COARSE_OPTIONS: PositionOptions = {
+  enableHighAccuracy: false,
+  timeout: 10000,
+  maximumAge: CACHE_TTL_MS,
+}
+
+/**
+ * 마지막으로 잡은 좌표. 화면을 오갈 때마다 훅이 새로 마운트되는데, 그때마다 다시
+ * 측위하면 캐시가 만료된 재진입에서 몇 초씩 빈 지도를 보게 된다.
+ * 정밀 측위 요청은 이 값을 쓰지 않는다 — 몇 분 전 좌표로 핀을 놓으면 안 된다.
+ */
+let cachedPosition: { location: ReportLocation; accuracy: number | null; at: number } | null = null
+
+function readCachedPosition() {
+  if (!cachedPosition || Date.now() - cachedPosition.at > CACHE_TTL_MS) {
+    return null
+  }
+
+  return cachedPosition
 }
 
 function getGeolocationErrorState(error: GeolocationPositionError): Pick<GeolocationState, 'status' | 'message'> {
@@ -37,11 +69,14 @@ function getGeolocationErrorState(error: GeolocationPositionError): Pick<Geoloca
   }
 }
 
-export function useGeolocation(): GeolocationState {
-  const [status, setStatus] = useState<LocationStatus>('idle')
-  const [location, setLocation] = useState<ReportLocation | null>(null)
-  const [accuracy, setAccuracy] = useState<number | null>(null)
-  const [message, setMessage] = useState('현재 위치 확인 전입니다.')
+export function useGeolocation({ highAccuracy = true }: UseGeolocationOptions = {}): GeolocationState {
+  const [initialPosition] = useState(() => (highAccuracy ? null : readCachedPosition()))
+  const [status, setStatus] = useState<LocationStatus>(initialPosition ? 'success' : 'idle')
+  const [location, setLocation] = useState<ReportLocation | null>(initialPosition?.location ?? null)
+  const [accuracy, setAccuracy] = useState<number | null>(initialPosition?.accuracy ?? null)
+  const [message, setMessage] = useState(
+    initialPosition ? '현재 위치 확인 완료' : '현재 위치 확인 전입니다.',
+  )
   const requestInProgressRef = useRef(false)
   const mountedRef = useRef(false)
 
@@ -66,14 +101,18 @@ export function useGeolocation(): GeolocationState {
       (position) => {
         requestInProgressRef.current = false
 
+        const nextLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }
+        // 언마운트됐어도 캐시에는 남긴다. 다음 진입이 이 좌표로 바로 시작한다.
+        cachedPosition = { location: nextLocation, accuracy: position.coords.accuracy, at: Date.now() }
+
         if (!mountedRef.current) {
           return
         }
 
-        setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        })
+        setLocation(nextLocation)
         setAccuracy(position.coords.accuracy)
         setStatus('success')
         setMessage('현재 위치 확인 완료')
@@ -91,19 +130,28 @@ export function useGeolocation(): GeolocationState {
         setStatus(errorState.status)
         setMessage(errorState.message)
       },
-      GEOLOCATION_OPTIONS,
+      highAccuracy ? HIGH_ACCURACY_OPTIONS : COARSE_OPTIONS,
     )
-  }, [])
+  }, [highAccuracy])
 
   useEffect(() => {
     mountedRef.current = true
+
+    // 캐시로 시작했으면 이미 쓸 수 있는 좌표가 있다. 여기서 또 측위하면
+    // 재진입 때마다 몇 초를 기다리던 원래 문제로 돌아간다.
+    if (initialPosition) {
+      return () => {
+        mountedRef.current = false
+      }
+    }
+
     const requestTimer = window.setTimeout(requestLocation, 0)
 
     return () => {
       window.clearTimeout(requestTimer)
       mountedRef.current = false
     }
-  }, [requestLocation])
+  }, [initialPosition, requestLocation])
 
   return { status, location, accuracy, message, requestLocation }
 }

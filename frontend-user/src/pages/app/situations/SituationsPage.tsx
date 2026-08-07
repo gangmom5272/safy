@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { AreaStatusSummary } from './AreaStatusSummary'
 import { LocationSearchBar } from './LocationSearchBar'
@@ -14,7 +15,9 @@ export function SituationsPage() {
   const situation = useSituationCheck()
   const navigate = useNavigate()
   const location = useLocation()
-  const geolocation = useGeolocation()
+  // 지도 중심은 수십 m 오차가 문제되지 않는다. 정밀 측위를 끄면 훨씬 빨리 끝나고,
+  // 훅이 마지막 좌표를 캐시해 두므로 다시 들어올 때 기다리지 않는다.
+  const geolocation = useGeolocation({ highAccuracy: false })
 
   const selectedArea = situation.selectedArea
   // 지도 응답에 마커가 없으면 center 가 (0,0)으로 내려온다. 그대로 쓰면 지도가
@@ -43,9 +46,14 @@ export function SituationsPage() {
     : null
   const mapCenter = selectedArea ? areaCenter : geolocation.location
 
-  const openReportDetail = (reportId: string) => {
-    navigate(`/app/situations/reports/${reportId}${location.search}`)
-  }
+  // 렌더마다 새 함수를 넘기면 지도가 마커를 전부 지웠다 다시 만든다.
+  // 검색어를 한 글자 칠 때마다 그 일이 벌어진다.
+  const openReportDetail = useCallback(
+    (reportId: string) => {
+      navigate(`/app/situations/reports/${reportId}${location.search}`)
+    },
+    [location.search, navigate],
+  )
 
   return (
     <div className="situation-page">
@@ -102,6 +110,7 @@ export function SituationsPage() {
           center={mapCenter}
           reports={situation.reports}
           showCurrentLocation={!selectedArea}
+          isLocating={geolocation.status === 'idle' || geolocation.status === 'checking'}
           // 지역을 검색해 지도가 그쪽으로 옮겨간 뒤에도 내 위치로 돌아올 수 있어야 하므로
           // center 와 별개로 측위 좌표를 그대로 넘긴다.
           currentLocation={geolocation.location}

@@ -49,6 +49,11 @@ interface SituationMapProps {
   /** 현재 위치 점 표시 여부. 지역 검색 전 화면에서만 켠다. */
   showCurrentLocation: boolean
   /**
+   * 측위가 아직 진행 중인지. 진행 중이면 지금 보이는 폴백 화면은 곧 버려질 화면이라
+   * 격자를 미리 받지 않는다. 받아 봐야 사용자가 볼 일 없는 서울시청 주변 데이터다.
+   */
+  isLocating: boolean
+  /**
    * 측위로 잡은 사용자 좌표. center 와 달리 지역을 검색해도 바뀌지 않으므로
    * "현재 위치로 이동" 버튼이 돌아갈 자리로 쓴다. 측위 전에는 null 이다.
    */
@@ -66,6 +71,7 @@ export function SituationMap({
   center,
   reports,
   showCurrentLocation,
+  isLocating,
   currentLocation,
   fitToReports,
   statusMessage,
@@ -75,6 +81,9 @@ export function SituationMap({
   const mapRef = useRef<KakaoMap | null>(null)
   // 지도 생성 시점의 중심. 이후 이동은 center 효과가 처리하므로 최초 값만 기억한다.
   const initialCenterRef = useRef<Coordinates>(center ?? FALLBACK_CENTER)
+  // 생성 시점에 이미 중심을 알고 있었는지(측위 캐시가 있는 재진입). 알고 있었다면
+  // 지도가 처음부터 최종 위치에 생기고 setCenter 가 지도를 움직이지 않아 idle 이 오지 않는다.
+  const hadInitialCenterRef = useRef(center != null)
   const overlaysRef = useRef<KakaoCustomOverlay[]>([])
   const currentLocationOverlayRef = useRef<KakaoCustomOverlay | null>(null)
   const gridPolygonsRef = useRef<KakaoPolygon[]>([])
@@ -117,6 +126,19 @@ export function SituationMap({
   }, [])
 
   /**
+   * 격자 조회를 디바운스해 예약한다. 이동·줌마다 바로 쏘지 않으려는 목적이 첫째지만,
+   * 지도가 뜨자마자 폴리곤 수백 개를 그리면 현재 위치 점 렌더와 경합하므로
+   * 최초 조회도 이 경로로 미룬다.
+   */
+  const scheduleGridLoad = useCallback(() => {
+    if (gridDebounceRef.current !== null) window.clearTimeout(gridDebounceRef.current)
+    gridDebounceRef.current = window.setTimeout(() => {
+      gridDebounceRef.current = null
+      void loadGridRisks()
+    }, GRID_DEBOUNCE_MS)
+  }, [loadGridRisks])
+
+  /**
    * 현재 위치로 지도 중심을 되돌린다. center prop 은 그대로이므로 상태만 바꿔서는
    * 아무 일도 일어나지 않는다 — 지도 인스턴스에 직접 setCenter 한다. 좌표는 이미
    * 받아둔 값을 쓰므로 누를 때마다 위치 권한을 다시 묻지 않는다.
@@ -148,14 +170,9 @@ export function SituationMap({
         })
         mapRef.current = map
         // 이동·줌이 끝날 때마다 보이는 범위의 격자 위험도를 다시 받는다.
-        maps.event.addListener(map, 'idle', () => {
-          if (gridDebounceRef.current !== null) window.clearTimeout(gridDebounceRef.current)
-          gridDebounceRef.current = window.setTimeout(() => {
-            gridDebounceRef.current = null
-            void loadGridRisks()
-          }, GRID_DEBOUNCE_MS)
-        })
-        void loadGridRisks()
+        maps.event.addListener(map, 'idle', scheduleGridLoad)
+        // 움직일 일이 없는 지도라 idle 을 기다릴 수 없다. 여기서 한 번 받는다.
+        if (hadInitialCenterRef.current) scheduleGridLoad()
         setIsReady(true)
       })
       .catch(() => {
@@ -167,7 +184,19 @@ export function SituationMap({
       if (gridDebounceRef.current !== null) window.clearTimeout(gridDebounceRef.current)
       gridAbortRef.current?.abort()
     }
-  }, [loadGridRisks])
+  }, [scheduleGridLoad])
+
+  /**
+   * 측위가 끝났는데도 중심이 없다 — 권한 거부나 실패다. 더 기다려도 화면이 바뀌지
+   * 않으므로 지금 보이는 폴백 화면 기준으로 한 번 받는다.
+   * 측위에 성공하는 경우에는 여기서 받지 않는다. center 효과의 setCenter 가 지도를
+   * 움직여 idle 이 오고 그쪽에서 받는다 — 둘 다 받으면 진입마다 조회가 두 번 나간다.
+   * (카카오는 지도 생성만으로는 idle 을 쏘지 않아 이 경로들이 없으면 격자가 영영 안 뜬다.)
+   */
+  useEffect(() => {
+    if (!isReady || isLocating || center) return
+    void loadGridRisks()
+  }, [center, isLocating, isReady, loadGridRisks])
 
   // 격자 위험도 폴리곤. 응답에 있는 칸만 그린다 — 없는 칸은 근거가 없는 칸이지
   // 안전한 칸이 아니므로 0점으로 채워 색칠하지 않는다.
