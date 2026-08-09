@@ -1,0 +1,175 @@
+stages:
+  - test
+  - deploy
+
+variables:
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+
+frontend-user:
+  stage: test
+  image: node:22
+  rules:
+    - changes:
+        - frontend-user/**/*
+  cache:
+    key: frontend-user-npm
+    paths:
+      - frontend-user/node_modules
+  script:
+    - cd frontend-user
+    - npm ci
+    - npm run lint
+    - npm run build
+  artifacts:
+    paths:
+      - frontend-user/dist
+    expire_in: 1 hour
+
+frontend-admin:
+  stage: test
+  image: node:22
+  rules:
+    - changes:
+        - frontend-admin/**/*
+  cache:
+    key: frontend-admin-npm
+    paths:
+      - frontend-admin/node_modules
+  script:
+    - cd frontend-admin
+    - npm ci
+    - npm run lint
+    - npm run build
+  artifacts:
+    paths:
+      - frontend-admin/dist
+    expire_in: 1 hour
+
+backend:
+  stage: test
+  image: eclipse-temurin:21-jdk
+  rules:
+    - changes:
+        - backend/**/*
+  cache:
+    key: backend-gradle
+    paths:
+      - .gradle
+  script:
+    - cd backend
+    - chmod +x gradlew
+    - ./gradlew test build --no-daemon
+
+ai:
+  stage: test
+  image: python:3.12-slim
+  rules:
+    - changes:
+        - ai/**/*
+        - infra/docker-compose.yml
+        - infra/env.example
+  cache:
+    key: ai-pip
+    paths:
+      - .cache/pip
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  before_script:
+    - apt-get update -qq && apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+  script:
+    - cd ai
+    - pip install -r requirements-ci.txt
+    - pytest
+
+# data는 운영 이미지가 python:3.11-slim이라(data/Dockerfile) CI도 같은 버전을 쓴다.
+# requirements-dev.txt가 requirements.txt를 포함하고 pytest만 더하므로
+# ai처럼 별도의 requirements-ci.txt를 두지 않는다.
+data:
+  stage: test
+  image: python:3.11-slim
+  rules:
+    # 잡 정의 자체가 바뀔 때도 돌려서 CI 설정 변경을 검증한다.
+    - changes:
+        - data/**/*
+        - .gitlab-ci.yml
+  cache:
+    key: data-pip
+    paths:
+      - .cache/pip
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  script:
+    - cd data
+    - pip install -r requirements-dev.txt
+    - pytest
+
+# backend/data/ai-server/frontend-user/frontend-admin 을 배포한다.
+#
+# ai-server 는 2026-07-31 에 추가했다. 서버에서 이미지를 수동 빌드해 기동·응답·자원을
+# 먼저 검증한 뒤 넣었다(최초 빌드 213s, 이미지 2.85GB, 추론 후 RSS 341MB,
+# 1280x720 왕복 p95 205ms = 5초 프레임 예산의 4%).
+#
+# 주의: ai-server 빌드가 실패하면 아래 compose up 체인이 끊겨 배포 전체가 실패한다.
+# 실패를 무시하도록 분리하지 않은 이유는, 무시하면 옛 컨테이너가 계속 도는데 배포가
+# 성공한 것으로 보이기 때문이다. 실패하면 즉시 알고 고치는 편을 택했다.
+deploy:
+  stage: deploy
+  image: alpine:3.20
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+  # develop에 MR이 연달아 머지되면 파이프라인이 동시에 돌고, 아래 rsync --delete가
+  # 서로를 덮어쓴다. 늦게 끝난 쪽이 이기므로 커밋이 더 오래된 배포가 최신 배포를
+  # 되돌릴 수 있다.
+  #
+  # 2026-07-29 실측 사고:
+  #   c361526(02:12:24 완료)이 742951b(02:11:09 완료)보다 1분 늦게 끝났다.
+  #   c361526은 742951b의 조상이라 그 시점 소스에는 뒤 커밋의 infra/ 변경이 없었고,
+  #   rsync --delete가 서버의 docker-compose.yml을 되감아 변경이 사라졌다.
+  #   backend/infra는 무조건 --delete로 동기화되는데 frontend dist는 빌드 잡이
+  #   changes 조건부라 아티팩트가 있을 때만 갱신된다. 그래서 infra만 되감겼다.
+  #
+  # resource_group은 이 잡을 프로젝트 전역에서 한 번에 하나만 실행하게 만든다.
+  # 동시 rsync는 이걸로 사라진다.
+  #
+  # 주의: 실행 '순서'까지 보장하려면 resource group의 process_mode를 oldest_first로
+  # 바꿔야 한다(기본값 unordered). 이건 .gitlab-ci.yml이 아니라 API로 설정한다:
+  #   PUT /projects/:id/resource_groups/production  {"process_mode":"oldest_first"}
+  resource_group: production
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - mkdir -p ~/.ssh
+    - echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/id_deploy
+    - chmod 600 ~/.ssh/id_deploy
+    - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+  script:
+    - ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503"
+    # data 와 ai 를 포함한다. --exclude=.env 는 basename 매칭이라 data/.env, ai/.env 도
+    # 제외되므로 API 키가 서버로 실려가지 않는다(키는 infra/.env 를 통해 compose 가 주입한다).
+    # ai/runs 는 저장소에 없어(로컬 전용) ai 전송량은 1.2MB 다.
+    # 주의: data 와 ai 도 --delete 대상이므로 서버의 해당 디렉터리에 수동 파일을 두면 안 된다.
+    - rsync -az --delete --exclude=.env -e "ssh -i ~/.ssh/id_deploy" backend infra data ai "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/"
+    - |
+      if [ -d frontend-user/dist ]; then
+        ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-user/dist"
+        rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" frontend-user/dist "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/frontend-user/"
+      fi
+    - |
+      if [ -d frontend-admin/dist ]; then
+        ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p ~/S15P11A503/frontend-admin/dist"
+        rsync -az --delete -e "ssh -i ~/.ssh/id_deploy" frontend-admin/dist "$DEPLOY_USER@$DEPLOY_HOST:~/S15P11A503/frontend-admin/"
+      fi
+    # compose up 뒤에 nginx 를 reload 하는 이유(2026-07-31 실측):
+    #   nginx conf 는 이제 디렉터리로 마운트되므로 rsync 로 갱신한 내용이 컨테이너
+    #   안에서도 보인다. 하지만 nginx 는 실행 중에 conf 를 다시 읽지 않으므로
+    #   reload 가 없으면 옛 설정으로 계속 돈다. compose 는 nginx 정의가 바뀌지 않으면
+    #   컨테이너를 재생성하지 않기 때문에 conf 만 고친 배포는 적용되지 않는다.
+    #   reload 는 새 워커를 띄우고 기존 연결을 유지해 무중단이다. `nginx -t` 를 먼저
+    #   실행해 잘못된 conf 를 reload 하지 않는다(문법 오류면 배포가 실패로 끝난다).
+    - |
+      ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" "
+        cd ~/S15P11A503/infra &&
+        DEPLOY_TAG=$CI_COMMIT_SHORT_SHA docker compose up -d --build backend data ai-server ai-tunnel db redis minio nginx uptime-kuma &&
+        docker compose exec -T nginx nginx -t &&
+        docker compose exec -T nginx nginx -s reload &&
+        echo '$CI_COMMIT_SHORT_SHA $(date -u +%Y-%m-%dT%H:%M:%SZ)' >> ~/S15P11A503/.deployed_tags
+      "

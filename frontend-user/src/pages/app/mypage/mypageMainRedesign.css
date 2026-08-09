@@ -1,0 +1,1003 @@
+.mypage-shell {
+  gap: 16px;
+  color: var(--color-text-primary);
+  background: var(--color-background);
+}
+
+.mypage-message {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  color: var(--color-primary-hover);
+  background: var(--color-primary-light);
+  font-size: 11px;
+}
+
+.profile-card,
+.mypage-card,
+.mypage-menu,
+.settings-cards,
+.privacy-list,
+.notification-setting-list {
+  border-color: var(--color-border);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 7px 24px rgba(22, 33, 58, .055);
+}
+
+.profile-card {
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 16px;
+  padding: 24px;
+}
+
+.profile-card .avatar {
+  width: 70px;
+  height: 70px;
+  color: #fff;
+  background: var(--color-primary);
+  font-size: 25px;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  width: 70px;
+  height: 70px;
+}
+
+.profile-edit-button {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  color: var(--color-primary);
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(22, 33, 58, .2);
+  cursor: pointer;
+}
+
+.profile-edit-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.profile-details {
+  min-width: 0;
+}
+
+.profile-card .profile-details h2 {
+  color: var(--color-text-primary);
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.profile-card .profile-details p {
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mypage-card {
+  gap: 16px;
+  padding: 20px;
+}
+
+.mypage-title h2 {
+  color: var(--color-text-primary);
+  font-size: 19px;
+}
+
+.mypage-title button {
+  padding: 4px 0;
+  color: var(--color-primary-hover);
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.report-status-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.report-status-grid span,
+.mypage-shell .report-status-grid span:nth-child(n) {
+  min-width: 0;
+  min-height: 72px;
+  padding: 12px 4px;
+  align-content: center;
+  gap: 4px;
+  border-radius: 15px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.mypage-shell .report-status-grid span:nth-child(1) {
+  color: var(--color-primary-hover);
+  background: var(--color-primary-light);
+}
+
+.mypage-shell .report-status-grid span:nth-child(2) {
+  color: var(--color-success);
+  background: var(--color-success-light);
+}
+
+.mypage-shell .report-status-grid span:nth-child(3) {
+  color: var(--color-danger);
+  background: var(--color-danger-light);
+}
+
+.report-status-grid b {
+  color: inherit;
+  font-size: 20px;
+}
+
+.mypage-menu {
+  overflow: hidden;
+}
+
+.mypage-shell .mypage-menu button {
+  grid-template-columns: 42px minmax(0, 1fr) 22px;
+  min-height: 70px;
+  gap: 12px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  background: #fff;
+  cursor: pointer;
+}
+
+.mypage-shell .mypage-menu button:hover {
+  background: var(--color-surface-secondary);
+}
+
+.mypage-shell .mypage-menu button > .mypage-menu-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  place-items: center;
+  border-radius: 13px;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.mypage-menu-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mypage-shell .mypage-menu button > b {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mypage-menu em {
+  display: grid;
+  color: var(--color-text-tertiary);
+  place-items: center;
+}
+
+.mypage-menu em svg {
+  width: 18px;
+  height: 18px;
+}
+
+.logout-button {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid #f1b5b5;
+  border-radius: 16px;
+  color: var(--color-danger);
+  background: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mypage-title button:focus-visible,
+.mypage-menu button:focus-visible,
+.logout-button:focus-visible {
+  outline: 3px solid rgba(46, 111, 224, .25);
+  outline-offset: 2px;
+}
+
+/* Keep MyPage subviews in the same blue design system. */
+.mypage-tabs button.active {
+  border-color: var(--color-primary);
+  color: #fff;
+  background: var(--color-primary);
+}
+
+.history-list li {
+  border-left-color: var(--color-primary);
+}
+
+.detail-actions button,
+.mypage-form > button,
+.inline-actions button {
+  background: var(--color-primary);
+}
+
+.mypage-form input:focus,
+.mypage-form select:focus,
+.mypage-form textarea:focus {
+  border-color: var(--color-primary);
+}
+
+.accordion-list button span {
+  color: var(--color-primary);
+}
+
+/* 공지사항은 배지가 없어 자식이 항상 3개다. .notice-list 의 4칸 그리드를 그대로 쓰면
+   제목이 내용 너비로 줄고 날짜가 1fr 칸으로 당겨져 행마다 위치가 어긋난다.
+   문의 내역은 상태 배지가 있어 4칸이 맞으므로 공지에만 3칸을 적용한다. */
+.notice-list-plain button {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.settings-cards button > span:first-child,
+.privacy-list button > span {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.settings-banner {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-light);
+}
+
+.settings-banner p {
+  color: var(--color-text-secondary);
+}
+
+.setting-toggle.on {
+  background: var(--color-primary);
+}
+
+.mypage-shell .support-menu button > span,
+.settings-cards button > span:first-child {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--color-primary);
+  background: rgba(46, 111, 224, .08);
+}
+
+.mypage-shell .support-menu button > span svg,
+.settings-cards button > span:first-child svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mypage-shell .support-menu button > b {
+  color: var(--color-primary-hover);
+}
+
+.support-menu button > em,
+.settings-cards button > b {
+  display: grid;
+  place-items: center;
+  color: var(--color-primary);
+}
+
+.support-menu button > em svg,
+.settings-cards button > b svg,
+.privacy-list button > span svg {
+  width: 20px;
+  height: 20px;
+}
+
+.privacy-detail h3 {
+  margin: 8px 0 0;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.privacy-detail ul,
+.privacy-detail ol {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.privacy-detail-table {
+  overflow-x: auto;
+}
+
+.privacy-detail table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.privacy-detail th,
+.privacy-detail td {
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.privacy-detail th {
+  background: var(--color-surface-secondary);
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.privacy-detail small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-tertiary);
+}
+
+.support-menu button:focus-visible,
+.settings-cards button:focus-visible,
+.account-form > button:focus-visible {
+  outline: 3px solid rgba(46, 111, 224, .25);
+  outline-offset: 2px;
+}
+
+.account-form .profile-edit-avatar .avatar {
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+.account-form .profile-edit-avatar > span {
+  color: var(--color-primary-hover);
+}
+
+.account-form input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(46, 111, 224, .12);
+}
+
+.account-form > button {
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+.account-form > button:disabled {
+  color: #ffffff;
+  background: rgba(46, 111, 224, .25);
+  cursor: not-allowed;
+}
+
+.profile-edit-form {
+  gap: 16px;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(22, 33, 58, .045);
+}
+
+.profile-edit-form .profile-edit-avatar {
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.profile-edit-form .profile-edit-avatar .avatar {
+  width: 88px;
+  height: 88px;
+  font-size: 28px;
+}
+
+.profile-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-edit-form .profile-photo-button,
+.profile-edit-form .profile-photo-reset {
+  display: inline-flex;
+  min-height: 34px;
+  padding: 0 12px;
+  align-items: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  color: var(--color-primary-hover);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-edit-form .profile-photo-reset {
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+/* 업로드 중에는 파일 입력이 disabled 라 라벨을 눌러도 열리지 않는다. 그 상태를 눈에 보이게 한다. */
+.profile-edit-form .profile-photo-button.disabled,
+.profile-edit-form .profile-photo-reset:disabled {
+  border-color: var(--color-border);
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-soft);
+  cursor: not-allowed;
+}
+
+.profile-photo-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.profile-edit-form label {
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.profile-edit-form .profile-edit-field input {
+  height: 50px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 13px;
+  color: var(--color-text-primary);
+  background: #fff;
+  /* 16px 미만이면 iOS 에서 포커스 시 화면이 확대된다. */
+  font-size: 16px;
+}
+
+/* 이메일은 소셜 로그인 값이라 수정할 수 없다. 편집 가능한 이름 칸과 구분되게 둔다. */
+.profile-edit-form .profile-edit-field input[readonly] {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-soft);
+  cursor: default;
+}
+
+.profile-edit-field {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-edit-field > label {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-field-error {
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+.profile-edit-form > button {
+  min-height: 52px;
+  margin-top: 8px;
+  border-radius: 14px;
+}
+
+.profile-edit-form > button:disabled {
+  background: var(--color-disabled-background);
+}
+
+.account-menu {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 7px 24px rgba(22, 33, 58, .055);
+}
+
+.account-menu button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-height: 58px;
+  padding: 0 16px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-menu button:last-child {
+  border-bottom: 0;
+}
+
+.account-menu button:hover {
+  background: var(--color-surface-secondary);
+}
+
+.account-menu small {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu b {
+  color: var(--color-text-tertiary);
+  font-size: 21px;
+  font-weight: 400;
+}
+
+.account-withdrawal {
+  min-height: 56px;
+  border: 1px solid #f1b5b5;
+  border-radius: 16px;
+  color: var(--color-danger);
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  padding: 24px;
+  place-items: center;
+  background: rgba(22, 33, 58, .45);
+}
+
+.account-modal {
+  display: grid;
+  width: min(100%, 340px);
+  gap: 12px;
+  padding: 24px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(22, 33, 58, .2);
+}
+
+.account-modal h2,
+.account-modal p {
+  margin: 0;
+}
+
+.account-modal h2 {
+  font-size: 20px;
+}
+
+.account-modal p {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.account-modal > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.account-modal button {
+  min-height: 56px;
+  border: 0;
+  border-radius: 13px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-soft);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-modal button.danger {
+  color: #fff;
+  background: var(--color-danger);
+}
+
+.report-filters {
+  display: grid;
+  gap: 12px;
+  overflow: visible;
+}
+
+/* 탭 5개가 컨테이너 너비를 균등하게 나눠 쓴다. 모두 한 화면에 들어가므로 가로 스크롤은
+   두지 않는다. 가장 긴 '접수 대기 중'이 한 줄로 들어가도록 글자 크기와 좌우 여백을 맞췄다. */
+.report-status-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--color-surface-soft);
+}
+
+.report-status-filters button {
+  min-height: 38px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -.2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.report-status-filters button.active {
+  color: var(--color-primary-hover);
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(22, 33, 58, .08);
+  font-weight: 600;
+}
+
+.report-filter-toolbar {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  overflow: visible;
+}
+
+.report-filter-toolbar > span {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.report-date-filter {
+  position: relative;
+  width: 136px;
+}
+
+.report-date-filter__trigger {
+  display: flex;
+  width: 100%;
+  height: 56px;
+  padding: 0 12px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text-secondary);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.report-date-filter__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  width: 168px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(22, 33, 58, .1);
+}
+
+.report-date-filter__menu button {
+  min-height: 56px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  background: #fff;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.report-date-filter__menu button.active {
+  color: var(--color-primary-hover);
+  background: rgba(46, 111, 224, .08);
+  font-weight: 600;
+}
+
+.report-custom-dates {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 8px;
+}
+
+.report-custom-dates label {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.report-custom-dates input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  /* 16px 미만이면 iOS 에서 포커스 시 화면이 확대된다. 두 칸이 나란히 놓이므로
+     좌우 padding 을 줄여 글자가 커진 만큼을 흡수한다. */
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text-secondary);
+  background: #fff;
+  font-size: 16px;
+}
+
+.report-custom-dates > span {
+  padding-bottom: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.my-report-list {
+  gap: 16px;
+}
+
+.mypage-shell .my-report-card {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  min-height: 112px;
+  overflow: hidden;
+  padding: 0;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(22, 33, 58, .05);
+}
+
+.mypage-shell .report-thumb {
+  position: relative;
+  display: grid;
+  width: 104px;
+  height: 100%;
+  min-height: 112px;
+  place-items: center;
+  overflow: hidden;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-soft);
+}
+
+.report-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.report-image-placeholder {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* 라이브 제보에 대표 이미지가 없을 때만 쓰는 대체 표시. 사진 제보 썸네일과 같은 칸을
+   채우므로 카드 높이가 흔들리지 않는다. */
+.report-thumb-fallback {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  padding: 0 8px;
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.report-thumb-fallback svg {
+  width: 22px;
+  height: 22px;
+}
+
+.report-card-status {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.report-card-relative-date {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 2px 8px rgba(22, 33, 58, .1);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.report-card-status--received {
+  color: var(--color-primary-hover);
+  background: rgba(235, 243, 255, .94);
+}
+
+.report-card-status--in-progress {
+  color: var(--color-warning);
+  background: rgba(251, 241, 223, .94);
+}
+
+.report-card-status--closed {
+  color: var(--color-success);
+  background: rgba(231, 244, 236, .94);
+}
+
+.report-card-status--rejected {
+  color: var(--color-danger);
+  background: rgba(252, 235, 233, .94);
+}
+
+/* 취소됨 탭은 없지만 전체 목록에는 취소된 제보가 그대로 내려온다. */
+.report-card-status--cancelled {
+  color: var(--color-text-secondary);
+  background: rgba(226, 233, 244, .94);
+}
+
+.mypage-shell .report-card-body {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  padding: 16px 16px;
+  align-content: center;
+  text-align: left;
+}
+
+.report-card-body small {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-card-body strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.report-card-body time {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.report-status-filters button:focus-visible,
+.report-date-filter button:focus-visible,
+.report-custom-dates input:focus-visible,
+.my-report-card:focus-visible {
+  outline: 3px solid rgba(46, 111, 224, .25);
+  outline-offset: 2px;
+}
+
+@media (max-width: 380px) {
+  .mypage-shell .my-report-card {
+    grid-template-columns: 94px minmax(0, 1fr);
+  }
+
+  .mypage-shell .report-thumb {
+    width: 94px;
+  }
+
+}
+
+.profile-edit-button:focus-visible,
+.account-menu button:focus-visible,
+.account-withdrawal:focus-visible {
+  outline: 3px solid rgba(46, 111, 224, .25);
+  outline-offset: 2px;
+}
+
+/* 즐겨찾기 추가 버튼만 원형으로 키운다. 공통 헤더 기본 스타일(40px)을 바꾸면 다른 화면의
+   헤더 버튼까지 커지므로 이 화면 클래스 안에서만 덮어쓴다. */
+.favorites-header .page-header__action,
+.favorites-header .page-header__action > .favorite-add-button {
+  width: 44px;
+  height: 44px;
+}
+
+.favorites-header .favorite-add-button {
+  border: 0;
+  border-radius: 50%;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  box-shadow: 0 2px 8px rgba(46, 111, 224, .12);
+  cursor: pointer;
+}
+
+.favorites-header .favorite-add-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.favorites-header .favorite-add-button:active {
+  background: var(--color-primary-light);
+}
+
+@media (max-width: 360px) {
+  .profile-card {
+    grid-template-columns: 60px minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .profile-card .avatar {
+    width: 60px;
+    height: 60px;
+  }
+
+  .profile-avatar-wrap {
+    width: 60px;
+    height: 60px;
+  }
+
+  .report-status-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .report-status-grid span,
+  .mypage-shell .report-status-grid span:nth-child(n) {
+    min-height: 66px;
+    font-size: 9px;
+  }
+}
+
+/* =====================================================
+   모바일 입력 자동 확대 방지
+   iOS Safari 는 포커스한 input·textarea·select 의 글자가 16px 보다 작으면 화면을 확대한다.
+   확대되면 가로 위치까지 어긋나 보이고 키보드를 닫아도 배율이 바로 돌아오지 않는다.
+   마이페이지 폼은 label 이 11px 이고 컨트롤이 font: inherit 로 그 값을 물려받아 11px 이 됐다.
+   그래서 라벨 크기는 그대로 두고 컨트롤만 16px 로 되돌린다.
+   ===================================================== */
+.mypage-shell .mypage-form input,
+.mypage-shell .mypage-form select,
+.mypage-shell .mypage-form textarea {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* 라벨은 기존 크기를 유지한다(컨트롤만 키운다). */
+.mypage-shell .mypage-form label {
+  font-size: 11px;
+}

@@ -1,0 +1,55 @@
+import { useCallback, useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router'
+import { startRealtimeEvents, subscribeToRealtimeSignals } from '../api/realtime'
+import { startLocationPresence } from '../pages/app/notifications/locationPresence'
+import { getUnreadNotificationCount } from '../pages/app/notifications/notificationsApi'
+import { NotificationUnreadContext, NOTIFICATIONS_UPDATED_EVENT } from '../pages/app/notifications/notificationUnread'
+
+function NotificationIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+}
+
+export function AppLayout() {
+  const [unreadCount, setUnreadCount] = useState(0)
+  const refreshUnreadCount = useCallback(() => {
+    void getUnreadNotificationCount().then(setUnreadCount).catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
+    const stopRealtime = startRealtimeEvents()
+    const stopLocationPresence = startLocationPresence()
+    const stopRealtimeSignals = subscribeToRealtimeSignals((signal) => {
+      if (signal.kind === 'event' && signal.event.eventType !== 'REPORT_MESSAGE') refreshUnreadCount()
+    })
+    window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshUnreadCount)
+    refreshUnreadCount()
+    return () => {
+      stopRealtime?.()
+      stopLocationPresence()
+      stopRealtimeSignals()
+      window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, refreshUnreadCount)
+    }
+  }, [refreshUnreadCount])
+
+  const { pathname } = useLocation()
+  const isHome = pathname === '/app' || pathname === '/app/'
+  const isNotifications = pathname === '/app/notifications'
+  const isMyPage = pathname.startsWith('/app/mypage')
+  const isSituationsMain = pathname === '/app/situations'
+  const isReportDetail = pathname.startsWith('/app/situations/reports/') || pathname.startsWith('/app/reports/')
+  const isReportCreate = pathname === '/app/report'
+
+  return (
+    <NotificationUnreadContext.Provider value={unreadCount}>
+    <div className={`app-shell ${isHome ? 'app-shell--landing' : ''}`}>
+      {!isHome && !isNotifications && !isMyPage && !isSituationsMain && !isReportDetail && !isReportCreate && <header className="app-header">
+        <div className="app-brand"><strong>SAFY</strong><span>Safe Area For You</span></div>
+        <NavLink className="app-header__notification" to="/app/notifications" aria-label={unreadCount ? `알림, 읽지 않은 알림 ${unreadCount}개` : '알림'}><NotificationIcon />{unreadCount > 0 && <span className="notification-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}</NavLink>
+      </header>}
+      <main className={`app-main ${isHome ? 'app-main--landing' : ''}`}>
+        <Outlet />
+      </main>
+    </div>
+    </NotificationUnreadContext.Provider>
+  )
+}

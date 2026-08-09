@@ -1,0 +1,13 @@
+sample_id,scenario,image_path,ground_truth_count,source,license
+coco-000000000009,EMPTY,../runs/evaluation/coco128/images/train2017/000000000009.jpg,0,COCO128,see-source-metadata
+coco-000000000025,EMPTY,../runs/evaluation/coco128/images/train2017/000000000025.jpg,0,COCO128,see-source-metadata
+coco-000000000030,EMPTY,../runs/evaluation/coco128/images/train2017/000000000030.jpg,0,COCO128,see-source-metadata
+coco-000000000036,SPARSE,../runs/evaluation/coco128/images/train2017/000000000036.jpg,1,COCO128,see-source-metadata
+coco-000000000061,SPARSE,../runs/evaluation/coco128/images/train2017/000000000061.jpg,3,COCO128,see-source-metadata
+coco-000000000077,SPARSE,../runs/evaluation/coco128/images/train2017/000000000077.jpg,5,COCO128,see-source-metadata
+coco-000000000049,NORMAL,../runs/evaluation/coco128/images/train2017/000000000049.jpg,6,COCO128,see-source-metadata
+coco-000000000110,NORMAL,../runs/evaluation/coco128/images/train2017/000000000110.jpg,10,COCO128,see-source-metadata
+coco-000000000308,NORMAL,../runs/evaluation/coco128/images/train2017/000000000308.jpg,7,COCO128,see-source-metadata
+coco-000000000074,LOCAL_DENSE,../runs/evaluation/coco128/images/train2017/000000000074.jpg,6,COCO128,see-source-metadata
+coco-000000000149,LOCAL_DENSE,../runs/evaluation/coco128/images/train2017/000000000149.jpg,12,COCO128,see-source-metadata
+coco-000000000257,LOCAL_DENSE,../runs/evaluation/coco128/images/train2017/000000000257.jpg,13,COCO128,see-source-metadata

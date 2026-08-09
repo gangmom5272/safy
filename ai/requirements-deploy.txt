@@ -1,0 +1,16 @@
+# CPU 운영 배포 전용 requirements
+# GPU 학습 환경은 requirements.txt, CPU CI는 requirements-ci.txt를 사용한다.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+fastapi==0.139.2
+numpy==2.4.4
+opencv-python==5.0.0.93
+packaging==26.2
+pillow==12.2.0
+psutil==7.2.2
+python-multipart==0.0.32
+scipy==1.17.1
+torch==2.13.0
+torchvision==0.28.0
+ultralytics==8.4.102
+uvicorn==0.51.0

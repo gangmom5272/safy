@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#2563eb" />
+    <!-- viewport-fit=cover 가 없으면 iOS 에서 env(safe-area-inset-*) 가 항상 0 으로 계산된다.
+         이 앱은 하단 CTA·알림·홈 화면에서 이미 env() 로 노치와 홈 인디케이터를 피하도록
+         작성돼 있는데 그 값이 먹지 않아 잘려 보였다. 사용자가 직접 확대하는 기능은
+         접근성을 위해 그대로 둔다(user-scalable·maximum-scale 지정 없음). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>safy-frontend-lab</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

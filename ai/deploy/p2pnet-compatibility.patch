@@ -1,0 +1,15 @@
+diff --git a/util/misc.py b/util/misc.py
+index 8a67c26..b0fb24d 100644
+--- a/util/misc.py
++++ b/util/misc.py
+@@ -23,5 +23,9 @@ from torch.autograd import Variable
+ # needed due to empty tensor bug in pytorch and torchvision 0.5
+ import torchvision
+-if float(torchvision.__version__[:3]) < 0.7:
++from packaging.version import Version
++
++if Version(
++    torchvision.__version__.split("+")[0]
++) < Version("0.7"):
+     from torchvision.ops import _new_empty_tensor
+     from torchvision.ops.misc import _output_size

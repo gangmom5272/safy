@@ -1,0 +1,9 @@
+sample_id,scenario,image_path,expected_issues
+part-b-img1-normal,NORMAL,../runs/evaluation/shanghaitech/ShanghaiTech/part_B/test_data/images/IMG_1.jpg,
+part-b-img250-dark-boundary,DARK_BOUNDARY,../runs/evaluation/shanghaitech/ShanghaiTech/part_B/test_data/images/IMG_250.jpg,
+part-b-img198-blur-boundary,BLUR_BOUNDARY,../runs/evaluation/shanghaitech/ShanghaiTech/part_B/test_data/images/IMG_198.jpg,
+part-b-img1-min-resolution,RESOLUTION_BOUNDARY,../runs/evaluation/quality-variants/part-b-img1-min-resolution.jpg,
+part-b-img1-night,NIGHT,../runs/evaluation/quality-variants/part-b-img1-night.jpg,TOO_DARK|TOO_BLURRY
+part-b-img1-too-bright,TOO_BRIGHT,../runs/evaluation/quality-variants/part-b-img1-too-bright.jpg,TOO_BRIGHT|TOO_BLURRY
+part-b-img1-blurry,BLURRY,../runs/evaluation/quality-variants/part-b-img1-low-quality.jpg,TOO_BLURRY
+part-b-img1-low-resolution,LOW_RESOLUTION,../runs/evaluation/quality-variants/part-b-img1-low-resolution.jpg,LOW_RESOLUTION

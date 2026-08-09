@@ -1,0 +1,7 @@
+# git apply는 패치와 대상 파일의 줄바꿈이 일치해야 적용한다.
+# 컨테이너 안에서 새로 clone한 대상 파일은 항상 LF이므로, Windows 체크아웃에서
+# 패치가 CRLF로 바뀌면 Dockerfile의 `git apply --check`가 거부한다.
+#
+# 루트가 아니라 ai/ 에 두는 이유는 저장소의 패치 파일이 ai/deploy 하나뿐이고,
+# 공유 파일을 늘리지 않기 위해서다.
+*.patch text eol=lf

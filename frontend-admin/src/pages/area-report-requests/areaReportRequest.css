@@ -1,0 +1,82 @@
+/* 공통 헤더 바로 아래에 오는 안내 블록. 카드 사이 간격은 .page-stack 이 맡으므로
+   따로 margin 을 두지 않는다. */
+.area-request-page__description {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.area-request-page__description-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.area-request-form {
+  display: grid;
+  gap: 18px;
+  max-width: 680px;
+}
+
+/* 짧은 값 두 개(구역·유효 시간)는 한 줄에 둔다. 폭이 좁아지면 자동으로 두 줄이 된다. */
+.area-request-form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.area-request-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.area-request-form__actions .primary-button {
+  min-height: 40px;
+  padding: 10px 20px;
+  margin-top: 14px;
+}
+
+.area-request-message {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.area-request-message--error {
+  border-color: #fecdca;
+  background: #fff0f0;
+  color: #a12626;
+}
+
+.area-request-message--success {
+  border-color: #bbf7d0;
+  background: #ecf8f0;
+  color: #176b3a;
+}
+
+@media (max-width: 620px) {
+  .area-request-form__actions {
+    justify-content: stretch;
+  }
+
+  .area-request-form__actions .primary-button {
+    width: 100%;
+  }
+}

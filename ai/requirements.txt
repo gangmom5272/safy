@@ -1,3 +1,5 @@
+# GPU 학습·로컬 검증 전용 requirements
+# CPU CI는 requirements-ci.txt, CPU 운영 배포는 requirements-deploy.txt를 사용한다.
 --extra-index-url https://download.pytorch.org/whl/cu130
 
 annotated-doc==0.0.4
@@ -45,6 +47,7 @@ python-dotenv==1.2.2
 python-multipart==0.0.32
 PyYAML==6.0.3
 requests==2.34.2
+scipy==1.17.1
 ruff==0.15.22
 six==1.17.0
 starlette==1.3.1

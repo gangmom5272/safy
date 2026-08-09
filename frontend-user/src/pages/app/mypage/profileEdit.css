@@ -1,0 +1,41 @@
+.profile-edit-form {
+  gap: 16px;
+}
+
+.profile-edit-avatar {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 5px 0 8px;
+}
+
+.profile-edit-avatar span {
+  color: #65758b;
+  font-size: 11px;
+}
+
+.profile-edit-form input[readonly] {
+  background: #f3f6f8;
+  color: #65758b;
+  cursor: not-allowed;
+}
+
+.profile-edit-form > button:disabled {
+  background: #b9d8d2;
+  cursor: not-allowed;
+}
+
+.profile-edit-error,
+.profile-edit-hint {
+  margin: 0 !important;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fee4e2;
+  color: #b42318 !important;
+  font-size: 11px !important;
+}
+
+.profile-edit-hint {
+  background: #f3f6f8;
+  color: #65758b !important;
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "model": {
+    "name": "P2PNet",
+    "deploymentVersion": "safy-p2pnet-v2-epoch3",
+    "checkpointModelVersion": "safy-p2pnet-v1",
+    "weightId": "p2pnet-finetune-v2-balanced-search/epoch-003.pth",
+    "fileName": "epoch-003.pth",
+    "sha256": "934989b1ec644660f3924fb916418cb7f757b11f35b470af46c324ac18204857"
+  },
+  "source": {
+    "repository": "https://github.com/TencentYoutuResearch/CrowdCounting-P2PNet.git",
+    "commit": "5c91a81ca062b1c7fd3db3ad1c55b1c21f0a7455",
+    "license": "Tencent P2PNet academic research license",
+    "licenseFile": "/opt/p2pnet/LICENSE"
+  }
+}

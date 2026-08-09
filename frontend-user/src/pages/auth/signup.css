@@ -1,0 +1,33 @@
+.signup-page { min-height: 100dvh; padding: max(18px, env(safe-area-inset-top)) 22px max(30px, env(safe-area-inset-bottom)); color: #111827; background: #fff; }
+.signup-page__inner { width: min(100%, 390px); margin: 0 auto; }
+.signup-header { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; margin-bottom: 28px; }
+.signup-header h1 { margin: 0; font-size: 22px; text-align: center; }
+.signup-header button { display: grid; width: 44px; height: 44px; padding: 0; place-items: center; border: 0; color: #111827; background: transparent; cursor: pointer; }
+.signup-header svg { width: 24px; height: 24px; }
+.signup-form { display: grid; gap: 22px; }
+.signup-field { display: grid; gap: 8px; margin: 0; }
+.signup-field > span, .signup-field > label { color: #111827; font-size: 14px; font-weight: 700; }
+.signup-field input { width: 100%; min-width: 0; height: 50px; padding: 0 14px; border: 1px solid #d8e0eb; border-radius: 12px; color: #111827; background: #fff; outline: none; transition: border-color .15s ease, box-shadow .15s ease; }
+.signup-field input:focus { border-color: #004aad; box-shadow: 0 0 0 3px rgba(0, 74, 173, .1); }
+.signup-field input:disabled { color: #6b7280; background: #f7f8fa; }
+.signup-field small { color: #dc2626; font-size: 12px; }
+.signup-field em { color: #6b7280; font-size: 12px; font-style: normal; }
+.signup-field p { margin: 0; color: #047857; font-size: 12px; }
+.signup-inline { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 88px; gap: 8px; }
+.signup-inline > button { border: 1px solid #004aad; border-radius: 12px; color: #004aad; background: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+.signup-inline > button:disabled { border-color: #d1d5db; color: #9ca3af; background: #f3f4f6; cursor: not-allowed; }
+.signup-code { grid-template-columns: minmax(0, 1fr) 46px 64px; }
+.signup-code time { align-self: center; color: #dc2626; font-size: 12px; text-align: center; }
+.signup-password { position: relative; }
+.signup-password input { padding-right: 52px; }
+.signup-password button { position: absolute; top: 3px; right: 3px; display: grid; width: 44px; height: 44px; padding: 0; place-items: center; border: 0; color: #6b7280; background: transparent; cursor: pointer; }
+.signup-password svg { width: 21px; height: 21px; }
+.signup-terms { display: grid; gap: 12px; margin: 4px 0 0; padding: 18px 0 0; border: 0; border-top: 1px solid #e5e7eb; }
+.signup-terms legend { padding: 0 0 12px; font-size: 14px; font-weight: 700; }
+.signup-terms label { display: flex; align-items: center; gap: 9px; color: #4b5563; font-size: 13px; }
+.signup-terms input { width: 18px; height: 18px; flex: none; accent-color: #004aad; }
+.signup-terms button { padding: 0; border: 0; color: #4b5563; background: transparent; text-align: left; text-decoration: underline; cursor: pointer; }
+.signup-submit { width: 100%; min-height: 54px; margin-top: 4px; border: 0; border-radius: 14px; color: #fff; background: #004aad; font-weight: 700; cursor: pointer; transition: background-color .15s ease; }
+.signup-submit:disabled { color: #fff; background: #b7bdc7; cursor: not-allowed; }
+.signup-page button:focus-visible, .signup-page input:focus-visible { outline: 3px solid rgba(0, 74, 173, .25); outline-offset: 2px; }
+@media (max-width: 350px) { .signup-page { padding-inline: 16px; } .signup-inline { grid-template-columns: minmax(0, 1fr) 80px; } .signup-code { grid-template-columns: minmax(0, 1fr) 42px 56px; gap: 5px; } }

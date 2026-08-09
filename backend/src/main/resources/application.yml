@@ -1,0 +1,197 @@
+spring:
+  application:
+    name: safy
+  config:
+    import: optional:file:.env[.properties]
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  data:
+    redis:
+      repositories:
+        enabled: false
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:not-configured}
+            client-secret: ${GOOGLE_CLIENT_SECRET:not-configured}
+            scope: openid,profile,email
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID:not-configured}
+            client-secret: ${KAKAO_CLIENT_SECRET:not-configured}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-authentication-method: client_secret_post
+            scope: profile_nickname,profile_image,account_email
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+server:
+  port: ${SPRING_PORT:8080}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  auth:
+    jwt-secret: ${JWT_SECRET}
+    access-token-ttl: ${AUTH_ACCESS_TOKEN_TTL:1h}
+    refresh-token-ttl: 14d
+    refresh-cookie-name: SAFY_REFRESH_TOKEN
+    # 시민 앱(/)과 관리자 콘솔(/admin/)이 같은 호스트라 쿠키를 공유한다. 이름을 분리해야
+    # 관리자 로그인이 시민 세션을 덮어쓰지 않는다.
+    admin-refresh-cookie-name: SAFY_ADMIN_REFRESH_TOKEN
+    cookie-secure: ${AUTH_COOKIE_SECURE:false}
+    cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+    oauth2-success-redirect-uri: ${OAUTH2_SUCCESS_REDIRECT_URI:http://localhost:3000/oauth/callback}
+    oauth2-failure-redirect-uri: ${OAUTH2_FAILURE_REDIRECT_URI:http://localhost:3000/login}
+  bootstrap-admin:
+    login-id: ${SUPER_ADMIN_LOGIN_ID:}
+    password: ${SUPER_ADMIN_PASSWORD:}
+    display-name: ${SUPER_ADMIN_DISPLAY_NAME:Super Admin}
+  kakao:
+    local:
+      rest-api-key: ${KAKAO_LOCAL_REST_API_KEY:}
+      base-url: ${KAKAO_LOCAL_BASE_URL:https://dapi.kakao.com}
+      connect-timeout: ${KAKAO_LOCAL_CONNECT_TIMEOUT:PT2S}
+      read-timeout: ${KAKAO_LOCAL_READ_TIMEOUT:PT3S}
+  report-routing:
+    max-attempts: ${REPORT_ROUTING_MAX_ATTEMPTS:5}
+    retry-delay: ${REPORT_ROUTING_RETRY_DELAY:PT1M}
+    batch-size: ${REPORT_ROUTING_BATCH_SIZE:50}
+    scheduler-delay: ${REPORT_ROUTING_SCHEDULER_DELAY:PT30S}
+  report-assignment:
+    scheduler-delay: ${REPORT_ASSIGNMENT_SCHEDULER_DELAY:PT30S}
+    assigned-timeout: ${REPORT_ASSIGNMENT_ASSIGNED_TIMEOUT:PT5M}
+    timeout-sweep-delay: ${REPORT_ASSIGNMENT_TIMEOUT_SWEEP_DELAY:PT30S}
+  presence:
+    offline-grace: ${PRESENCE_OFFLINE_GRACE:PT90S}
+    in-progress-release-grace: ${PRESENCE_IN_PROGRESS_RELEASE_GRACE:PT3M}
+    sweep-delay: ${PRESENCE_SWEEP_DELAY:PT30S}
+  web-push:
+    enabled: ${WEB_PUSH_ENABLED:false}
+    subject: ${WEB_PUSH_SUBJECT:mailto:admin@example.com}
+    public-key: ${WEB_PUSH_PUBLIC_KEY:}
+    private-key: ${WEB_PUSH_PRIVATE_KEY:}
+    ttl-seconds: ${WEB_PUSH_TTL_SECONDS:86400}
+    connect-timeout: ${WEB_PUSH_CONNECT_TIMEOUT:PT3S}
+    read-timeout: ${WEB_PUSH_READ_TIMEOUT:PT5S}
+    scheduler-delay: ${WEB_PUSH_SCHEDULER_DELAY:PT1S}
+    retry-delay: ${WEB_PUSH_RETRY_DELAY:PT1M}
+    retry-jitter: ${WEB_PUSH_RETRY_JITTER:PT30S}
+    processing-timeout: ${WEB_PUSH_PROCESSING_TIMEOUT:PT1M}
+    max-attempts: ${WEB_PUSH_MAX_ATTEMPTS:8}
+    # 동시 전송 수. HTTP 커넥션 풀의 route 당 상한도 이 값을 따라간다.
+    send-concurrency: ${WEB_PUSH_SEND_CONCURRENCY:8}
+    # 완료·실패로 끝난 전송 작업을 남겨두는 기간. 0 이면 정리하지 않는다.
+    cleanup-delay: ${WEB_PUSH_CLEANUP_DELAY:PT1H}
+    completed-retention: ${WEB_PUSH_COMPLETED_RETENTION:P7D}
+    # 알림이 가치를 유지하는 시간. 푸시 서비스 TTL 과 재시도 종료 시점을 함께 정한다.
+    # 위험 정보는 오래된 채 도착하면 지난 상황을 현재로 오인시키므로 짧게 잡는다.
+    validity:
+      SAFETY: ${WEB_PUSH_VALIDITY_SAFETY:PT15M}
+      REPORT: ${WEB_PUSH_VALIDITY_REPORT:PT12H}
+      SYSTEM: ${WEB_PUSH_VALIDITY_SYSTEM:PT24H}
+    allowed-endpoint-hosts: ${WEB_PUSH_ALLOWED_ENDPOINT_HOSTS:fcm.googleapis.com,updates.push.services.mozilla.com,web.push.apple.com,.notify.windows.com}
+  public-data:
+    base-url: ${PUBLIC_DATA_BASE_URL:http://localhost:8000}
+    connect-timeout: ${PUBLIC_DATA_CONNECT_TIMEOUT:PT2S}
+    # 혼잡도·행사 요청은 FastAPI 가 장소 121곳을 나눠 병렬 조회하는 동안 대기한다.
+    # 이 값을 넘기면 그 주기의 수집 결과를 통째로 버리고 다음 주기에 다시 요청한다
+    # (FastAPI 는 서울시 호출을 이미 마쳤을 수 있으므로 그 run 의 데이터는 유실된다).
+    # 타임아웃 경고가 반복되면 값을 올려야 한다.
+    read-timeout: ${PUBLIC_DATA_READ_TIMEOUT:PT2M}
+    # fixedRate 라서 실행 시작 시각 기준 주기다. read-timeout 보다 길게 두어야
+    # 한 회차가 다음 회차를 밀어내지 않는다(현재 혼잡도 3분 > read-timeout 2분).
+    # 관측 시각이 같은 값은 (place_id, observed_at) 유일 제약으로 걸러지므로 중복 적재는 없다.
+    city-congestion-delay: ${PUBLIC_DATA_CITY_CONGESTION_DELAY:PT3M}
+    # 2분(하루 720회)은 실측에서 매일 한도를 소진했다. 운영 로그에 code=22
+    # LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS 가 반복되고, 이틀 연속 오후부터
+    # 하루 끝까지 전량 실패했다(08-04 성공 58/실패 296, 08-05 성공 390/실패 48로
+    # 13:22 KST 이후 전부 실패). 공식 문서의 1일 1,000회와 실측이 맞지 않아
+    # 하루 144회로 낮춘다. lookback-days=1 이라 매 요청이 어제부터 다시 받으므로
+    # 주기를 늘려도 누락되는 문자는 없고, 최신 문자 반영이 최대 10분 늦어진다.
+    disaster-message-delay: ${PUBLIC_DATA_DISASTER_MESSAGE_DELAY:PT10M}
+    # 재난문자 조회 시작일을 며칠 전으로 둘지. 원본 crtDt 는 조회 '시작'일자라서
+    # 1이면 어제부터 최신까지 받는다(10분 주기에도 하루 여유). 하루 넘는 장애 뒤에는
+    # 이 값을 늘려 재수집한다. 다만 원본 1회 응답 상한이 1,000건이고 정렬이 없어
+    # 창을 너무 넓히면 어떤 건이 빠질지 예측할 수 없다(실측 이틀치 348건).
+    disaster-message-lookback-days: ${PUBLIC_DATA_DISASTER_MESSAGE_LOOKBACK_DAYS:1}
+    cultural-event-cron: ${PUBLIC_DATA_CULTURAL_EVENT_CRON:0 0 4 * * *}
+    # 수집은 FastAPI 응답을 최대 2분 기다리므로, 앱 공용 스케줄러(스레드 1개)를 쓰면
+    # 제보 라우팅·라이브 정리가 그동안 멈춘다. 그래서 전용 풀을 둔다.
+    scheduler-pool-size: ${PUBLIC_DATA_SCHEDULER_POOL_SIZE:3}
+    # 관측값은 지역 121곳 × 5분이라 월 100만 행씩 늘어난다.
+    # 지도는 최신 1건만 쓰고 위험도 추이도 몇 주면 충분하므로 보관 기간을 넘긴 행은 지운다.
+    observation-retention: ${PUBLIC_DATA_OBSERVATION_RETENTION:P90D}
+    observation-cleanup-cron: ${PUBLIC_DATA_OBSERVATION_CLEANUP_CRON:0 30 4 * * *}
+  grid-risk:
+    # 121곳 혼잡도 수집 주기(city-congestion-delay)와 같게 둔다. 더 자주 돌려도
+    # 공공데이터 쪽 입력은 바뀌지 않는다. 제보는 최대 이 간격만큼 늦게 반영되는데,
+    # 담당자 알림은 SSE 로 즉시 가고 격자는 배경 위험도라 감수한다.
+    # 이력은 값이 바뀔 때만 쌓이므로 주기를 줄여도 저장량이 비례해 늘지는 않는다.
+    scheduler-delay: ${GRID_RISK_SCHEDULER_DELAY:PT3M}
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
+openvidu:
+  url: ${OPENVIDU_URL:}
+  api-key: ${OPENVIDU_API_KEY:}
+  api-secret: ${OPENVIDU_API_SECRET:}
+  token-ttl: ${OPENVIDU_TOKEN_TTL:PT10M}
+  session-ttl: ${OPENVIDU_SESSION_TTL:PT30M}
+  cleanup-delay: ${OPENVIDU_CLEANUP_DELAY:PT1M}
+  disconnect-grace: ${OPENVIDU_DISCONNECT_GRACE:PT60S}
+  disconnect-sweep-delay: ${OPENVIDU_DISCONNECT_SWEEP_DELAY:PT20S}
+
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  public-endpoint: ${MINIO_PUBLIC_ENDPOINT:${MINIO_ENDPOINT:http://localhost:9000}}
+  access-key: ${MINIO_ACCESS_KEY:}
+  secret-key: ${MINIO_SECRET_KEY:}
+  upload-bucket: ${MINIO_UPLOAD_BUCKET:safy}
+
+ai:
+  server:
+    base-url: ${AI_SERVER_BASE_URL:http://localhost:8000}
+    connect-timeout: ${AI_CONNECT_TIMEOUT:PT5S}
+    # 정확도 우선 정책으로 정상 프레임은 YOLO+P2PNet 을 직렬 실행한다. P2PNet 고밀도 추론이
+    # 노트북 CPU 실측 약 1.7초, 운영 4 vCPU 는 그보다 느리고 초기 요청은 모델 초기화(최대
+    # 3.5초)까지 겹치므로 read timeout 이 추론보다 먼저 끝나지 않도록 여유를 둔다.
+    # processingTimeMs 는 네트워크·디코딩 시간을 포함하지 않는다.
+    read-timeout: ${AI_READ_TIMEOUT:PT40S}
+
+live:
+  recording:
+    # Egress 컨테이너가 없는 환경에서는 false로 두면 라이브는 그대로 동작하고 녹화만 생략된다.
+    enabled: ${LIVE_RECORDING_ENABLED:true}
+    bucket: ${LIVE_RECORDING_BUCKET:${MINIO_UPLOAD_BUCKET:safy}}
+    # Egress 컨테이너에서 접근 가능한 내부 주소여야 한다(브라우저용 public 주소가 아님).
+    # backend 자신이 쓰는 MINIO_ENDPOINT와 값이 다를 수 있다. Egress는 OpenVidu 스택의
+    # host 네트워크 컨테이너라 우리 도커 브리지의 이름(minio)을 해석하지 못한다
+    # (2026-07-30 실측: getent hosts minio 실패, wget http://minio:9000 이 exit 4).
+    # 미지정 시 MINIO_ENDPOINT로 대체되므로 기존 동작과 같다.
+    s3-endpoint: ${LIVE_RECORDING_S3_ENDPOINT:${MINIO_ENDPOINT:http://localhost:9000}}
+    s3-access-key: ${MINIO_ACCESS_KEY:}
+    s3-secret-key: ${MINIO_SECRET_KEY:}
+    region: ${LIVE_RECORDING_REGION:us-east-1}
+    frame-interval: ${LIVE_FRAME_INTERVAL:PT5S}
+    frame-width: ${LIVE_FRAME_WIDTH:1280}
+    frame-height: ${LIVE_FRAME_HEIGHT:720}
+    frame-poll-delay: ${LIVE_FRAME_POLL_DELAY:PT2S}
+    # Egress 시작 실패 시 재시도 횟수(최초 시도 포함)와 재시도 간 대기 시간.
+    start-max-attempts: ${LIVE_RECORDING_START_MAX_ATTEMPTS:4}
+    start-retry-delay: ${LIVE_RECORDING_START_RETRY_DELAY:PT2S}

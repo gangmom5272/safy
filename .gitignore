@@ -38,6 +38,9 @@ htmlcov/
 .env
 !*.env.example
 
+# Locally generated deploy keys (never commit private keys)
+.deploy-key-tmp/
+
 # Data pipeline outputs
 data/raw/
 data/processed/

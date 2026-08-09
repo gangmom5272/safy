@@ -1,0 +1,4711 @@
+:root {
+  --bg: #f3f6fa;
+  --surface: #ffffff;
+  --surface-muted: #eef2f6;
+  --text: #1f2933;
+  --text-muted: #697586;
+  --border: #d9e2ec;
+  --accent: #004aad;
+  --accent-hover: #003b8a;
+  --accent-muted: #eaf2ff;
+  --sidebar: #003b8a;
+  --sidebar-active: #004aad;
+  --danger: #d92d20;
+  --warning: #dc6803;
+  --caution: #b54708;
+  --safe: #027a48;
+  /* 관리자가 아직 확인하지 않은 신규 제보 강조색. 위험도 색과 구분되도록 보라색 계열을 쓴다. */
+  --new-report: #7c3aed;
+  --new-report-surface: #f5f0ff;
+  --new-report-surface-hover: #ebe1ff;
+  --shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  --home-map-row-height: 500px;
+  --home-recent-row-height: 310px;
+  --home-grid-gap: 14px;
+  --admin-header-height: 83px;
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  /* 스크롤바 자리를 항상 비워 둔다. 없으면 목록을 필터링해 페이지가 짧아지는 순간
+     스크롤바가 사라져 본문 폭이 약 15px 늘고, 16:9 로 고정된 관제 카드가 함께 커진다. */
+  scrollbar-gutter: stable;
+  color: var(--text);
+  background: var(--bg);
+  font: 15px/1.45 var(--sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app-shell {
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--bg);
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+}
+
+.app-header span {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.app-main {
+  width: min(100%, 960px);
+  margin: 0 auto;
+  padding: 24px 20px 96px;
+}
+
+.app-bottom-nav {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-top: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+}
+
+.app-bottom-nav a {
+  min-width: 0;
+  padding: 12px 6px 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.app-bottom-nav a.active {
+  color: var(--accent);
+  background: var(--accent-muted);
+  font-weight: 700;
+}
+
+.admin-shell {
+  min-height: 100svh;
+  display: grid;
+  /* '실시간 모니터링' + 숫자 배지가 한 줄에 들어가는 최소 폭. 줄어들면 메뉴명이 두 줄로 접힌다. */
+  grid-template-columns: 236px minmax(0, 1fr);
+  background: var(--bg);
+  /* 접기·펼치기로 좌측 칼럼 폭만 바뀌므로, 본문이 튀지 않게 폭 자체를 전환한다. */
+  transition: grid-template-columns 200ms ease;
+}
+
+.admin-sidebar {
+  position: sticky;
+  top: 0;
+  /* 접힌 상태의 tooltip 과 프로필 팝오버가 사이드바 밖으로 나가야 하므로 잘라내지 않는다. */
+  z-index: 20;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: visible;
+  padding: 0 18px 18px;
+  background: var(--sidebar);
+  color: #ffffff;
+}
+
+/* 메뉴가 화면 높이를 넘길 만큼 낮은 창에서는 하단 버튼이 잘리지 않도록 스크롤을 허용한다. */
+@media (max-height: 620px) {
+  .admin-sidebar {
+    overflow-y: auto;
+  }
+}
+
+.admin-sidebar__brand {
+  display: flex;
+  flex: 0 0 var(--admin-header-height);
+  align-items: center;
+  gap: 12px;
+  height: var(--admin-header-height);
+  padding: 0 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.admin-sidebar__brand-icon {
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--sidebar-active);
+}
+
+.admin-sidebar__brand-icon svg {
+  width: 25px;
+  height: 25px;
+}
+
+.admin-sidebar__brand-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.admin-sidebar__brand-copy strong {
+  font-size: 21px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.admin-sidebar__nav {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-sidebar__nav a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  color: #c6d1df;
+  font-size: 14px;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.admin-sidebar__nav a:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+
+.admin-sidebar__nav a:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.82);
+  outline-offset: 2px;
+}
+
+.admin-sidebar__nav-icon-slot {
+  position: relative;
+  display: grid;
+  flex: 0 0 22px;
+  place-items: center;
+}
+
+.admin-sidebar__nav-icon {
+  width: 22px;
+  height: 22px;
+}
+
+/* 메뉴명은 배지가 붙어도 한 줄로 둔다. 두 줄이 되면 항목 높이가 서로 달라진다. */
+.admin-sidebar__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar__nav a.active {
+  background: var(--sidebar-active);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* 신규·미확인 건수. 펼친 상태는 숫자 배지, 접힌 상태는 아이콘 우측 상단의 점으로 같은 상태를 알린다. */
+.admin-sidebar__nav-badge {
+  flex: 0 0 auto;
+  min-width: 22px;
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.admin-sidebar__nav-dot {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  display: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  /* 파란 활성 배경 위에서도 배지가 묻히지 않도록 배경색과 같은 테두리를 둘러 분리한다. */
+  box-shadow: 0 0 0 2px var(--sidebar);
+}
+
+.admin-sidebar__nav a.active .admin-sidebar__nav-dot {
+  box-shadow: 0 0 0 2px var(--sidebar-active);
+}
+
+/* 접힌 상태에서 아이콘만 보일 때 메뉴명을 알려주는 tooltip. hover 와 키보드 focus 모두에서 뜬다. */
+.admin-sidebar__tooltip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 10px);
+  z-index: 30;
+  display: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+  box-shadow: var(--shadow);
+}
+
+.admin-sidebar__footer {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.admin-sidebar__profile {
+  position: relative;
+}
+
+.admin-sidebar__account {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.09);
+  color: inherit;
+  text-align: left;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.admin-sidebar__account:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.17);
+}
+
+.admin-sidebar__account:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.82);
+  outline-offset: 2px;
+}
+
+.admin-sidebar__avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--sidebar-active);
+  color: #ffffff;
+}
+
+.admin-sidebar__avatar svg {
+  width: 21px;
+  height: 21px;
+}
+
+.admin-sidebar__account-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.admin-sidebar__account-copy strong,
+.admin-sidebar__account-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar__account-copy strong {
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-sidebar__account-copy span {
+  color: #b7c2d0;
+  font-size: 11px;
+}
+
+/* 프로필 팝오버. 계정 설정 탭을 없앤 대신 계정 설정과 로그아웃을 여기서 연다. */
+.admin-sidebar__profile-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.admin-sidebar__profile-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.admin-sidebar__profile-menu button svg {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.admin-sidebar__profile-menu button:hover {
+  background: var(--surface-muted);
+}
+
+.admin-sidebar__profile-menu button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.admin-sidebar__profile-menu button.active {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.admin-sidebar__collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: transparent;
+  color: #c6d1df;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.admin-sidebar__collapse:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.admin-sidebar__collapse:focus-visible {
+  color: #ffffff;
+  outline: 2px solid rgba(255, 255, 255, 0.82);
+  outline-offset: 2px;
+}
+
+.admin-sidebar__collapse svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+/* 접힌 사이드바는 아이콘 전용이다. 760px 이하에서는 사이드바가 상단 가로 배치로 바뀌므로 적용하지 않는다. */
+@media (min-width: 761px) {
+  .admin-shell--collapsed {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .admin-sidebar--collapsed {
+    padding: 0 14px 18px;
+  }
+
+  .admin-sidebar--collapsed .admin-sidebar__brand {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .admin-sidebar--collapsed .admin-sidebar__brand-copy,
+  .admin-sidebar--collapsed .admin-sidebar__label,
+  .admin-sidebar--collapsed .admin-sidebar__account-copy,
+  .admin-sidebar--collapsed .admin-sidebar__nav-badge {
+    display: none;
+  }
+
+  .admin-sidebar--collapsed .admin-sidebar__nav a {
+    justify-content: center;
+    gap: 0;
+    padding: 11px 0;
+  }
+
+  .admin-sidebar--collapsed .admin-sidebar__nav-dot {
+    display: block;
+  }
+
+  .admin-sidebar--collapsed .admin-sidebar__nav a:hover .admin-sidebar__tooltip,
+  .admin-sidebar--collapsed .admin-sidebar__nav a:focus-visible .admin-sidebar__tooltip {
+    display: block;
+  }
+
+  .admin-sidebar--collapsed .admin-sidebar__account {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    padding: 8px;
+  }
+
+  .admin-sidebar--collapsed .admin-sidebar__collapse {
+    padding: 8px 0;
+  }
+
+  /* 좁은 사이드바 안에 팝오버를 넣으면 잘리므로 오른쪽으로 펼친다. */
+  .admin-sidebar--collapsed .admin-sidebar__profile-menu {
+    bottom: 0;
+    left: calc(100% + 10px);
+    right: auto;
+    min-width: 176px;
+  }
+}
+
+/* 카테고리와 위험도는 짧아서 한 줄을 나눠 쓰고, 나머지는 한 줄을 다 쓴다.
+   카드가 옆 영상 높이만큼 커져도 행 사이는 벌어지지 않고 위에서부터 쌓인다. */
+.monitor-detail__list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: start;
+  gap: 12px 16px;
+  margin: 0;
+}
+
+.monitor-detail__list > div {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 3px;
+}
+
+.monitor-detail__row {
+  grid-column: 1 / -1;
+}
+
+/* 제보 내용은 길어질 수 있어 남는 높이를 받아 채운다. */
+.monitor-detail__description {
+  align-content: start;
+}
+
+.monitor-detail dt {
+  color: #aab6c5;
+  font-size: 12px;
+}
+
+.monitor-detail dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.admin-workspace {
+  min-width: 0;
+}
+
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: var(--admin-header-height);
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+}
+
+.admin-header__left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 10px 22px;
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.admin-header__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.admin-header__status time {
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-header__actions {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 10px;
+}
+
+/* 옆의 근무 상태 토글과 같은 캡슐 형태·높이로 맞춰 헤더 상태 영역이 한 덩어리로 보이게 한다. */
+.emergency-alert-button {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border: 1px solid #b42318;
+  border-radius: 999px;
+  background: #d92d20;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.emergency-alert-button .header-action-icon {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.emergency-alert-button:hover,
+.emergency-alert-button:focus-visible {
+  background: #b42318;
+}
+
+/* 1건이라도 있으면 버튼 뒤로 붉은 파동이 퍼져 나가 긴급하다는 느낌을 준다.
+   버튼 자체와 ::after 가 같은 파동을 시간차로 내보내 끊기지 않고 이어지게 한다. */
+.emergency-alert-button--alert {
+  animation: emergency-alert-ripple 1.8s ease-out infinite;
+}
+
+.emergency-alert-button--alert::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: emergency-alert-ripple 1.8s ease-out 0.9s infinite;
+}
+
+@keyframes emergency-alert-ripple {
+  0% { box-shadow: 0 0 0 0 rgba(217, 45, 32, 0.6); }
+  70% { box-shadow: 0 0 0 14px rgba(217, 45, 32, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(217, 45, 32, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emergency-alert-button--alert {
+    /* 움직임을 끈 사용자에게도 긴급 상태는 구분돼야 하므로 고정 외곽 그림자로 대체한다. */
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.3);
+  }
+
+  .emergency-alert-button--alert::after {
+    animation: none;
+  }
+}
+
+.header-action-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-search input,
+.filter-grid input,
+.filter-grid select {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text);
+}
+
+.admin-search {
+  width: 260px;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.admin-profile {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.logout-button {
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.admin-main {
+  padding: 20px 24px 36px;
+}
+
+.page-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-section {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 9px;
+}
+
+.admin-section__heading {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-section__heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.admin-section__content {
+  min-width: 0;
+}
+
+.admin-card,
+.page-section {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.admin-card h2,
+.page-section h1 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.admin-card p,
+.page-section p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.emergency-banner {
+  padding: 11px 14px;
+  border: 1px solid #fec84b;
+  border-radius: 8px;
+  background: #fffaeb;
+  color: #93370d;
+  font-weight: 700;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-card {
+  display: grid;
+  gap: 8px;
+  min-height: 112px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  box-shadow: var(--shadow);
+}
+
+.summary-card span {
+  color: var(--text-muted);
+}
+
+.summary-card strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.dashboard-grid,
+.monitoring-layout,
+.risk-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(360px, 0.9fr);
+  gap: 14px;
+}
+
+.map-preview,
+.map-placeholder {
+  position: relative;
+  min-height: 330px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(0, 74, 173, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(0, 74, 173, 0.08) 1px, transparent 1px),
+    #eaf1f7;
+  background-size: 42px 42px;
+  color: var(--text);
+}
+
+.map-preview {
+  width: 100%;
+}
+
+.report-map {
+  position: relative;
+  width: 100%;
+  min-height: 330px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* 카카오 SDK 가 크기를 직접 읽어가므로 부모를 그대로 채우게 둔다. */
+.report-map__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.report-map--error {
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  padding: 20px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.risk-map-canvas {
+  position: relative;
+}
+
+/*
+ * 지도 위치 핀. 요소 박스가 정확히 핀 크기(30x40)라서 CustomOverlay 의
+ * xAnchor 0.5 / yAnchor 1 과 맞물려 핀 끝이 제보 좌표에 놓인다.
+ * 펄스와 NEW 배지는 absolute 로 띄워 박스 크기를 바꾸지 않는다.
+ */
+.map-pin {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pin-color, var(--accent));
+  line-height: 0;
+}
+
+.map-pin__svg {
+  display: block;
+  filter: drop-shadow(0 3px 4px rgba(15, 23, 42, 0.35));
+}
+
+.map-pin__body {
+  fill: var(--pin-color, var(--accent));
+}
+
+.map-pin__pulse {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.map-pin--new .map-pin__pulse {
+  animation: map-pin-pulse 2.2s ease-out infinite;
+}
+
+.map-pin__badge {
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: var(--pin-color, var(--new-report));
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+}
+
+@keyframes map-pin-pulse {
+  0% { transform: scale(0.5); opacity: 0.5; }
+  70% { transform: scale(2); opacity: 0; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pin--new .map-pin__pulse {
+    animation: none;
+  }
+}
+
+/* 마커를 클릭했을 때만 열리는 정보창. 핀 위로 올려 핀을 가리지 않게 한다. */
+.map-info {
+  display: grid;
+  /*
+   * 카카오 오버레이 레이어는 자식에게 white-space: nowrap 을 상속시킨다.
+   * 그대로 두면 주소가 한 줄로 늘어나 암시적 auto 트랙이 박스(250px)보다
+   * 커지고, 트랙에 맞춰 늘어난 헤더 때문에 닫기 버튼까지 테두리 밖으로
+   * 밀려난다. 트랙을 박스 너비로 묶고 줄바꿈을 되돌려 둘 다 막는다.
+   */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  width: 250px;
+  padding: 10px 12px;
+  transform: translateY(calc(-1 * var(--pin-height, 40px) - 6px));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: normal;
+  text-align: left;
+}
+
+.map-info__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.map-info__number {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.map-info__status {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.map-info__close {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.map-info__address {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.map-info__rows {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.map-info__rows dt {
+  color: var(--text-muted);
+}
+
+.map-info__rows dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.map-info__detail {
+  justify-self: start;
+}
+
+.report-map__legend {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  max-width: calc(100% - 24px);
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.report-map__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* CSS 만으로 그린 물방울 핀 모양. 색은 인라인 color 로 받는다. */
+.report-map__legend-pin {
+  width: 9px;
+  height: 9px;
+  border-radius: 50% 50% 50% 0;
+  background: currentColor;
+  transform: rotate(-45deg);
+}
+
+.report-map__legend-risk i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.risk-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.risk-badge--unclassified {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.live-preview-grid,
+/* grid 모드는 카드 개수만 바꾼다. 카드 내부 구조는 같고, 카드가 좁아지는 만큼
+   글자·여백·줄 수만 변수로 줄인다(DOM 분기 없음). */
+.monitoring-grid {
+  display: grid;
+  gap: 10px;
+  --tile-pad: 10px;
+  --tile-gap: 5px;
+  --tile-font: 13px;
+  --tile-title: 15px;
+  --tile-badge-font: 11px;
+  --tile-address-clamp: 2;
+  --tile-description-clamp: 2;
+}
+
+.monitoring-grid.columns-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.monitoring-grid.columns-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.monitoring-grid.columns-5 {
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  --tile-pad: 8px;
+  --tile-gap: 4px;
+  --tile-font: 11px;
+  --tile-title: 13px;
+  --tile-badge-font: 10px;
+  --tile-description-clamp: 2;
+}
+
+.monitoring-grid-card {
+  min-height: calc(100svh - 270px);
+}
+
+.video-card {
+  position: relative;
+  display: grid;
+  align-content: end;
+  gap: 7px;
+  min-height: 180px;
+  padding: 12px;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #101828, #263446);
+  color: #ffffff;
+  text-align: left;
+}
+
+/* 관제 카드는 [미디어][정보] 두 행 고정이다. 예전에는 align-content:end 로 내용을 카드
+   아래로 몰아 붙여, 글이 짧은 카드는 미디어 프레임이 아래로 밀리고 위에 검은 여백이
+   남았다(카드마다 미디어 위치가 달라 보인 원인). 정보 행이 남는 높이를 흡수하게 해
+   미디어는 항상 카드 맨 위, 하단 액션은 항상 같은 높이에 놓인다. */
+.monitoring-report-card {
+  align-content: stretch;
+  grid-template-rows: auto 1fr;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  /* 위험 카드만 3px 테두리를 쓰면 내부 폭이 2px 좁아지고, 16:9 프레임 높이까지 달라져
+     같은 행 카드들의 미디어 높이가 어긋난다. 두께는 늘 3px 로 두고 색만 바꾼다. */
+  border-width: 3px;
+}
+
+/* 위험도 '높음' 이상 카드는 테두리 색을 깜빡여, 카드가 많아 색만으로는 묻히는 상황에서도
+   관제사 눈에 띄게 한다. 0%·100% 키프레임을 비워두면 그 시점에는 요소의 계산값
+   (인라인으로 넣는 등급 색)이 그대로 쓰이므로, 등급별 색을 여기서 다시 정의하지 않아도 된다.
+   두께는 건드리지 않는다 — 위 규칙대로 3px 를 유지해야 카드 높이가 어긋나지 않는다.
+   1초 주기(1Hz)는 WCAG 2.3.1 의 '초당 3회 이하' 상한 아래다. */
+@keyframes monitoring-risk-blink {
+  50% {
+    border-color: transparent;
+  }
+}
+
+.monitoring-report-card--alert {
+  animation: monitoring-risk-blink 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monitoring-report-card--alert {
+    /* 움직임을 끈 사용자에게도 위험 카드는 구분돼야 한다. 깜빡임 대신 외곽 그림자로 강조한다. */
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.3);
+  }
+}
+
+.monitoring-report-card__info {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--tile-gap);
+  padding: var(--tile-pad);
+}
+
+/* 주소·제보 내용은 줄 수를 고정으로 예약한다. 예약하지 않으면 주소가 1줄인 카드와 2줄인
+   카드의 정보 영역 높이가 달라져 하단 액션 위치가 어긋난다. */
+.monitoring-report-card strong {
+  display: -webkit-box;
+  overflow: hidden;
+  min-height: calc(var(--tile-address-clamp) * 1.35em);
+  font-size: var(--tile-title);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--tile-address-clamp);
+}
+
+/* 상태·카테고리 줄은 좁은 카드에서 줄바꿈되며 높이를 밀어 올린다. 한 줄로 묶고 넘치면 줄인다. */
+.monitoring-report-card__info > span:not(.risk-badge):not(.monitoring-report-card__description) {
+  overflow: hidden;
+  max-width: 100%;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.video-card.selected {
+  outline: 3px solid var(--accent);
+}
+
+.video-card span:not(.risk-badge):not(.live-badge):not(.status-badge):not(.media-type-badge) {
+  color: #d0d5dd;
+  font-size: 13px;
+}
+
+.monitoring-report-card__info span:not(.risk-badge):not(.status-badge) {
+  font-size: var(--tile-font);
+}
+
+.monitoring-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 700;
+}
+
+.monitoring-notice--warning {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.monitoring-notice--success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.monitoring-report-card {
+  width: 100%;
+  min-width: 0;
+  border-radius: 8px;
+  background: #101828;
+}
+
+/* 주소 앞 위치 아이콘. 주소 strong 은 -webkit-line-clamp 로 줄 수를 고정하므로 아이콘도
+   인라인으로 흘려보낸다. 크기를 em 으로 두면 grid 모드별 --tile-title 에 맞춰 따라간다. */
+.monitoring-report-card__pin {
+  width: 1em;
+  height: 1em;
+  margin-right: 5px;
+  vertical-align: -0.15em;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 기준 부모는 .video-card__stream 이다. 카드가 아니라 미디어 프레임 우측 상단에
+   고정되므로 이미지 유무·비율·grid 모드와 무관하게 항상 같은 자리에 있다. */
+.media-type-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: var(--tile-badge-font, 11px);
+  font-weight: 900;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+}
+
+.media-type-badge--live {
+  background: #b42318;
+}
+
+.media-type-badge--image {
+  background: #175cd3;
+}
+
+.monitoring-report-card__description {
+  display: -webkit-box;
+  overflow: hidden;
+  min-height: calc(var(--tile-description-clamp, 2) * 1.5em);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--tile-description-clamp, 2);
+}
+
+.video-card__stream {
+  position: relative;
+  display: block;
+  width: calc(100% + 24px);
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin: -12px -12px 4px;
+  overflow: hidden;
+  border-radius: 8px 8px 0 0;
+  background: #0b1724;
+}
+
+/* 카드가 padding 0 이 되었으니 예전의 음수 margin 보정이 필요 없다. 프레임은 카드 폭을
+   그대로 채우고 16:9 로 고정되므로, 이미지 원본 비율과 무관하게 모든 카드의 미디어
+   높이가 같다. */
+.monitoring-report-card .video-card__stream {
+  width: 100%;
+  margin: 0;
+}
+
+.video-card__video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* contain 은 세로 사진을 프레임 가운데 작게 넣고 좌우에 검은 여백을 남긴다. 관제 카드는
+   프레임을 채우는 편이 현장 파악에 유리해 cover 를 쓴다. 대시보드의 라이브 타일은
+   LiveViewer 를 공유하므로 여기서만 좁혀서 적용한다. */
+.monitoring-report-card .video-card__video {
+  object-fit: cover;
+  object-position: center;
+}
+
+.video-card .video-card__status,
+.live-connection-item__media .video-card__status {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: max-content;
+  max-width: calc(100% - 20px);
+  transform: translate(-50%, -50%);
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(11, 23, 36, 0.78);
+  color: #ffffff;
+  text-align: center;
+}
+
+.live-connection-item__media .live-badge {
+  z-index: 1;
+}
+
+.live-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.queue-list {
+  display: grid;
+  gap: 10px;
+}
+
+.queue-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto minmax(140px, auto) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-table th {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: #f8fbff;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  align-items: end;
+  gap: 10px;
+}
+
+.filter-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.primary-button,
+.secondary-button,
+.text-button {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.primary-button {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.primary-button:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.status-badge--neutral {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.status-badge--primary {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.status-badge--success {
+  background: #ecfdf3;
+  color: var(--safe);
+}
+
+.status-badge--warning {
+  background: #fff6ed;
+  color: var(--warning);
+}
+
+.status-badge--danger {
+  background: #fef3f2;
+  color: var(--danger);
+}
+
+.admin-modal {
+  width: min(100%, 520px);
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.admin-modal__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-modal__heading h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.admin-modal__body {
+  display: grid;
+  gap: 12px;
+}
+
+/* 관리자 폼 공통 필드. 예전에는 label 안에 텍스트와 textarea 가 그냥 나란히 놓여
+   '사유 (필수)' 옆에 좁은 입력칸이 붙어 보였다. 라벨을 위, 입력칸을 아래 전체 너비로 둔다. */
+.admin-field {
+  display: grid;
+  /* start 로 고정한다. stretch 면 한 줄에 나란히 둔 필드끼리 높이를 맞추려고
+     입력칸이 늘어나서(안내 문구가 있는 쪽이 더 높음) 같은 select 인데도 높이가 달라진다. */
+  align-content: start;
+  gap: 6px;
+}
+
+.admin-field__label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-field__label em {
+  color: var(--danger);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.admin-field__control {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.55;
+}
+
+textarea.admin-field__control {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.admin-field__control::placeholder {
+  color: var(--text-muted);
+}
+
+.admin-field__control:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid rgba(0, 74, 173, 0.18);
+  outline-offset: 0;
+}
+
+.admin-field__counter {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
+}
+
+.admin-field__hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.emergency-alert-message {
+  padding: 11px;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318 !important;
+  font-weight: 700;
+}
+
+.emergency-report-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.emergency-report-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.dashboard-grid--equal {
+  align-items: stretch;
+}
+
+.home-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.95fr);
+  grid-template-rows: var(--home-map-row-height) var(--home-recent-row-height);
+  grid-template-areas:
+    'map live'
+    'recent live';
+  gap: var(--home-grid-gap);
+  min-width: 0;
+}
+
+.home-content-grid > * {
+  min-width: 0;
+}
+
+.home-content-grid .admin-section__heading h2 {
+  color: var(--accent);
+}
+
+.home-map-section { grid-area: map; }
+.home-recent-section { grid-area: recent; }
+.home-live-section {
+  grid-area: live;
+  min-height: 0;
+}
+
+.home-map-section,
+.home-recent-section,
+.home-live-section,
+.home-map-section .admin-section__content,
+.home-recent-section .admin-section__content,
+.home-live-section .admin-section__content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.home-recent-section .table-wrap {
+  max-height: 100%;
+  overflow: auto;
+}
+
+.dashboard-equal-section {
+  min-height: 500px;
+}
+
+.dashboard-map-card,
+.live-connection-panel {
+  height: 100%;
+  min-height: 450px;
+  overflow: hidden;
+}
+
+.dashboard-map-card {
+  padding: 0;
+}
+
+.dashboard-map-card .map-preview {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: inherit;
+}
+
+.live-connection-panel {
+  min-height: 0;
+}
+
+.home-live-section .live-connection-panel {
+  height: 100%;
+  max-height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.live-connection-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  gap: 16px;
+  padding: 2px 8px 16px 2px;
+  background: transparent;
+  scrollbar-gutter: stable;
+}
+
+.live-connection-item {
+  position: relative;
+  flex: 0 0 auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--text);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.live-connection-item:hover,
+.live-connection-item:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 10px 24px rgba(0, 74, 173, 0.18);
+  transform: translateY(-1px);
+}
+
+.live-connection-item:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.live-connection-item__header {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.live-connection-item__header .risk-badge {
+  flex-shrink: 0;
+}
+
+.live-connection-item__location {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.live-connection-item__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    rgba(15, 23, 42, 0.35);
+  background-size: 32px 32px;
+  color: #98a2b3 !important;
+}
+
+.live-connection-item__footer {
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  padding: 12px 14px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.live-connection-item__footer time {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.connection-request-dialog textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 96px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+}
+
+.connection-request-dialog textarea:focus {
+  border-color: var(--accent);
+  outline: 3px solid rgba(0, 74, 173, 0.16);
+}
+
+.connection-request-dialog__count {
+  justify-self: end;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.connection-request-dialog__error {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: var(--danger) !important;
+  font-size: 13px !important;
+  overflow-wrap: anywhere;
+}
+
+.recent-reports-table {
+  min-width: 560px;
+}
+
+/*
+ * 아직 확인하지 않은 신규 배정 제보.
+ * 배경을 td 에 칠해 tr 에 걸린 .clickable-row:hover 와 충돌하지 않게 한다.
+ */
+.recent-reports-table__row--new > td {
+  background: var(--new-report-surface);
+}
+
+.recent-reports-table__row--new:hover > td {
+  background: var(--new-report-surface-hover);
+}
+
+.recent-reports-table__row--new > td:first-child {
+  box-shadow: inset 3px 0 0 var(--new-report);
+}
+
+.new-badge {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--new-report);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  vertical-align: middle;
+}
+
+/* 카드가 늘어나면 점수·척도·요약 세 덩어리가 위아래로 벌어져 카드를 채운다. */
+.risk-indicator {
+  display: grid;
+  align-content: space-between;
+  gap: 14px;
+}
+
+.risk-indicator__score {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.risk-indicator__score span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.risk-indicator__score strong {
+  color: var(--accent);
+  font-size: 28px;
+  line-height: 1;
+}
+
+/* 1~5 단계를 가로 눈금으로 편다. 현재 단계까지 막대가 채워지고, 숫자와 단계 이름이
+   그 아래에 붙는다. */
+.risk-indicator__levels {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.risk-indicator__level {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  text-align: center;
+}
+
+.risk-indicator__bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.risk-indicator__step {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.risk-indicator__label {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.risk-indicator__level.is-current .risk-indicator__step,
+.risk-indicator__level.is-current .risk-indicator__label {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.risk-indicator__summary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.risk-indicator__summary > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.risk-indicator__summary dt {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.risk-indicator__summary dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.risk-indicator__current {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.secondary-button {
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text);
+}
+
+.text-button {
+  min-height: auto;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+}
+
+.notice-text {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--accent-muted);
+  color: var(--accent) !important;
+}
+
+/* 되돌릴 수 없는 조치를 알릴 때. 색은 .monitoring-notice--warning 과 맞춘다. */
+.notice-text--warning {
+  background: #fff7ed;
+  color: #9a3412 !important;
+}
+
+.status-management-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.status-section {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.status-section h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.status-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.status-current span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.confirm-dialog {
+  width: min(100%, 440px);
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.confirm-dialog h2,
+.confirm-dialog p {
+  margin: 0;
+}
+
+.confirm-dialog p {
+  color: var(--text-muted);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.dialog-status-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.dialog-status-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dialog-status-list dt {
+  color: var(--text-muted);
+}
+
+.dialog-status-list dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.system-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.system-summary-grid div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.system-summary-grid span,
+.system-status-section dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.system-summary-grid strong {
+  font-size: 20px;
+}
+
+.settings-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.system-status-section {
+  align-content: start;
+}
+
+.system-status-section dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.system-status-section dl div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.system-status-section dl div:last-child {
+  border-bottom: 0;
+}
+
+.system-status-section dd {
+  margin: 0;
+  font-weight: 800;
+  text-align: right;
+}
+
+.empty-state {
+  min-height: 180px;
+  place-items: center;
+  text-align: center;
+}
+
+/* 근무 상태 토글 (헤더) */
+
+.presence-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: none;
+}
+
+.presence-dot--on_duty { background: #16a34a; }
+.presence-dot--away { background: #eab308; }
+.presence-dot--offline { background: #94a3b8; }
+
+.presence-toggle__buttons {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.presence-toggle__buttons button {
+  padding: 5px 13px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.presence-toggle__buttons button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.presence-toggle__buttons button:disabled {
+  cursor: progress;
+}
+
+.presence-toggle__hint,
+.presence-toggle__error {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.presence-toggle__error {
+  color: #b42318;
+}
+
+/* 미배정 제보 */
+
+.queue-panel {
+  gap: 14px;
+}
+
+/* 설명과 새로고침 버튼을 한 행에 두고 세로 가운데로 맞춘다. 폭이 좁아지면 버튼이
+   설명 아래로 내려간다. */
+.queue-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.queue-intro {
+  min-width: min(100%, 320px);
+  flex: 1 1 420px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.queue-refresh {
+  flex: 0 0 auto;
+  gap: 6px;
+  padding: 7px 14px;
+  color: var(--accent);
+  border-color: #bcd3f5;
+}
+
+.queue-refresh:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.queue-refresh:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.queue-refresh:active:not(:disabled) {
+  background: var(--surface-muted);
+}
+
+.queue-refresh__spinner {
+  display: inline-flex;
+}
+
+.queue-refresh__spinner.is-spinning {
+  animation: queue-refresh-spin 0.8s linear infinite;
+}
+
+.queue-refresh__icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes queue-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .queue-refresh__spinner.is-spinning {
+    animation: none;
+  }
+}
+
+.queue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  align-items: stretch;
+  justify-content: start;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.queue-card {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.queue-card__media {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-muted);
+}
+
+.queue-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 빈 썸네일 문구만 가운데로 모은다. 읽어야 하는 주소·카테고리·내용은 왼쪽 정렬이다. */
+.queue-card__placeholder {
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.queue-card__live {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #b42318;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.queue-card__body {
+  flex: 1 1 auto;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  text-align: left;
+}
+
+.queue-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.queue-card__elapsed {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 주소가 길어도 카드 높이가 카드마다 달라지지 않게 두 줄에서 자른다. */
+.queue-card__address {
+  font-size: 14.5px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.queue-card__category {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.queue-card__desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.queue-card__claim {
+  width: 100%;
+  min-height: 38px;
+  margin-top: auto;
+}
+
+.queue-card__claim:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detail-grid--two-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-grid div {
+  display: grid;
+  gap: 6px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.detail-grid span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.tag-list,
+.button-row,
+.layer-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag-list span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.history-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.history-list li {
+  padding: 8px 0;
+}
+
+.history-list span,
+.history-list time {
+  margin-left: 10px;
+  color: var(--text-muted);
+}
+
+.segmented-control {
+  display: inline-flex;
+  width: fit-content;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.segmented-control button {
+  min-width: 74px;
+  padding: 7px 10px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: #ffffff;
+}
+
+.segmented-control button:last-child {
+  border-right: 0;
+}
+
+.segmented-control button.active {
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.monitor-detail dt {
+  color: var(--text-muted);
+}
+
+.monitoring-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(340px, 0.8fr);
+  align-items: stretch;
+  gap: 14px;
+}
+
+/* 첫 행(영상 프레임)이 남는 높이를 갖고, 입력창과 메시지 이력은 내용 높이를 지킨다. */
+.monitoring-featured-video {
+  grid-template-rows: 1fr;
+  grid-auto-rows: auto;
+}
+
+/* 두 카드 모두 내용 높이만 갖고 위에서부터 쌓는다. 영상 열이 더 길어도 카드를 늘려
+   가운데를 비우지 않는다. */
+.monitoring-detail-sidebar {
+  display: grid;
+  align-content: start;
+  grid-auto-rows: min-content;
+  gap: 14px;
+}
+
+.live-message-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.live-message-form input {
+  min-width: 0;
+}
+
+.live-message-form button {
+  min-width: 72px;
+}
+
+.live-message-error {
+  color: var(--danger) !important;
+  font-size: 13px !important;
+}
+
+.featured-video-frame {
+  position: relative;
+  min-height: 460px;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(145deg, #101828, #263446);
+  background-size: 48px 48px, 48px 48px, auto;
+  color: #ffffff;
+  text-align: center;
+}
+
+.featured-video-frame strong {
+  font-size: 24px;
+}
+
+.featured-video-frame span:not(.live-badge) {
+  color: #d0d5dd;
+}
+
+.featured-live-video {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  object-fit: cover;
+  background: #0b1724;
+}
+
+.featured-live-status {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(11, 23, 36, 0.78);
+  color: #fff;
+}
+
+/* 송출 종료 안내와 '원본 영상 보기'를 프레임 가운데에 세로로 쌓는다.
+   .featured-live-status 처럼 절대 배치하면 두 요소가 겹친다. */
+.featured-live-ended {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.featured-recording-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.featured-recording-link:hover {
+  color: #93c5fd;
+}
+
+.featured-recording-hint {
+  font-size: 13px;
+}
+
+/* 프레임 안에서는 라이브 화면과 같은 cover 로 채운다. 다만 녹화 배율이 프레임과 다르면
+   가장자리가 잘리므로, 전체화면에서는 잘라내지 않고 원본 전체를 보여준다. */
+.featured-recording-video:fullscreen {
+  object-fit: contain;
+}
+
+.featured-recording-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(11, 23, 36, 0.78);
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.featured-recording-close:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.live-message-history {
+  display: grid;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid #dde5eb;
+  border-radius: 12px;
+  background: #f8fafb;
+}
+
+.live-message-history h3,
+.live-message-history p {
+  margin: 0;
+}
+
+.live-message-history article {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.live-message-history time {
+  flex: none;
+  color: #6b7b88;
+  font-size: 12px;
+}
+
+.risk-map-layout {
+  grid-template-columns: minmax(0, 1fr) 260px;
+}
+
+/* 위험도 지도만 쓰는 크기다(대시보드는 .map-preview). 헤더·필터·카드 여백을 뺀 만큼
+   화면 아래까지 채우고, 화면이 짧아도 560px 아래로는 줄지 않는다. 옆 통계 블록은
+   .map-stats 의 align-self: start 때문에 같이 늘어나지 않는다. */
+.map-placeholder {
+  min-height: max(560px, calc(100vh - 280px));
+}
+
+.active-layer-list {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 1;
+  max-width: calc(100% - 28px);
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.layer-options {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.layer-options legend {
+  padding: 0 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.layer-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-stats {
+  display: grid;
+  gap: 10px;
+  align-self: start;
+}
+
+.map-stats .admin-card {
+  gap: 6px;
+}
+
+.map-stats span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.map-stats strong {
+  font-size: 22px;
+}
+
+.eyebrow {
+  color: var(--accent) !important;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.text-link,
+.link-list a {
+  width: fit-content;
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.login-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 24px 20px;
+  background:
+    linear-gradient(135deg, rgba(0, 74, 173, 0.1), rgba(16, 24, 40, 0.05)),
+    var(--bg);
+}
+
+.login-card {
+  width: min(100%, 440px);
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.login-brand {
+  display: grid;
+  gap: 4px;
+}
+
+.login-brand strong {
+  color: var(--sidebar);
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.login-brand span,
+.mock-account span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.login-card h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.login-card p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.login-form {
+  display: grid;
+  gap: 10px;
+}
+
+.login-form label {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.login-form input {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.login-error {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: var(--danger) !important;
+  font-weight: 700;
+}
+
+.login-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.mock-account {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.mock-account dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.mock-account div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mock-account dt {
+  color: var(--text-muted);
+}
+
+.mock-account dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+@media (max-width: 1180px) {
+  .summary-grid,
+  .system-summary-grid,
+  .detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid,
+  .monitoring-layout,
+  .monitoring-detail-layout,
+  .risk-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .status-management-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-grid {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: static;
+    height: auto;
+    overflow: visible;
+    padding: 18px;
+  }
+
+  .admin-sidebar__brand {
+    flex-basis: auto;
+    height: auto;
+    padding: 2px 2px 18px;
+  }
+
+  .admin-header {
+    align-items: stretch;
+    flex-direction: column;
+    height: auto;
+    min-height: var(--admin-header-height);
+    padding: 18px 20px;
+  }
+
+  .admin-header__left {
+    gap: 8px 16px;
+  }
+
+  .admin-header__actions,
+  .card-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-search {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .admin-main {
+    padding: 20px;
+  }
+
+  .summary-grid,
+  .system-summary-grid,
+  .detail-grid,
+  .filter-grid,
+  .monitoring-grid.columns-2,
+  .monitoring-grid.columns-3,
+  .monitoring-grid.columns-5 {
+    grid-template-columns: 1fr;
+  }
+
+  .queue-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.risk-map-legend {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  max-width: calc(100% - 28px);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.risk-map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.risk-map-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+/* 검색창과 상세조건 패널이 이미 각자 흰 배경·테두리를 가지므로 감싸는 카드는 두지 않는다. */
+.report-filter {
+  display: grid;
+  gap: 16px;
+}
+
+.report-filter__basic,
+.report-filter__detail {
+  display: grid;
+  gap: 12px;
+}
+
+.report-filter__basic {
+  grid-template-columns: minmax(320px, 1fr) auto 88px;
+  align-items: center;
+}
+
+.report-filter__detail {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-areas:
+    'category status risk analysis'
+    'date date media actions';
+  align-items: start;
+  gap: 18px 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+
+.report-filter__category { grid-area: category; }
+.report-filter__status { grid-area: status; }
+.report-filter__risk { grid-area: risk; }
+.report-filter__analysis { grid-area: analysis; }
+.report-filter__date { grid-area: date; }
+.report-filter__media { grid-area: media; }
+
+.report-filter__group {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.report-filter__group legend,
+.report-filter__group-title {
+  margin: 0;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 컨트롤 높이는 실시간 모니터링·위험도 지도와 같은 38px 로 통일한다.
+   세로 패딩이 10px 이면 내용 높이만 42px 이 되어 38px 이 적용되지 않으므로 7px 로 함께 줄인다. */
+.report-filter input:not([type='checkbox']),
+.report-filter select {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+}
+
+.report-filter__search-field,
+.monitoring-filter__region {
+  position: relative;
+  min-width: 0;
+}
+
+.report-filter .report-filter__search-field input {
+  min-height: 38px;
+  padding-right: 190px;
+  padding-left: 42px;
+}
+
+.report-filter__search-hint {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.filter-field-icon,
+.monitoring-filter__location-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.filter-detail-toggle {
+  min-height: 38px;
+  gap: 8px;
+  padding: 7px 14px;
+  white-space: nowrap;
+}
+
+.filter-settings-icon,
+.filter-toggle-chevron {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.filter-toggle-chevron {
+  transition: transform 160ms ease;
+}
+
+.filter-toggle-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.report-filter__search-button {
+  width: 100%;
+  min-height: 38px;
+}
+
+.report-filter__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.filter-chip {
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.filter-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.filter-chip[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.report-filter__date-range {
+  width: 100%;
+  max-width: 520px;
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  color: var(--text-muted);
+}
+
+.report-filter .report-filter__date-range input {
+  min-width: 0;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.report-filter__date-range > span {
+  color: var(--text-muted);
+}
+
+.report-filter__actions {
+  grid-area: actions;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: end;
+  gap: 10px;
+}
+
+.report-filter__actions button {
+  width: 100%;
+  min-height: 38px;
+}
+
+.report-filter__media-options {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.media-filter-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.media-filter-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* 정렬 버튼이 목록 헤더로 옮겨졌다. 제목이 길어지면 같은 줄에 못 들어가므로
+   이 화면에서만 줄바꿈을 허용한다. 다른 화면의 섹션 헤더는 그대로 둔다. */
+.report-list-section .admin-section__heading {
+  flex-wrap: wrap;
+}
+
+.report-filter__sort {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-muted);
+}
+
+.report-filter__sort button {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.report-filter__sort button[aria-pressed='true'] {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-soft);
+}
+
+.filter-reset-button {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+}
+
+.filter-reset-icon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.monitoring-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+/* select 를 남는 폭만큼 늘리지 않고 내용에 맞는 고정 폭으로 두어, 검색창 바로 옆에
+   제보 유형·위험도·초기화가 붙어 한 덩어리로 보이게 한다. 남는 폭은 오른쪽 배치 선택이 가져간다. */
+.monitoring-filter__controls {
+  display: flex;
+  flex: 0 1 auto;
+  /* 검색창·제보 유형·위험도·초기화는 항상 한 줄이다. 줄바꿈을 허용하면 초기화만 아래로 떨어진다. */
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.monitoring-filter__region {
+  flex: 0 1 360px;
+  min-width: 0;
+  max-width: 380px;
+}
+
+.monitoring-filter__region input,
+.monitoring-filter select {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+}
+
+.monitoring-filter__region input {
+  padding-right: 38px;
+  padding-left: 38px;
+}
+
+.monitoring-filter__region input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.monitoring-filter__clear {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.monitoring-filter__clear:hover,
+.monitoring-filter__clear:focus-visible {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.monitoring-filter__clear-icon {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.monitoring-filter select {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+/* 검색창·select·초기화 버튼 높이와 테두리·모서리를 한 값으로 맞춘다. */
+.monitoring-filter__region input:focus-visible,
+.monitoring-filter select:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid rgba(0, 74, 173, 0.18);
+  outline-offset: 0;
+}
+
+.monitoring-filter__controls > button {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.monitoring-filter select.select-placeholder,
+.risk-map-filter select.select-placeholder {
+  color: var(--text-muted);
+}
+
+.monitoring-filter__controls > button {
+  min-height: 38px;
+  flex: 0 0 auto;
+}
+
+.monitoring-grid-selector {
+  flex: 0 0 auto;
+}
+
+.monitoring-grid-selector button {
+  min-width: 52px;
+  min-height: 38px;
+  padding: 7px 9px;
+}
+
+/* 레이어 선택은 내용 폭만 쓰고, 검색·위험도·초기화는 오른쪽 끝에 붙어 한 줄을 이룬다. */
+.risk-map-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.risk-map-filter .layer-options {
+  flex: 0 1 auto;
+}
+
+.risk-map-filter__controls {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  flex-wrap: nowrap;
+  margin-left: auto;
+  gap: 10px;
+}
+
+.risk-map-filter__controls input,
+.risk-map-filter__controls select {
+  min-width: 130px;
+  min-height: 38px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+}
+
+/* 네이티브 화살표는 위치를 제어할 수 없어 테두리에 붙는다. 상세조건 버튼(.filter-toggle-chevron)과
+   같은 chevron 을 써서 간격도 같게 맞춘다: 오른쪽 14px, 아이콘 16px, 텍스트와 8px.
+   폭은 select 마다 달라서(필터 줄은 고정 폭, 상세조건은 100%) 여기서 정하지 않는다. */
+.monitoring-filter select,
+.risk-map-filter__controls select,
+.report-filter select {
+  padding-right: 38px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23697586' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 9 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+}
+
+/* 필터 줄의 select 2종만 고정 폭이다. 상세조건 안의 select 는 칸 너비를 그대로 쓴다. */
+.monitoring-filter select,
+.risk-map-filter__controls select {
+  width: 144px;
+}
+
+.risk-map-filter__controls input:disabled {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.risk-map-filter__region {
+  position: relative;
+  min-width: 200px !important;
+  flex: 0 1 400px;
+}
+
+.risk-map-filter__region input {
+  width: 100%;
+  padding-left: 38px;
+}
+
+.monitoring-filter__region input::placeholder,
+.risk-map-filter__region input::placeholder,
+.risk-map-filter__controls input::placeholder {
+  color: var(--text-muted);
+}
+
+.risk-map-filter__controls button {
+  min-height: 38px;
+  flex: 0 0 auto;
+}
+
+.system-summary-section {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.breadcrumb a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.breadcrumb strong {
+  color: var(--text);
+}
+
+/*
+ * 제보 상세 3열 배치.
+ *
+ *   [제보 이미지] [기본 정보]   [처리 버튼]
+ *                 [위험도 지표] [처리 이력]
+ *
+ * 세 열의 높이는 서로 달라도 된다. 행 높이를 맞추면 대개 가장 긴 처리 이력에
+ * 끌려가 이미지 카드 아래에 큰 빈 공간이 생긴다. align-items: start 로 각 열이
+ * 제 내용 높이만 갖게 하고, 어떤 카드에도 stretch·height:100% 를 주지 않는다.
+ */
+.report-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 39fr) minmax(0, 28fr) minmax(320px, 33fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.report-card {
+  gap: 12px;
+}
+
+/* 가운데 열은 기본 정보 + 위험도 지표, 오른쪽 열은 처리 버튼 + 처리 이력을 쌓는다. */
+.report-detail-layout__mid,
+.report-detail-layout__side {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.report-detail-layout__mid { align-content: start; }
+
+/* 오른쪽 열만 칸 높이를 채워 아래 끝을 가장 높은 열(위험도 지표까지 있는 가운데 열)에
+   맞춘다. 버튼 칸은 제 높이만 쓰고 이력 칸이 남는 높이를 전부 가져가므로, 늘어난 만큼
+   이력이 더 보이고 그래도 넘치면 그 안에서 스크롤한다. */
+.report-detail-layout__side {
+  align-self: stretch;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* 버튼만 담는 칸이라 제목이 없다. 카드 기본 여백보다 좁게 줘 버튼 줄에 맞춘다. */
+.report-detail-actions {
+  padding: 12px;
+}
+
+/* 모든 카드는 제목 + 내용이 각자 필요한 만큼만 차지한다. 1fr 을 주면 카드가 늘어날 때
+   내용이 따라 늘어나는데, 이제 늘어나는 카드가 없으므로 auto 로 둔다. */
+.report-detail-layout__image,
+.report-detail-layout__info,
+.report-detail-layout__risk { grid-template-rows: auto auto; }
+
+/* 제목 · 담당 정보 · 이력 칸. 앞의 둘은 늘 보이고 마지막만 스크롤한다.
+   1fr 이라 카드가 늘어난 만큼 이력 칸이 그대로 넓어진다. */
+.report-detail-side__handling { grid-template-rows: auto auto minmax(0, 1fr); }
+
+/* 지금 누가 들고 있는지. 두 값 모두 짧아 한 줄에 나란히 둔다. 카드가 좁아지면 접힌다. */
+.report-assignee {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-assignee dt {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.report-assignee dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+/* 이력 목록을 absolute 로 띄우기 위한 기준 상자. 자리만 잡고 높이는 위 1fr 이 준다. */
+.report-history-scroll {
+  position: relative;
+  min-height: 0;
+}
+
+/*
+ * 이력 목록. absolute 로 띄워 카드 높이 계산에서 완전히 빼낸다.
+ *
+ * 보통 흐름에 두면 이력 전체 길이가 열 높이 계산에 들어가 오른쪽 열이 가운데 열보다
+ * 길어진다(max-height 백분율은 높이가 정해지기 전 단계에서는 무시된다). absolute 는
+ * 그 계산에서 빠지므로, 열 높이는 가운데 열이 정하고 이력은 남은 자리를 채운 뒤
+ * 넘치는 만큼만 스크롤한다.
+ *
+ * 카드 이름까지 붙여 명시도를 올린다. 이게 없으면 파일 뒤쪽의 `.status-timeline`
+ * (ol 기본 여백을 지우는 padding: 0)이 같은 명시도로 이겨서 아래 padding 이 사라진다.
+ */
+.report-detail-side__handling .report-history-scroll > * {
+  position: absolute;
+  inset: 0;
+  /* 단계 표시 원은 box-shadow 로 2px 테두리를 그린다. overflow-y 를 주면 가로도 함께
+     잘리므로(가로가 visible 로 남지 않는다) 왼쪽에 그만큼 자리를 비워 원이 안 잘리게
+     한다. 오른쪽은 스크롤바 자리다. */
+  padding-left: 5px;
+  padding-right: 6px;
+  overflow-y: auto;
+  /* 이력 끝까지 스크롤한 뒤 휠을 더 굴려도 뒤 페이지가 따라 움직이지 않게 한다. */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.report-history-scroll > *:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.report-history-scroll > *::-webkit-scrollbar {
+  width: 8px;
+}
+
+.report-history-scroll > *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.report-history-scroll > *::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.report-history-scroll > *::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.report-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+
+/* 제목과 그 오른쪽 조작부를 한 줄에 둔다. 조작부가 없는 카드는 이 줄 자체를 만들지 않는다. */
+.report-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.report-card__icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: var(--accent);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 이미지 / 원본 영상 전환. 두 칸짜리 세그먼트 컨트롤이다. */
+.report-media-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.report-media-tabs button {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.report-media-tabs button.is-active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+/* 녹화가 아직 없거나 실패한 제보. 왜 못 보는지는 아래 안내가 말해 준다. */
+.report-media-tabs button:disabled {
+  color: var(--text-muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.report-media-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 원본 영상도 사진과 같은 칸을 쓴다. 세로로 긴 영상도 잘리지 않게 맞춰 넣는다. */
+.report-video {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 6px;
+  background: #0f172a;
+}
+
+.report-media-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 카드가 늘어나면 남는 높이만큼 각 행 사이가 고르게 벌어진다. */
+.report-info {
+  display: grid;
+  align-content: space-between;
+  margin: 0;
+}
+
+.report-info > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(84px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-info > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.report-info > div:first-child {
+  padding-top: 0;
+}
+
+/* 소속과 담당자는 짧은 값이라 한 줄에 나란히 두고, 카드가 좁아지면 두 줄로 접힌다.
+   아래 이력은 스크롤 영역이라 구분선을 스크롤되지 않는 이쪽에 둔다. */
+.report-info--summary {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-info--summary > div {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.report-info dt {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.report-info dd {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-weight: 700;
+}
+
+/* 기본 정보는 항목이 많아 값까지 굵으면 읽는 데 방해가 된다. 라벨(회색)과 값의 대비는
+   색으로 충분하다. 처리 정보의 소속·담당자는 두 개뿐이라 그대로 둔다. */
+.report-detail-layout__info .report-info dd {
+  font-weight: 400;
+}
+
+.report-info__live-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--safe);
+}
+
+/* 기본 정보 카드 안으로 들어온 제보 내용. 라벨은 dl 의 dt 와 같은 톤으로 맞춰
+   위 항목들과 이어져 보이게 한다. */
+.report-content-block {
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.report-content-block__label {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 카드로 따로 있을 때는 132px 이었다. 기본 정보에 합치면서 카드 하나가 지나치게
+   길어지지 않도록 절반으로 줄인다. 넘치는 내용은 이 칸 안에서 스크롤한다. */
+.report-content {
+  min-height: 66px;
+  max-height: 132px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfe;
+  color: var(--text) !important;
+  line-height: 1.6;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 한 장씩 보여주는 뷰어. 사진 칸 → 이동 줄 → 썸네일 줄 순으로 쌓는다. */
+.report-image-frame {
+  min-height: 0;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+/* 사진 칸 높이는 고정한다. 사진 크기에 따라 카드가 들쭉날쭉해지면 옆 열과 높이가
+   어긋나 보이고, 세로로 긴 사진 한 장이 페이지 전체를 밀어 내린다. */
+/* 높이는 오른쪽 처리 정보 카드와 아래 끝이 맞도록 고른 값이다. 이력 상한(340px)을
+   바꾸면 이 값도 함께 조정해야 두 카드 높이가 계속 맞는다. */
+.report-image-stage {
+  min-height: 0;
+  width: 100%;
+  height: 330px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/* 잘라내지 않고(contain) 칸 안에 통째로 넣는다. 비율이 다르면 남는 쪽에 여백이
+   생기고 사진은 가운데 정렬된다. */
+.report-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+/* 이동 버튼과 현재 장수. 사진 위에 겹치면 사진 일부를 가리므로 아래 줄로 내린다. */
+.report-image-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.report-image-counter {
+  min-width: 46px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-image-placeholder {
+  width: 100%;
+  height: 330px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: linear-gradient(145deg, var(--accent-muted), var(--surface-muted));
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+/* 이미지 자체가 확대 버튼이다. 크기는 안쪽 img 가 정하므로 껍데기만 씌운다. */
+.report-image-open {
+  min-height: 0;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  cursor: zoom-in;
+}
+
+.report-image-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* 이전·다음 버튼. 사진 아래 줄에 번호와 나란히 둔다. */
+.report-image-action {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.report-image-action:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.report-image-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.report-image-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 회색 프레임 안 아래쪽 줄. 이미지가 가운데 정렬이라 썸네일도 가운데로 모은다. */
+.report-image-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.report-image-thumb {
+  width: 56px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  /* 프레임과 같은 회색이면 경계가 안 보여서 흰색으로 둔다. */
+  background: var(--surface);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.report-image-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.report-image-thumb.is-active {
+  border-color: var(--accent);
+}
+
+.report-image-thumb:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.transfer-target-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.transfer-target-list label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.transfer-target-list label span {
+  display: grid;
+  gap: 2px;
+}
+
+.transfer-target-list small {
+  color: var(--text-muted);
+}
+
+.transfer-target--disabled {
+  background: var(--surface-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.report-action-closed {
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* 처리 버튼 4개는 우측 처리 카드 안에서 한 칸씩 세로로 쌓는다. 한 칸 grid 에 같은 크기
+   행 4개라 카드 폭·높이가 바뀌어도 네 버튼의 너비와 높이가 같이 유지되고, 카드에 남는
+   높이는 버튼이 나눠 채운다. */
+.report-action-buttons {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(48px, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.report-action-buttons > button {
+  display: inline-flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/*
+ * 가로 배치. 폭에 따라 접히게 두면 줄 나누기가 들쭉날쭉하므로 격자로 고정한다.
+ *
+ *   [  제보 승인  ][    반려    ]
+ *   [ 이관 ][ 재배정 ][ 상황 종료 ]
+ *
+ * 6칸 격자에서 첫 줄 두 개가 3칸씩, 둘째 줄 세 개가 2칸씩 가져간다.
+ */
+.report-action-buttons--row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  width: 100%;
+  gap: 8px;
+}
+
+.report-action-buttons--row > button {
+  grid-column: span 2;
+  width: auto;
+  height: auto;
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.report-action-buttons--row > button:nth-child(-n + 2) {
+  grid-column: span 3;
+}
+
+/* 승인이 끝난 제보는 버튼이 넷이라 6칸을 2·3 으로 나눌 수 없다. 두 줄에 둘씩 둔다. */
+.report-action-buttons--row[data-count='4'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.report-action-buttons--row[data-count='4'] > button {
+  grid-column: auto;
+}
+
+.report-action-closed--row {
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.report-action-buttons > button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.report-action-buttons > .secondary-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.report-action-buttons > .danger-button:hover:not(:disabled) {
+  background: #b42318;
+}
+
+.report-action-buttons > button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.report-action-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.image-lightbox {
+  padding: 32px;
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.image-lightbox__frame {
+  position: relative;
+  display: grid;
+  max-width: min(100%, 1200px);
+  max-height: 100%;
+}
+
+.image-lightbox__image {
+  max-width: 100%;
+  max-height: calc(100vh - 64px);
+  border-radius: 8px;
+  background: var(--surface);
+  object-fit: contain;
+}
+
+.image-lightbox__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.image-lightbox__close:hover {
+  background: rgba(15, 23, 42, 0.85);
+}
+
+/* 확대 상태에서 다른 장으로 넘기는 버튼. 좌우 키로도 넘길 수 있다. */
+.image-lightbox__nav {
+  position: absolute;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65);
+  color: #fff;
+  transform: translateY(-50%);
+}
+
+.image-lightbox__nav:hover {
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.image-lightbox__nav:focus-visible,
+.image-lightbox__close:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.image-lightbox__nav--prev { left: 10px; }
+.image-lightbox__nav--next { right: 10px; }
+
+.image-lightbox__nav-icon {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.image-lightbox__counter {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+}
+
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.report-summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.report-summary dt {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.report-summary dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+/* 처리 이력 타임라인. 도달한 단계만 그리므로 마지막 항목이 현재 단계다.
+   지난 단계는 연한 회색, 현재 단계는 파랑, 반려·취소로 끝난 단계는 빨강이다. */
+/* 단계는 늘 내용 높이만 갖는다. 예전에는 카드가 남는 높이를 단계에 나눠 줬는데,
+   그러면 한 단계 안에서 제목·설명·사유·시각이 서로 벌어져 읽기 어려웠다.
+   카드에 남는 높이는 아래쪽 여백으로 두고 단계는 위에서부터 쌓는다. */
+.status-timeline {
+  display: grid;
+  align-content: start;
+  grid-auto-rows: min-content;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status-timeline__step {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+  padding-bottom: 14px;
+}
+
+.status-timeline__step:last-child {
+  padding-bottom: 0;
+}
+
+.status-timeline__step:not(:last-child)::before {
+  position: absolute;
+  top: 16px;
+  bottom: 0;
+  left: 7px;
+  width: 2px;
+  background: var(--accent);
+  content: '';
+}
+
+.status-timeline__marker {
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: #cbd5e1;
+  box-shadow: 0 0 0 2px #cbd5e1;
+}
+
+.status-timeline__step--current .status-timeline__marker { background: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.status-timeline__step--failed .status-timeline__marker { background: var(--danger); box-shadow: 0 0 0 2px var(--danger); }
+
+/* 한 단계 안의 제목·설명·사유·시각은 붙여 둔다. align-content 를 start 로 고정하지
+   않으면 li 높이가 남을 때 이 네 줄이 서로 벌어진다. */
+.status-timeline__content {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 2px;
+}
+
+.status-timeline__content strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.status-timeline__step--current .status-timeline__content strong { color: var(--accent); }
+.status-timeline__step--failed .status-timeline__content strong { color: var(--danger); }
+
+.status-timeline__content p,
+.status-timeline__content time {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* 설명과 붙어 보이지 않을 만큼만 띄운다. */
+.status-timeline__content time {
+  margin-top: 3px;
+  font-size: 12.5px;
+}
+
+/* 담당자가 입력한 원본 사유. 설명 문구와 섞이지 않게 배경을 깔아 구분한다. */
+.status-timeline__reason {
+  width: 100%;
+  margin-top: 4px !important;
+  padding: 6px 9px;
+  border-left: 2px solid var(--border);
+  border-radius: 0 6px 6px 0;
+  background: var(--surface-muted);
+  color: var(--text) !important;
+}
+
+.status-timeline__step--failed .status-timeline__reason {
+  border-left-color: var(--danger);
+}
+
+.timeline-status-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.timeline-history {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.timeline-history li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.danger-button,
+.danger-outline-button {
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.danger-button { background: var(--danger); color: #fff; }
+.danger-outline-button { background: #fff; color: var(--danger); }
+
+.break-text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1280px) {
+  .report-filter__detail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'category status'
+      'date date'
+      'risk analysis'
+      'media actions';
+  }
+  /* 3열을 유지하기에는 좁아지는 구간이라 2열로 접고, 처리 열은 아래 전체 폭에 둔다.
+     아래 한 줄을 혼자 쓰므로 높이를 맞출 상대가 없다. 늘리지 말고 상한만 준다. */
+  .report-detail-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .report-detail-layout__side {
+    grid-column: 1 / -1;
+    align-self: start;
+    grid-template-rows: auto auto;
+  }
+  /* 늘릴 기준이 없으니 카드가 내용 높이를 갖는다. absolute 는 기준 높이가 사라져
+     쓸 수 없으므로 보통 흐름으로 되돌리고 상한만 준다. */
+  .report-detail-side__handling { grid-template-rows: auto auto auto; }
+  .report-detail-side__handling .report-history-scroll > * {
+    position: static;
+    max-height: 420px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .report-filter__basic { grid-template-columns: minmax(0, 1fr) auto 80px; }
+  .report-filter__search-hint { display: none; }
+  .home-content-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows:
+      var(--home-map-row-height)
+      minmax(520px, 620px)
+      var(--home-recent-row-height);
+    grid-template-areas:
+      'map'
+      'live'
+      'recent';
+  }
+
+  .home-live-section .live-connection-panel {
+    min-height: 0;
+    max-height: 100%;
+  }
+}
+
+@media (max-width: 980px) {
+  .report-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* 세로로 길어지는 1열에서는 이력 상한을 조금 낮춰 아래 내용이 너무 밀리지 않게 한다. */
+  .report-detail-side__handling .report-history-scroll > * {
+    max-height: 380px;
+  }
+  /* 좁은 화면에서는 위험도와 버튼이 한 줄에 안 들어가므로 위아래로 나눈다. */
+  .report-detail-topbar { justify-content: flex-start; }
+  .report-action-buttons--row { justify-content: flex-start; }
+  .report-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .report-filter__basic,
+  .report-filter__detail,
+  .report-summary { grid-template-columns: 1fr; }
+  .report-filter__detail {
+    grid-template-areas:
+      'category'
+      'date'
+      'status'
+      'risk'
+      'analysis'
+      'media'
+      'actions';
+  }
+  .report-filter__search-field { grid-column: auto; }
+  .report-filter__basic > button { width: 100%; }
+  .report-filter__sort {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .report-filter__sort button { width: 100%; }
+  .report-filter__actions { justify-content: stretch; }
+  .report-filter__actions button { flex: 1; }
+  /* 한 줄에 다 들어가지 않으면 검색창이 윗줄을 전부 쓰고 select 2개와 초기화가
+     아랫줄로 내려간다. 검색창과 select 가 같이 찌그러지지 않게 하려는 배치다. */
+  .monitoring-filter__controls { min-width: 0; flex-wrap: wrap; }
+  .monitoring-filter__region { flex-basis: 100%; max-width: none; }
+  .monitoring-filter select { flex: 1 1 120px; width: auto; }
+  .monitoring-grid-selector { margin-left: auto; }
+  .risk-map-filter__controls > input,
+  .risk-map-filter__controls > select { flex: 1 1 calc(50% - 5px); }
+  .risk-map-filter__region { flex-basis: 100%; }
+  .emergency-report-list li { grid-template-columns: 1fr; }
+  .dashboard-equal-section { min-height: auto; }
+  .dashboard-map-card,
+  .live-connection-panel { min-height: 380px; }
+  .recent-reports-table { min-width: 520px; }
+}
+
+/* 담당자 인사 관리 (SUPER_ADMIN) */
+.operator-form {
+  display: grid;
+  gap: 12px;
+}
+
+.operator-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.operator-form input,
+.operator-form select {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  font-weight: 500;
+}
+
+.operator-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.operator-row-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.operator-row-actions .secondary-button {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.operator-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-weight: 700;
+}
+
+/* 계정 설정 */
+.settings-password-form {
+  max-width: 420px;
+}
+
+.settings-success {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 700;
+}
+
+/* 실시간 모니터링: AI 위험도 테두리 */
+.monitoring-report-card--risk {
+  border-width: 3px;
+  border-style: solid;
+}
+
+/* 위험도 지도: 격자 추이 패널 */
+.grid-trend-card {
+  display: grid;
+  gap: 10px;
+}
+
+.grid-trend-card__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.grid-trend-card__heading span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.grid-trend-card__heading strong {
+  display: block;
+  font-size: 18px;
+}
+
+.grid-trend-card__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin: 0;
+}
+
+.grid-trend-card__meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.grid-trend-card__meta dt {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.grid-trend-card__meta dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.grid-trend-chart {
+  margin: 0;
+}
+
+.grid-trend-chart svg {
+  width: 100%;
+  height: auto;
+}
+
+.grid-trend-chart__caption {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.map-stats__hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* 위험도 지도: 혼잡도(서울시 121장소)·행사·처리 완료 제보 마커 */
+.congestion-place-marker,
+.event-place-marker,
+.public-feed-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 180px;
+  padding: 4px 9px;
+  border: 1px solid rgba(16, 24, 40, 0.14);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #101828;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(16, 32, 51, 0.25);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.congestion-place-marker span,
+.event-place-marker span,
+.public-feed-marker span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.congestion-place-marker i {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--congestion-color, #94a3b8);
+}
+
+.event-place-marker {
+  border-color: #d8b4fe;
+  background: #faf5ff;
+  color: #6b21a8;
+}
+
+.event-place-marker i {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: #9333ea;
+}
+
+/*
+ * 처리 완료 제보 마커. 위험 등급(빨강·주황·노랑·초록·파랑)과 담당 핀(보라·파랑)에 쓰이지 않은
+ * teal 계열을 쓰고, 30분 뒤 사라지는 임시 상태라는 뜻으로 점선 테두리를 준다.
+ */
+.public-feed-marker {
+  border-color: #5eead4;
+  border-style: dashed;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.public-feed-marker i {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #0d9488;
+  border-radius: 50%;
+}
+
+.public-feed-status {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.congestion-level-badge {
+  justify-self: start;
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.congestion-message {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--text);
+  font-size: 12px;
+}
