@@ -156,6 +156,7 @@ services:
       # 4,806ms, CI 빌드와 겹치면 6,496~10,856ms. 정확도 우선을 실제로 켤 때는
       # AI 내부 타임아웃과 이 값을 함께 올려야 한다.
       - AI_READ_TIMEOUT=${AI_READ_TIMEOUT:-PT10S}
+      - GRID_RISK_SCHEDULER_DELAY=${GRID_RISK_SCHEDULER_DELAY:-PT3M}
     depends_on:
       - db
       - redis
