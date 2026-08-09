@@ -626,6 +626,7 @@ button:disabled {
 
 /* 옆의 근무 상태 토글과 같은 캡슐 형태·높이로 맞춰 헤더 상태 영역이 한 덩어리로 보이게 한다. */
 .emergency-alert-button {
+  position: relative;
   flex: 0 0 auto;
   min-height: 32px;
   display: inline-flex;
@@ -653,17 +654,37 @@ button:disabled {
   background: #b42318;
 }
 
-/* 0건이어도 눌러서 확인할 수 있어야 하므로 비활성처럼 보이지 않게, 강조만 낮춘 붉은 계열로 둔다. */
-.emergency-alert-button--idle {
-  border-color: #fda29b;
-  background: #fef3f2;
-  color: #b42318;
+/* 1건이라도 있으면 버튼 뒤로 붉은 파동이 퍼져 나가 긴급하다는 느낌을 준다.
+   버튼 자체와 ::after 가 같은 파동을 시간차로 내보내 끊기지 않고 이어지게 한다. */
+.emergency-alert-button--alert {
+  animation: emergency-alert-ripple 1.8s ease-out infinite;
 }
 
-.emergency-alert-button--idle:hover,
-.emergency-alert-button--idle:focus-visible {
-  background: #fee4e2;
-  color: #912018;
+.emergency-alert-button--alert::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: emergency-alert-ripple 1.8s ease-out 0.9s infinite;
+}
+
+@keyframes emergency-alert-ripple {
+  0% { box-shadow: 0 0 0 0 rgba(217, 45, 32, 0.6); }
+  70% { box-shadow: 0 0 0 14px rgba(217, 45, 32, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(217, 45, 32, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emergency-alert-button--alert {
+    /* 움직임을 끈 사용자에게도 긴급 상태는 구분돼야 하므로 고정 외곽 그림자로 대체한다. */
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.3);
+  }
+
+  .emergency-alert-button--alert::after {
+    animation: none;
+  }
 }
 
 .header-action-icon {

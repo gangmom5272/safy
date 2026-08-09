@@ -85,8 +85,8 @@ export function AdminHeader({ reports, onCheckReport }: AdminHeaderProps) {
           <button
             type="button"
             className={dangerReports.length > 0
-              ? 'emergency-alert-button'
-              : 'emergency-alert-button emergency-alert-button--idle'}
+              ? 'emergency-alert-button emergency-alert-button--alert'
+              : 'emergency-alert-button'}
             onClick={() => setIsEmergencyOpen(true)}
             aria-label={`긴급 위험 알림 ${dangerReports.length}건 확인`}
           >
