@@ -139,4 +139,15 @@ OpenVidu Community v3(LiveKit+mediasoup)는 [공식 배포 스택](https://githu
 - P2PNet 미세 조정에 사용한 JHU-CROWD++ 데이터셋은 이를 인용한 발표
   자료·보고서에 관련 논문 2편 인용을 요구합니다.
 
+```text
+Sindagi et al., "Pushing the frontiers of unconstrained crowd counting:
+New dataset and benchmark method", ICCV 2019.
+
+Sindagi et al., "JHU-CROWD++: Large-Scale Crowd Counting Dataset and
+A Benchmark Method", Technical Report 2020.
+```
+
+> P2PNet 원본 코드, 모델 가중치, 학습 이미지와 머리 좌표 라벨은
+> 용량·라이선스 문제로 이 저장소에 포함하지 않습니다.
+
 자세한 내용은 [ai/docs/model-license-review.md](ai/docs/model-license-review.md)를 참고합니다.
